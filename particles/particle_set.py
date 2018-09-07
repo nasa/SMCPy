@@ -1,14 +1,14 @@
 import numpy as np
 import copy
 
-class ParticleChain():
+class ParticleSet():
     '''
-    Class defining data structure of an SMC particle chain.
+    Class defining data structure of an SMC particle set. The set stores all
+    particle instances at all temperature steps (i.e., the entire particle set
+    is M x T where M is the total number of particles and T is the number of
+    steps in the temperature schedule. 
+    '''
 
-    chain -> steps (list) -> particles (list)
-    '''
-    # TODO add check for normalized
-    
     def __init__(self, num_particles):
         self.num_particles = num_particles
         self.step = []
@@ -21,31 +21,28 @@ class ParticleChain():
         self.nsteps += 1
 
 
-    def add_particle(self, particle, step):
+    def add_particle(self, particle, step_number):
         '''
         Add a single particle to a given step.
         '''
-        # add empty set if adding particle to empty chain
         if self.nsteps == 0:
             self.add_empty_step()
-        
-        # check to see if specified step is full #TODO allow overwrite
-        if len(self.step[step]) >= self.num_particles:
-            raise ValueError('append particle failed; new length of step '+\
-                             'would exceed self.num_particles')
-
+        if len(self.step[step_number]) >= self.num_particles:
+            msg = 'Cannot add particle; new step length would exceed number '+\
+                  'of total particles allowed.'
+            raise ValueError(msg)
         # check to see if new step should be added
-        if step == len(self.step)+1:
+        if step_number == len(self.step)+1:
             self.add_empty_step()
-        elif step > len(self.step)+1:
+        elif step_number > len(self.step)+1:
             raise ValueError('cannot skip steps, next step available for '+\
                              'creation is %s' % (len(self.step)+1))
-        self.step[step].append(particle)
+        self.step[step_number].append(particle)
 
     
     def add_step(self, particle_list):
         '''
-        Add an entire step to the chain, providing a list of particles.
+        Add an entire step to the set, providing a list of particles.
         '''
         if len(particle_list) != self.num_particles:
             raise ValueError('len(particle_list) must equal self.num_particles')
@@ -113,7 +110,7 @@ class ParticleChain():
 
     def calculate_step_covariance(self, step=-1):
         '''
-        Estimates the covariance matrix for a given step in the chain.
+        Estimates the covariance matrix for a given step in the set.
 
         :param int step: step identifier, default is most recent (i.e., step=-1)
         '''
@@ -139,7 +136,7 @@ class ParticleChain():
     def compute_ESS(self, step=-1):
         '''
         Computes the effective sample size (ESS) of a given step in the particle
-        chain.
+        set.
         '''
         weights = self.get_weights(step)
         # make sure weights are normalized
@@ -150,7 +147,7 @@ class ParticleChain():
 
     def copy(self, step=-1):
         '''
-        Returns a copy of particle chain at step (most recent step by default).
+        Returns a copy of particle set at step (most recent step by default).
         '''
         return copy.deepcopy(self.step[-1])
 
@@ -181,7 +178,7 @@ class ParticleChain():
 
     def overwrite_step(self, step, particle_list):
         '''
-        Overwrite an entire step of the chain with the provided list of
+        Overwrite an entire step of the set with the provided list of
         particles.
         '''
         print particle_list
@@ -214,7 +211,7 @@ class ParticleChain():
     def plot_all_marginals(self, step=-1, save=False, show=True,
                            prefix='marginal_'):
         '''
-        Plots marginal approximation for all parameters in the chain.
+        Plots marginal approximation for all parameters in the set.
         '''
         try:
             plt
@@ -348,7 +345,7 @@ class ParticleChain():
 
     def resample(self, step=-1, overwrite=True):
         '''
-        Resamples a given step in the particle chain based on normalized 
+        Resamples a given step in the particle set based on normalized 
         weights. Assigns discrete probabilities to each particle (sum to 1),
         resample from this discrete distribution using the particle's copy()
         method.
@@ -384,9 +381,10 @@ class ParticleChain():
             self.add_step(new_particles)
 
 
-    def save(self, filename='pchain.p', mode='w'):
+    def save(self, filename='pset.p', mode='w'):
+        #TODO: change to hdf5
         '''
-        Saves particle chain as a pickle file.
+        Saves particle set as a pickle file.
         '''
         import pickle
         with open(filename, mode) as pf:
