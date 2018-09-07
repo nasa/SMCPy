@@ -38,7 +38,7 @@ class SMCSampler(object):
 
     def sample(self, num_particles, num_time_steps, measurement_std_dev,
                ESS_threshold=None, proposal_center=None, proposal_scales=None,
-               restart_time=0):
+               restart_time=0, hdf_file_path=None):
         '''
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
@@ -66,26 +66,28 @@ class SMCSampler(object):
             zero, meaning the sampling process starts at the prior distribution;
             note that restart_time < num_time_steps.
         :type restart_time: int
+        :param hdf5_file_path: file path of a particle set saved using the
+            ParticleSet.save() method.
+        :type hdf5_file_path: string
         '''
         self._set_num_particles(num_particles)
         self._set_ESS_threshold(ESS_threshold)
         self._set_temperature_schedule(num_time_steps)
+
+        # TODO: move this block to an initialize particle set function?
         if restart_time == 0:
             self._set_proposal_distribution(proposal_center, proposal_scales)
             self._set_start_time_based_on_proposal()
             particles = self._initialize_particles(measurement_std_dev)
+            particle_set = self._init_particle_set_from_particles(particles)
         elif 0 < restart_time <= num_time_steps:
-            #TODO allow restart; load particle chain from hdf5
-            #particles = self._load_particle_chain_from_hdf5()
             self._set_start_time_equal_to_restart_time(restart_time)
+            particle_set = self._load_particle_set_from_hdf5(hdf5_file_path)
         else:
             raise ValueError('restart_time not in range [0, num_time_steps]')
+
         for t in range(num_time_steps)[self.start_time_step:]:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t-1]
-            if self.rank == 0:
-                particles = self.comm.gather(particles, root=0)
-                # TODO: NEED TO GATHER ALL PARTICLES AND STORE IN CHAIN...
-                # CAN THIS BE DONE HERE SO THAT IT DOESN'T HAVE TO BE IN INIT?
         return None
 
 
@@ -199,6 +201,30 @@ class SMCSampler(object):
         results_index = mcmc.pymc_mod_order.index('results')
         log_like = mcmc.pymc_mod[results_index].logp
         return log_like
+
+
+    def _init_particle_set_from_particles(self, particles):
+        particles = self.comm.gather(particles, root=0)
+        if self.rank == 0:
+            particle_set = ParticleSet(self.num_particles)
+            particle_set.add_step(particles)
+            particle_set.normalize_step_weights()
+        else:
+            particle_set = None
+        return particle_set
+
+
+    def load_particle_set_from_hdf5(self, hdf5_file_path):
+        '''
+        :param hdf5_file_path: file path of a particle set saved using the
+            ParticleSet.save() method.
+        :type hdf5_file_path: string
+        '''
+        if self.rank == 0:
+            #load
+            return particle_set
+        else:
+            return None
 
 
     def _set_start_time_equal_to_restart_time(self, restart_time):
