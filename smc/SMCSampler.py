@@ -1,16 +1,12 @@
 from copy import copy
-import itertools
 from mpi4py import MPI
 from mcmc import MCMC
 import numpy as np
-import os
-import pickle
 from pymc import Normal
 from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
 import warnings
 
-#TODO remove if not needed
 ## for multiprocessing pickle fix
 #from smc.pickle_methods import _pickle_method, _unpickle_method
 #import types
@@ -82,12 +78,11 @@ class SMCSampler(object):
         self._set_num_mcmc_steps(num_mcmc_steps)
         self._set_ESS_threshold(ESS_threshold)
 
-        # TODO: move this block to an initialize particle chain function?
         if restart_time == 0:
             self._set_proposal_distribution(proposal_center, proposal_scales)
             self._set_start_time_based_on_proposal()
             particles = self._initialize_particles(measurement_std_dev)
-            particle_chain = self.initialize_particle_chain(particles)
+            particle_chain = self._initialize_particle_chain(particles)
         elif 0 < restart_time <= num_time_steps:
             self._set_start_time_equal_to_restart_time(restart_time)
             particle_chain = self._load_particle_chain_from_hdf5(hdf5_file_path)
@@ -103,13 +98,12 @@ class SMCSampler(object):
                 self._compute_new_particle_weights(temperature_step)
                 self._normalize_new_particle_weights()
                 self._resample_if_needed()
-                partitioned_particles = self._partition_new_particles()
+                new_particles = self._partition_new_particles()
             else:
                 step_cov = None
-                partitioned_particles = [None]
-            #TODO better (faster) way to get covariance to every rank?
-            step_cov = self.comm.scatter([step_covariance]*self.size, root=0)
-            new_particles = self.comm.scatter(partitioned_particles, root=0)
+                new_particles = [None]
+            step_cov = self.comm.scatter([step_cov]*self.size, root=0)
+            new_particles = self.comm.scatter(new_particles, root=0)
             new_particles = self._mutate_new_particles(new_particles, step_cov,
                                                        measurement_std_dev,
                                                        temperature_step)
@@ -125,7 +119,6 @@ class SMCSampler(object):
 
 
     def _set_temperature_schedule(self, num_cooling_steps):
-        #TODO add option to optimize temp_schedule
         self.temp_schedule = np.linspace(0, 1, num_cooling_steps)
         return None
 
@@ -170,8 +163,6 @@ class SMCSampler(object):
 
 
     def _initialize_particles(self, measurement_std_dev):
-        #TODO allow for sampling of data_stddev
-        #TODO allow for sampled proposal_center
         m_std = measurement_std_dev
         self.mcmc.generate_pymc_model(fix_var=True, std_dev0=m_std)
         num_particles_per_partition = self._get_num_particles_per_partition()
@@ -195,7 +186,7 @@ class SMCSampler(object):
 
 
     def _create_prior_random_variables(self,):
-        mcmc = copy(self.mcmc) # TODO necessary?
+        mcmc = copy(self.mcmc)
         random_variables = dict()
         for key in mcmc.params.keys():
             index = mcmc.pymc_mod_order.index(key)
@@ -214,7 +205,6 @@ class SMCSampler(object):
 
 
     def _sample_particle(self, random_variables):
-        #TODO rename to something specific to init?
         param_keys = self.mcmc.keys()
         param_vals = {key: random_variables[key].random() for key in param_keys}
         prior_log_prob = np.sum([rv.logp for rv in random_variables])
@@ -227,7 +217,7 @@ class SMCSampler(object):
         '''
         Note: this method performs 1 model evaluation per call.
         '''
-        mcmc = copy(self.mcmc) # TODO necessary?
+        mcmc = copy(self.mcmc)
         for key, value in param_vals:
             index = mcmc.pymc_mod_order.index(key)
             mcmc.pymc_mod[index].value = value
@@ -236,7 +226,7 @@ class SMCSampler(object):
         return log_like
 
 
-    def initialize_particle_chain(self, particles):
+    def _initialize_particle_chain(self, particles):
         particles = self.comm.gather(particles, root=0)
         if self.rank == 0:
             particle_chain = ParticleSet(self.num_particles)
@@ -294,7 +284,6 @@ class SMCSampler(object):
         '''
         ESS = self.particle_chain.compute_ESS()
         if ESS < self.ESS_threshold:
-            #TODO remove prints or put in verbose flag
             print 'ESS = %s' % ESS
             print 'resampling...'
             self.particle_chain.resample(overwrite=True)
@@ -356,7 +345,6 @@ class SMCSampler(object):
 
 
     def _save_particle_chain_progress(self, hdf5_file_path):
-        #TODO improve save in particle_chain.py; update to save hdf5; save
-        #     current temperature schedule and time step as well
-        self.particle_chain.save(hdf5_file_path)
+        if self.rank == 0:
+            self.particle_chain.save(hdf5_file_path)
         return None
