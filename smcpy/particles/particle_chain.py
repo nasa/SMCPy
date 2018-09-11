@@ -181,7 +181,6 @@ class ParticleChain():
         Overwrite an entire step of the chain with the provided list of
         particles.
         '''
-        print particle_list
         if len(particle_list) != self.num_particles:
             raise ValueError('len(particle_list) must equal self.num_particles')
         self.step[step] = particle_list

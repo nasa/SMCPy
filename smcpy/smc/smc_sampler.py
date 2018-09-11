@@ -1,6 +1,6 @@
 from copy import copy
 from mpi4py import MPI
-from mcmc import MCMC
+from mcmc.MCMC import MCMC
 import numpy as np
 from pymc import Normal
 from ..particles.particle import Particle
@@ -13,6 +13,9 @@ import warnings
 #import copy_reg
 
 class SMCSampler(object):
+    '''
+    Class for performing parallel Sequential Monte Carlo sampling 
+    '''
 
     def __init__(self, data, model, param_priors):
         self.comm, self.size, self.rank = self._setup_communicator()
@@ -20,8 +23,7 @@ class SMCSampler(object):
 
 
     def _setup_communicator(self,):
-        if comm is None:
-            comm = MPI.COMM_WORLD
+        comm = MPI.COMM_WORLD
         size = comm.Get_size()
         my_rank = comm.Get_rank()
         return comm, size, my_rank
@@ -66,7 +68,7 @@ class SMCSampler(object):
             note that restart_time < num_time_steps.
         :type restart_time: int
         :param hdf5_file_path: file path of a particle chain saved using the
-            ParticleSet.save() method.
+            ParticleChain.save() method.
         :type hdf5_file_path: string
 
 
@@ -90,7 +92,7 @@ class SMCSampler(object):
             raise ValueError('restart_time not in range [0, num_time_steps]')
 
         self._set_particle_chain(particle_chain)
-        for t in range(num_time_steps)[self.start_time_step:]:
+        for t in range(num_time_steps)[self.start_time_step+1:]:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t-1]
             if self.rank == 0:
                 step_cov = self._compute_current_step_covariance()
@@ -137,9 +139,9 @@ class SMCSampler(object):
 
     def _set_proposal_distribution(self, proposal_center, proposal_scales):
         if proposal_center is not None and proposal_scales is None:
-            msg = 'No scales given; setting scales to identity matrix.')
+            msg = 'No scales given; setting scales to identity matrix.'
             warnings.warn(msg)
-            proposal_scales = {k: 1. for k in mcmc.param_priors.keys()}
+            proposal_scales = {k: 1. for k in self.mcmc.params.keys()}
         elif proposal_center is None and proposal_scales is not None:
             raise ValueError('Proposal scales given but center == None.')
         self.proposal_center = proposal_center
@@ -157,7 +159,7 @@ class SMCSampler(object):
         '''
         if self.proposal_center is None:
             self.start_time_step = 1
-        else self.proposal_center is not None:
+        else:
             self.start_time_step = 0
         return None
 
@@ -167,19 +169,21 @@ class SMCSampler(object):
         self.mcmc.generate_pymc_model(fix_var=True, std_dev0=m_std)
         num_particles_per_partition = self._get_num_particles_per_partition()
         particles = []
-        if self.proposal_center is None:
-            random_variables = self._create_prior_random_variables()
+        prior_variables = self._create_prior_random_variables()
+        if self.proposal_center is not None:
+            proposal_variables = self._create_proposal_random_variables()
         else:
-            random_variables = self._create_proposal_random_variables()
+            proposal_variables = None
         for i in range(num_particles_per_partition):
-            particles.append(self._sample_particle(random_variables))
+            p = self._create_particle(prior_variables, proposal_variables)
+            particles.append(p)
         return particles
 
 
     def _get_num_particles_per_partition(self,):
         num_particles_per_partition = self.num_particles/self.size
         remainder = self.num_particles % self.size
-        overtime_ranks = range(remainder):
+        overtime_ranks = range(remainder)
         if self.rank in overtime_ranks:
             num_particles_per_partition += 1
         return num_particles_per_partition
@@ -195,30 +199,40 @@ class SMCSampler(object):
 
 
     def _create_proposal_random_variables(self,):
-        centers = self.proposal_centers
+        centers = self.proposal_center
         scales = self.proposal_scales
         random_variables = dict()
-        for key in self.mcmc.pymc_order:
+        for key in self.mcmc.params.keys():
             variance = (centers[key] * scales[key])**2
             random_variables[key] = Normal(key, centers[key], 1/variance)
         return random_variables
 
 
-    def _sample_particle(self, random_variables):
-        param_keys = self.mcmc.keys()
-        param_vals = {key: random_variables[key].random() for key in param_keys}
-        prior_log_prob = np.sum([rv.logp for rv in random_variables])
+    def _create_particle(self, prior_variables, prop_variables=None):
+        param_vals, prior_logp = self._draw_random_variables(prior_variables)
+        if prop_variables is None:
+            prop_logp = prior_logp
+        else:
+            param_vals, prop_logp = self._draw_random_variables(prop_variables)
         log_like = self._evaluate_likelihood(param_vals)
-        log_weight = log_like*cooling_step + prior_log_prob - prop_log_prob
+        temp_step = self.temp_schedule[self.start_time_step]
+        log_weight = log_like*temp_step + prior_logp - prop_logp
         return Particle(param_vals, log_weight, log_like)
 
 
-    def _evaluate_likelihood(self, random_variables, param_vals):
+    def _draw_random_variables(self, random_variables):
+        param_keys = self.mcmc.params.keys()
+        param_vals = {key: random_variables[key].random() for key in param_keys}
+        param_log_prob = np.sum([rv.logp for rv in random_variables.values()])
+        return param_vals, param_log_prob
+
+
+    def _evaluate_likelihood(self, param_vals):
         '''
         Note: this method performs 1 model evaluation per call.
         '''
         mcmc = copy(self.mcmc)
-        for key, value in param_vals:
+        for key, value in param_vals.iteritems():
             index = mcmc.pymc_mod_order.index(key)
             mcmc.pymc_mod[index].value = value
         results_index = mcmc.pymc_mod_order.index('results')
@@ -227,9 +241,9 @@ class SMCSampler(object):
 
 
     def _initialize_particle_chain(self, particles):
-        particles = self.comm.gather(particles, root=0)
+        particles = self.comm.gather(particles, root=0)[0]
         if self.rank == 0:
-            particle_chain = ParticleSet(self.num_particles)
+            particle_chain = ParticleChain(self.num_particles)
             particle_chain.add_step(particles)
             particle_chain.normalize_step_weights()
         else:
@@ -240,7 +254,7 @@ class SMCSampler(object):
     def load_particle_chain_from_hdf5(self, hdf5_file_path):
         '''
         :param hdf5_file_path: file path of a particle chain saved using the
-            ParticleSet.save() method.
+            ParticleChain.save() method.
         :type hdf5_file_path: string
         '''
         if self.rank == 0:
@@ -267,7 +281,7 @@ class SMCSampler(object):
 
 
     def _compute_new_particle_weights(self, temperature_step):
-        new_particles = self.particle_chain.step[-1]
+        new_particles = self.particle_chain.copy_step()
         for p in new_particles:
             p.weight = np.log(p.weight)+p.log_like*temperature_step
         return None
@@ -316,7 +330,8 @@ class SMCSampler(object):
         return partitions
 
 
-    def _mutate_new_particles(particles, covariance, measurement_std_dev):
+    def _mutate_new_particles(self, particles, covariance, measurement_std_dev,
+                              temperature_step):
         '''
         Predicts next distribution along the temperature schedule path using
         the MCMC kernel.
@@ -329,7 +344,7 @@ class SMCSampler(object):
                                      q0=particle.params)
             mcmc.sample(self.num_mcmc_steps, burnin=0, step_method=step_method,
                         cov=covariance, verbose=True, phi=temperature_step)
-            stochastics = mcmc.db.getstate()['stochastics']
+            stochastics = mcmc.MCMC.db.getstate()['stochastics']
             params = {key: stochastics[key] for key in particle.params.keys()}
             particle.params = params
             particle.log_like = mcmc.MCMC.logp
@@ -340,7 +355,7 @@ class SMCSampler(object):
     def _update_particle_chain_with_new_particles(self, new_particles):
         if self.rank == 0:
             particles = np.concatenate(new_particles)
-            self.particle_chain.overwrite_step(step=-1, particles)
+            self.particle_chain.overwrite_step(step=-1, particle_list=particles)
         return None
 
 
