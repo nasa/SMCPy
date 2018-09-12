@@ -270,6 +270,24 @@ class SMCSampler(object):
         return None
 
 
+    def _compute_current_step_covariance(self):
+        covariance = self.particle_chain.calculate_step_covariance(step=-1)
+        if not self.is_positive_definite(covariance):
+            msg = 'current step cov not pos def, setting to identity matrix'
+            warnings.warn(msg)
+            covariance = np.eye(covariance.shape[0])
+        return covariance
+
+
+    @staticmethod
+    def is_positive_definite(covariance):
+        try:
+            np.linalg.cholesky(covariance)
+            return True
+        except np.linalg.linalg.LinAlgError:
+            return False
+
+
     def _create_new_particles(self):
         new_particles = self.particle_chain.copy_step(step=-1)
         self.particle_chain.add_step(new_particles)
@@ -277,8 +295,7 @@ class SMCSampler(object):
 
 
     def _compute_new_particle_weights(self, temperature_step):
-        new_particles = self.particle_chain.copy_step()
-        for p in new_particles:
+        for p in self.particle_chain.step[-1]:
             p.weight = np.exp(np.log(p.weight)+p.log_like*temperature_step)
         return None
 
@@ -303,24 +320,6 @@ class SMCSampler(object):
         return None
 
 
-    def _compute_current_step_covariance(self):
-        covariance = self.particle_chain.calculate_step_covariance(step=-1)
-        if not self.is_positive_definite(covariance):
-            msg = 'current step cov not pos def, setting to identity matrix'
-            warnings.warn(msg)
-            covariance = np.eye(covariance.shape[0])
-        return covariance
-
-
-    @staticmethod
-    def is_positive_definite(covariance):
-        try:
-            np.linalg.cholesky(covariance)
-            return True
-        except np.linalg.linalg.LinAlgError:
-            return False
-
-
     def _partition_new_particles(self):
         partitions = np.array_split(self.particle_chain.step[-1], self.size)
         return partitions
@@ -339,7 +338,7 @@ class SMCSampler(object):
             mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
                                      q0=particle.params)
             mcmc.sample(self.num_mcmc_steps, burnin=0, step_method=step_method,
-                        cov=covariance, verbose=True, phi=temperature_step)
+                        cov=covariance, verbose=-1, phi=temperature_step)
             stochastics = mcmc.MCMC.db.getstate()['stochastics']
             params = {key: stochastics[key] for key in particle.params.keys()}
             particle.params = params
