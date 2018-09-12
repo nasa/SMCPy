@@ -87,6 +87,7 @@ class SMCSampler(object):
         else:
             raise ValueError('restart_time not in range [0, num_time_steps]')
 
+        import pdb; pdb.set_trace()
         self._set_particle_chain(particle_chain)
         for t in range(num_time_steps)[self.start_time_step+1:]:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t-1]
@@ -213,7 +214,7 @@ class SMCSampler(object):
         log_like = self._evaluate_likelihood(param_vals)
         temp_step = self.temp_schedule[self.start_time_step]
         log_weight = log_like*temp_step + prior_logp - prop_logp
-        return Particle(param_vals, log_weight, log_like)
+        return Particle(param_vals, np.exp(log_weight), log_like)
 
 
     def _draw_random_variables(self, random_variables):
@@ -279,7 +280,7 @@ class SMCSampler(object):
     def _compute_new_particle_weights(self, temperature_step):
         new_particles = self.particle_chain.copy_step()
         for p in new_particles:
-            p.weight = np.log(p.weight)+p.log_like*temperature_step
+            p.weight = np.exp(np.log(p.weight)+p.log_like*temperature_step)
         return None
 
 

@@ -158,22 +158,12 @@ class ParticleChain():
 
         :param int step: step identifier, default is most recent (i.e., step=-1)
         '''
-        # TODO: find better way to handle log weights and non-log weights
         weights = self.get_weights(step)
         particles = self.get_particles(step)
-
-        # if non-log weights
-        if np.sum(weights) > 0:
-            total_weight = np.sum(weights)
-            for p in particles:
-                p.weight = p.weight/total_weight
-
-        # if log weights
-        else:
-            total_weight = np.sum(np.exp(weights))
-            for p in particles:
-                # normalized weights between 0 and 1 (unlog)
-                p.weight = np.exp(p.weight-np.log(total_weight))
+        total_weight = np.sum(weights)
+        for p in particles:
+            p.weight = p.weight/total_weight
+        return None
 
 
     def overwrite_step(self, step, particle_list):
