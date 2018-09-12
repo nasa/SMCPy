@@ -7,10 +7,6 @@ from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
 import warnings
 
-## for multiprocessing pickle fix
-#from smc.pickle_methods import _pickle_method, _unpickle_method
-#import types
-#import copy_reg
 
 class SMCSampler(object):
     '''
