@@ -109,7 +109,7 @@ class SMCSampler(object):
             new_particles = self._mutate_new_particles(new_particles, step_cov,
                                                        measurement_std_dev,
                                                        temperature_step)
-            new_particles = self.comm.gather(particles, root=0)
+            new_particles = self.comm.gather(new_particles, root=0)
             self._update_particle_chain_with_new_particles(new_particles)
             self._save_particle_chain_progress(hdf5_file_path)
         return self.particle_chain
