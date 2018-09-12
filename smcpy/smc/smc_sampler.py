@@ -87,7 +87,6 @@ class SMCSampler(object):
         else:
             raise ValueError('restart_time not in range [0, num_time_steps]')
 
-        import pdb; pdb.set_trace()
         self._set_particle_chain(particle_chain)
         for t in range(num_time_steps)[self.start_time_step+1:]:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t-1]
