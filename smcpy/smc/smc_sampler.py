@@ -128,7 +128,7 @@ class SMCSampler(object):
 
     def _set_ESS_threshold(self, ESS_threshold):
         if ESS_threshold is None:
-            ESS_threshold = 0.25*num_particles
+            ESS_threshold = 0.25*self.num_particles
         self.ESS_threshold = ESS_threshold
         return None
 
