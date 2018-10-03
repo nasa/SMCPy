@@ -33,7 +33,7 @@ class SMCSampler(object):
 
     def sample(self, num_particles, num_time_steps, num_mcmc_steps,
                measurement_std_dev, ESS_threshold=None, proposal_center=None,
-               proposal_scales=None, restart_time=0, hdf5_file_path=None):
+               proposal_scales=None, restart_time=0, hdf5_file_path='smc.h5'):
         '''
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
@@ -107,7 +107,8 @@ class SMCSampler(object):
                                                        temperature_step)
             new_particles = self.comm.gather(new_particles, root=0)
             self._update_particle_chain_with_new_particles(new_particles)
-            self._save_particle_chain_progress(hdf5_file_path)
+            #TODO:
+            #self._save_particle_chain_progress(hdf5_file_path)
         return self.particle_chain
 
 
@@ -128,7 +129,7 @@ class SMCSampler(object):
 
     def _set_ESS_threshold(self, ESS_threshold):
         if ESS_threshold is None:
-            ESS_threshold = 0.25*self.num_particles
+            ESS_threshold = 0.5*self.num_particles
         self.ESS_threshold = ESS_threshold
         return None
 
@@ -356,5 +357,5 @@ class SMCSampler(object):
 
     def _save_particle_chain_progress(self, hdf5_file_path):
         if self.rank == 0:
-            self.particle_chain.save(hdf5_file_path)
+            self.particle_chain.save(hdf5_file_path, mode='a')
         return None
