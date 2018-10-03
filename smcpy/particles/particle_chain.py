@@ -11,33 +11,30 @@ class ParticleChain():
 
     def __init__(self, num_particles):
         self.num_particles = num_particles
-        self.step = []
-        self.current_step = 0
-        self.nsteps = 0
+        self._steps = []
 
 
     def add_empty_step(self,):
-        self.step.append([])
-        self.nsteps += 1
+        self._steps.append([])
 
 
     def add_particle(self, particle, step_number):
         '''
         Add a single particle to a given step.
         '''
-        if self.nsteps == 0:
+        if self.get_num_steps() == 0:
             self.add_empty_step()
-        if len(self.step[step_number]) >= self.num_particles:
+        if len(self._steps[step_number]) >= self.num_particles:
             msg = 'Cannot add particle; new step length would exceed number '+\
-                  'of total particles allowed.'
+                  'of total particles set by self.num_particles.'
             raise ValueError(msg)
         # check to see if new step should be added
-        if step_number == len(self.step)+1:
+        if step_number == len(self._steps)+1:
             self.add_empty_step()
-        elif step_number > len(self.step)+1:
+        elif step_number > len(self._steps)+1:
             raise ValueError('cannot skip steps, next step available for '+\
-                             'creation is %s' % (len(self.step)+1))
-        self.step[step_number].append(particle)
+                             'creation is %s' % (len(self._steps)+1))
+        self._steps[step_number].append(particle)
 
     
     def add_step(self, particle_list):
@@ -46,33 +43,39 @@ class ParticleChain():
         '''
         if len(particle_list) != self.num_particles:
             raise ValueError('len(particle_list) must equal self.num_particles')
-        self.step.append(particle_list)
-        self.nsteps += 1
+        self._steps.append(particle_list)
+
+
+    def get_num_steps(self,):
+        '''
+        Returns number of steps in the particle chain.
+        '''
+        return len(self._steps)
 
 
     def get_likes(self, step=-1):
         '''
         Returns a list of all particle likelihoods for a given step.
         '''
-        return [np.exp(p.log_like) for p in self.step[step]]
+        return [np.exp(p.log_like) for p in self._steps[step]]
 
 
     def get_log_likes(self, step=-1):
         '''
         Returns a list of all particle log likelihoods for a given step.
         '''
-        return [p.log_like for p in self.step[step]]
+        return [p.log_like for p in self._steps[step]]
 
 
     def get_mean(self, step=-1):
         '''
         Computes mean for a given step.
         '''
-        param_names = self.step[step][0].params.keys()
+        param_names = self._steps[step][0].params.keys()
         mean = dict()
         for pn in param_names:
             mean[pn] = []
-            for p in self.step[step]:
+            for p in self._steps[step]:
                 mean[pn].append(p.weight*p.params[pn])
             mean[pn] = np.sum(mean[pn])
         return mean
@@ -98,14 +101,14 @@ class ParticleChain():
         '''
         Returns a list of all particles for a given step.
         '''
-        return self.step[step]
+        return self._steps[step]
 
 
     def get_weights(self, step=-1):
         '''
         Returns a list of all weights for a given step.
         '''
-        return [p.weight for p in self.step[step]]
+        return [p.weight for p in self._steps[step]]
 
 
     def calculate_step_covariance(self, step=-1):
@@ -149,7 +152,7 @@ class ParticleChain():
         '''
         Returns a copy of particle chain at step (most recent step by default).
         '''
-        return copy.deepcopy(self.step[-1])
+        return copy.deepcopy(self._steps[-1])
 
     
     def normalize_step_weights(self, step=-1):
@@ -173,7 +176,7 @@ class ParticleChain():
         '''
         if len(particle_list) != self.num_particles:
             raise ValueError('len(particle_list) must equal self.num_particles')
-        self.step[step] = particle_list
+        self._steps[step] = particle_list
 
 
     def plot_marginal(self, key, step=-1, save=False, show=True,
@@ -187,7 +190,7 @@ class ParticleChain():
             import matplotlib.pyplot as plt
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        for p in self.step[step]:
+        for p in self._steps[step]:
             ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
             ax.plot(p.params[key], p.weight, 'o')
         if save == True:
@@ -206,10 +209,47 @@ class ParticleChain():
             plt
         except:
             import matplotlib.pyplot as plt
-        param_names = self.step[0][0].params.keys()
+        param_names = self._steps[0][0].params.keys()
         for i, pn in enumerate(param_names):
             self.plot_marginal(key=pn, step=step, save=save, show=show,
                                prefix=prefix)
+
+    def resample(self, step=-1, overwrite=True):
+        '''
+        Resamples a given step in the particle chain based on normalized 
+        weights. Assigns discrete probabilities to each particle (sum to 1),
+        resample from this discrete distribution using the particle's copy()
+        method.
+
+        :param boolean overwrite: if True (default), overwrites current step
+            with resampled step, else appends new step
+        '''
+        particles = self.get_particles(step)
+        weights = self.get_weights(step)
+        weights_cs = np.cumsum(weights)
+        
+        # intervals based on weights to use for discrete probability draw
+        intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
+
+        # generate random numbers, iterate to find intervals for resample
+        R = np.random.uniform(0, 1, [self.num_particles,])
+        new_particles = []
+        uniform_weight = 1./self.num_particles
+        for r in R:
+            for i, (a, b) in enumerate(intervals):
+
+                if a <= r < b:
+                    # resample
+                    new_particles.append(particles[i].copy())
+                    # assign uniform weight
+                    new_particles[-1].weight = uniform_weight
+                    break
+
+        # overwrite or append new step
+        if overwrite == True:
+            self.overwrite_step(step, new_particles)
+        else:
+            self.add_step(new_particles)
 
 
     def plot_pairwise_weights(self, step=-1, param_names=None, labels=None,
@@ -314,7 +354,7 @@ class ParticleChain():
 
 
     def print_particle_info(self, step_num, particle_num):
-        step = self.step[step_num]
+        step = self._steps[step_num]
         particle = step[particle_num]
         print '-----------------------------------------------------'
         print 'Step: %s' % step_num
@@ -323,58 +363,10 @@ class ParticleChain():
 
 
     def print_step_info(self, step_num=-1):
-        step = self.step[step_num]
+        step = self._steps[step_num]
         print '-----------------------------------------------------'
         print 'Step: %s' % step_num
         for i, particle in enumerate(step):
             print '-----------------------------------------------------'
             print 'Particle: %s' % i
             particle.print_particle_info()
-    
-
-    def resample(self, step=-1, overwrite=True):
-        '''
-        Resamples a given step in the particle chain based on normalized 
-        weights. Assigns discrete probabilities to each particle (sum to 1),
-        resample from this discrete distribution using the particle's copy()
-        method.
-
-        :param boolean overwrite: if True (default), overwrites current step
-            with resampled step, else appends new step
-        '''
-        particles = self.get_particles(step)
-        weights = self.get_weights(step)
-        weights_cs = np.cumsum(weights)
-        
-        # intervals based on weights to use for discrete probability draw
-        intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
-
-        # generate random numbers, iterate to find intervals for resample
-        R = np.random.uniform(0, 1, [self.num_particles,])
-        new_particles = []
-        uniform_weight = 1./self.num_particles
-        for r in R:
-            for i, (a, b) in enumerate(intervals):
-
-                if a <= r < b:
-                    # resample
-                    new_particles.append(particles[i].copy())
-                    # assign uniform weight
-                    new_particles[-1].weight = uniform_weight
-                    break
-
-        # overwrite or append new step
-        if overwrite == True:
-            self.overwrite_step(step, new_particles)
-        else:
-            self.add_step(new_particles)
-
-
-    def save(self, filename='pchain.p', mode='w'):
-        #TODO: change to hdf5
-        '''
-        Saves particle chain as a pickle file.
-        '''
-        import pickle
-        with open(filename, mode) as pf:
-            pickle.dump(self, pf)

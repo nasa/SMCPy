@@ -108,7 +108,7 @@ class SMCSampler(object):
             new_particles = self._comm.gather(new_particles, root=0)
             self._update_particle_chain_with_new_particles(new_particles)
             #TODO:
-            #self._save_particle_chain_progress(hdf5_file_path)
+            #self.save_particle_chain_to_hdf5(hdf5_file_path)
         return self.particle_chain
 
 
@@ -248,19 +248,6 @@ class SMCSampler(object):
         return particle_chain
 
 
-    def load_particle_chain_from_hdf5(self, hdf5_file_path):
-        '''
-        :param hdf5_file_path: file path of a particle chain saved using the
-            ParticleChain.save() method.
-        :type hdf5_file_path: string
-        '''
-        if self._rank == 0:
-            #load
-            return particle_chain
-        else:
-            return None
-
-
     def _set_particle_chain(self, particle_chain):
         self.particle_chain = particle_chain
         return None
@@ -296,7 +283,7 @@ class SMCSampler(object):
 
 
     def _compute_new_particle_weights(self, temperature_step):
-        for p in self.particle_chain.step[-1]:
+        for p in self.particle_chain.get_particles(-1):
             p.weight = np.exp(np.log(p.weight)+p.log_like*temperature_step)
         return None
 
@@ -322,7 +309,8 @@ class SMCSampler(object):
 
 
     def _partition_new_particles(self):
-        partitions = np.array_split(self.particle_chain.step[-1], self._size)
+        partitions = np.array_split(self.particle_chain.get_particles(-1),
+                                    self._size)
         return partitions
 
 
@@ -355,7 +343,20 @@ class SMCSampler(object):
         return None
 
 
-    def _save_particle_chain_progress(self, hdf5_file_path):
+    def load_particle_chain_from_hdf5(self, hdf5_file_path):
+        '''
+        :param hdf5_file_path: file path of a particle chain saved using the
+            ParticleChain.save() method.
+        :type hdf5_file_path: string
+        '''
+        if self._rank == 0:
+            #load
+            return particle_chain
+        else:
+            return None
+
+
+    def save_particle_chain_to_hdf5(self, hdf5_file_path):
         if self._rank == 0:
             self.particle_chain.save(hdf5_file_path, mode='a')
         return None
