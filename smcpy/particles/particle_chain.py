@@ -15,6 +15,7 @@ class ParticleChain():
 
     def add_empty_step(self,):
         self._steps.append([])
+        return None
 
 
     def add_particle(self, particle, step_number):
@@ -31,6 +32,7 @@ class ParticleChain():
             raise ValueError('cannot skip steps, next step available for '+\
                              'creation is %s' % (len(self._steps)+1))
         self._steps[step_number].append(particle)
+        return None
 
     
     def add_step(self, particle_list):
@@ -38,6 +40,7 @@ class ParticleChain():
         Add an entire step to the chain, providing a list of particles.
         '''
         self._steps.append(particle_list)
+        return None
 
 
     def get_num_steps(self,):
@@ -171,42 +174,8 @@ class ParticleChain():
         if len(particle_list) != len(self.get_particles(step)):
             raise ValueError('Number of new particles must equal number of old')
         self._steps[step] = particle_list
+        return None
 
-
-    def plot_marginal(self, key, step=-1, save=False, show=True,
-                      prefix='marginal_'):
-        '''
-        Plots a single marginal approximation for param given by <key>.
-        '''
-        try:
-            plt
-        except: 
-            import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        for p in self._steps[step]:
-            ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
-            ax.plot(p.params[key], p.weight, 'o')
-        if save == True:
-            plt.savefig(prefix+key+'.png')
-        if show == True:
-            plt.show()
-        plt.close(fig)
-
-
-    def plot_all_marginals(self, step=-1, save=False, show=True,
-                           prefix='marginal_'):
-        '''
-        Plots marginal approximation for all parameters in the chain.
-        '''
-        try:
-            plt
-        except:
-            import matplotlib.pyplot as plt
-        param_names = self._steps[0][0].params.keys()
-        for i, pn in enumerate(param_names):
-            self.plot_marginal(key=pn, step=step, save=save, show=show,
-                               prefix=prefix)
 
     def resample(self, step=-1, overwrite=True):
         '''
@@ -245,6 +214,45 @@ class ParticleChain():
             self.overwrite_step(step, new_particles)
         else:
             self.add_step(new_particles)
+        return None
+
+
+    def plot_marginal(self, key, step=-1, save=False, show=True,
+                      prefix='marginal_'):
+        '''
+        Plots a single marginal approximation for param given by <key>.
+        '''
+        try:
+            plt
+        except: 
+            import matplotlib.pyplot as plt
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        for p in self._steps[step]:
+            ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
+            ax.plot(p.params[key], p.weight, 'o')
+        if save == True:
+            plt.savefig(prefix+key+'.png')
+        if show == True:
+            plt.show()
+        plt.close(fig)
+        return None
+
+
+    def plot_all_marginals(self, step=-1, save=False, show=True,
+                           prefix='marginal_'):
+        '''
+        Plots marginal approximation for all parameters in the chain.
+        '''
+        try:
+            plt
+        except:
+            import matplotlib.pyplot as plt
+        param_names = self._steps[0][0].params.keys()
+        for i, pn in enumerate(param_names):
+            self.plot_marginal(key=pn, step=step, save=save, show=show,
+                               prefix=prefix)
+        return None
 
 
     def plot_pairwise_weights(self, step=-1, param_names=None, labels=None,
@@ -346,6 +354,7 @@ class ParticleChain():
         if show==True:
             plt.show()
         plt.close(fig)
+        return None
 
 
     def print_particle_info(self, step_num, particle_num):
@@ -355,6 +364,7 @@ class ParticleChain():
         print 'Step: %s' % step_num
         print 'Particle: %s' % particle_num
         particle.print_particle_info()
+        return None
 
 
     def print_step_info(self, step_num=-1):
@@ -365,3 +375,4 @@ class ParticleChain():
             print '-----------------------------------------------------'
             print 'Particle: %s' % i
             particle.print_particle_info()
+        return None
