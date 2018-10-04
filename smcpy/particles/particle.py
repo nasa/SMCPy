@@ -26,6 +26,7 @@ class Particle():
         print 'params = %s' % self.params
         print 'weight = %s' % self.weight
         print 'log_like = %s' % self.log_like
+        return None
 
 
     def copy(self):

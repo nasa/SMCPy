@@ -9,8 +9,7 @@ class ParticleChain():
     steps in the temperature schedule). 
     '''
 
-    def __init__(self, num_particles):
-        self.num_particles = num_particles
+    def __init__(self):
         self._steps = []
 
 
@@ -24,10 +23,7 @@ class ParticleChain():
         '''
         if self.get_num_steps() == 0:
             self.add_empty_step()
-        if len(self._steps[step_number]) >= self.num_particles:
-            msg = 'Cannot add particle; new step length would exceed number '+\
-                  'of total particles set by self.num_particles.'
-            raise ValueError(msg)
+
         # check to see if new step should be added
         if step_number == len(self._steps)+1:
             self.add_empty_step()
@@ -41,8 +37,6 @@ class ParticleChain():
         '''
         Add an entire step to the chain, providing a list of particles.
         '''
-        if len(particle_list) != self.num_particles:
-            raise ValueError('len(particle_list) must equal self.num_particles')
         self._steps.append(particle_list)
 
 
@@ -174,8 +168,8 @@ class ParticleChain():
         Overwrite an entire step of the chain with the provided list of
         particles.
         '''
-        if len(particle_list) != self.num_particles:
-            raise ValueError('len(particle_list) must equal self.num_particles')
+        if len(particle_list) != len(self.get_particles(step)):
+            raise ValueError('Number of new particles must equal number of old')
         self._steps[step] = particle_list
 
 
@@ -225,6 +219,7 @@ class ParticleChain():
             with resampled step, else appends new step
         '''
         particles = self.get_particles(step)
+        num_particles = len(particles)
         weights = self.get_weights(step)
         weights_cs = np.cumsum(weights)
         
@@ -232,9 +227,9 @@ class ParticleChain():
         intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
 
         # generate random numbers, iterate to find intervals for resample
-        R = np.random.uniform(0, 1, [self.num_particles,])
+        R = np.random.uniform(0, 1, [num_particles,])
         new_particles = []
-        uniform_weight = 1./self.num_particles
+        uniform_weight = 1./num_particles
         for r in R:
             for i, (a, b) in enumerate(intervals):
 
