@@ -5,6 +5,7 @@ import numpy as np
 from pymc import Normal
 from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
+from ..hdf5.hdf5_storage import HDF5Storage
 import warnings
 
 
@@ -240,7 +241,7 @@ class SMCSampler(object):
     def _initialize_particle_chain(self, particles):
         particles = self._comm.gather(particles, root=0)[0]
         if self._rank == 0:
-            particle_chain = ParticleChain(self.num_particles)
+            particle_chain = ParticleChain()
             particle_chain.add_step(particles)
             particle_chain.normalize_step_weights()
         else:
@@ -343,20 +344,26 @@ class SMCSampler(object):
         return None
 
 
-    def load_particle_chain_from_hdf5(self, hdf5_file_path):
+    @staticmethod
+    def save_particle_chain(hdf5_file_path):
         '''
-        :param hdf5_file_path: file path of a particle chain saved using the
-            ParticleChain.save() method.
+        :param hdf5_file_path: file path at which to save particle chain
         :type hdf5_file_path: string
         '''
-        if self._rank == 0:
-            #load
-            return particle_chain
-        else:
-            return None
-
-
-    def save_particle_chain_to_hdf5(self, hdf5_file_path):
-        if self._rank == 0:
-            self.particle_chain.save(hdf5_file_path, mode='a')
+        hdf5 = HDF5Storage(hdf5_file_path, mode='w')
+        hdf5.write_chain(self.particle_chain)
+        hdf5.close()
         return None
+
+
+    @staticmethod
+    def load_particle_chain(hdf5_file_path):
+        '''
+        :param hdf5_file_path: file path of a particle chain saved using the
+            ParticleChain.save() or self.save_particle_chain() methods.
+        :type hdf5_file_path: string
+        '''
+        hdf5 = HDF5Storage(hdf5_file_path, mode='r')
+        particle_chain = hdf5.read_chain()
+        hdf5.close()
+        return particle_chain
