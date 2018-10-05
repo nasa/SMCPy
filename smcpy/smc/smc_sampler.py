@@ -91,23 +91,13 @@ class SMCSampler(object):
         self._set_particle_chain(particle_chain)
         for t in range(num_time_steps)[self._start_time_step+1:]:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t-1]
-            if self._rank == 0:
-                step_cov = self._compute_current_step_covariance()
-                self._create_new_particles()
-                self._compute_new_particle_weights(temperature_step)
-                self._normalize_new_particle_weights()
-                self._resample_if_needed()
-                new_particles = self._partition_new_particles()
-            else:
-                step_cov = None
-                new_particles = [None]
-            step_cov = self._comm.scatter([step_cov]*self._size, root=0)
-            new_particles = self._comm.scatter(new_particles, root=0)
-            new_particles = self._mutate_new_particles(new_particles, step_cov,
-                                                       measurement_std_dev,
-                                                       temperature_step)
-            new_particles = self._comm.gather(new_particles, root=0)
-            self._update_particle_chain_with_new_particles(new_particles)
+            new_particles = self._create_new_particles(temperature_step)
+            covariance = self._compute_current_step_covariance()
+            mutated_particles = self._mutate_new_particles(new_particles,
+                                                           covariance,
+                                                           measurement_std_dev,
+                                                           temperature_step)
+            self._update_particle_chain_with_new_particles(mutated_particles)
             #TODO:
             #self.save_particle_chain_to_hdf5(hdf5_file_path)
         return self.particle_chain
@@ -239,10 +229,10 @@ class SMCSampler(object):
 
 
     def _initialize_particle_chain(self, particles):
-        particles = self._comm.gather(particles, root=0)[0]
+        particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
             particle_chain = ParticleChain()
-            particle_chain.add_step(particles)
+            particle_chain.add_step(np.concatenate(particles))
             particle_chain.normalize_step_weights()
         else:
             particle_chain = None
@@ -260,11 +250,15 @@ class SMCSampler(object):
 
 
     def _compute_current_step_covariance(self):
-        covariance = self.particle_chain.calculate_step_covariance(step=-1)
-        if not self._is_positive_definite(covariance):
-            msg = 'current step cov not pos def, setting to identity matrix'
-            warnings.warn(msg)
-            covariance = np.eye(covariance.shape[0])
+        if self._rank == 0:
+            covariance = self.particle_chain.calculate_step_covariance(step=-1)
+            if not self._is_positive_definite(covariance):
+                msg = 'current step cov not pos def, setting to identity matrix'
+                warnings.warn(msg)
+                covariance = np.eye(covariance.shape[0])
+        else:
+            covariance = None
+        covariance = self._comm.scatter([covariance]*self._size, root=0)
         return covariance
 
 
@@ -277,7 +271,20 @@ class SMCSampler(object):
             return False
 
 
-    def _create_new_particles(self):
+    def _create_new_particles(self, temperature_step):
+        if self._rank == 0:
+            self._initialize_new_particles()
+            self._compute_new_particle_weights(temperature_step)
+            self._normalize_new_particle_weights()
+            self._resample_if_needed()
+            new_particles = self._partition_new_particles()
+        else:
+            new_particles = [None]
+        new_particles = self._comm.scatter(new_particles, root=0)
+        return new_particles
+
+
+    def _initialize_new_particles(self):
         new_particles = self.particle_chain.copy_step(step=-1)
         self.particle_chain.add_step(new_particles)
         return None
@@ -334,6 +341,7 @@ class SMCSampler(object):
             particle.params = params
             particle.log_like = mcmc.MCMC.logp
             new_particles.append(particle)
+        new_particles = self._comm.gather(new_particles, root=0)
         return new_particles
 
 
@@ -344,26 +352,33 @@ class SMCSampler(object):
         return None
 
 
-    @staticmethod
-    def save_particle_chain(hdf5_file_path):
+    def save_particle_chain(self, hdf5_file_path):
         '''
+        Saves self.particle_chain to an hdf5 file using the HDF5Storage class.
+
         :param hdf5_file_path: file path at which to save particle chain
         :type hdf5_file_path: string
         '''
-        hdf5 = HDF5Storage(hdf5_file_path, mode='w')
-        hdf5.write_chain(self.particle_chain)
-        hdf5.close()
+        if self._rank == 0:
+            hdf5 = HDF5Storage(hdf5_file_path, mode='w')
+            hdf5.write_chain(self.particle_chain)
+            hdf5.close()
         return None
 
 
-    @staticmethod
-    def load_particle_chain(hdf5_file_path):
+    def load_particle_chain(self, hdf5_file_path):
         '''
+        Loads and returns a particle chain object stored using the HDF5Storage
+        class.
+
         :param hdf5_file_path: file path of a particle chain saved using the
             ParticleChain.save() or self.save_particle_chain() methods.
         :type hdf5_file_path: string
         '''
-        hdf5 = HDF5Storage(hdf5_file_path, mode='r')
-        particle_chain = hdf5.read_chain()
-        hdf5.close()
+        if self._rank == 0:
+            hdf5 = HDF5Storage(hdf5_file_path, mode='r')
+            particle_chain = hdf5.read_chain()
+            hdf5.close()
+        else:
+            particle_chain = None
         return particle_chain
