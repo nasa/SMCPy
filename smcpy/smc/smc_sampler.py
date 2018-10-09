@@ -14,9 +14,25 @@ class SMCSampler(object):
     Class for performing parallel Sequential Monte Carlo sampling 
     '''
 
-    def __init__(self, data, model, param_priors):
+    def __init__(self, data, model, param_priors, save_file='smc.h5'):
+        self.set_save_file(save_file)
         self._comm, self._size, self._rank = self._setup_communicator()
         self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
+
+
+    def set_save_file(self, save_file):
+        '''
+        Sets the file to which particle information will be saved during
+        sampling. This method can allow a user to use an existing class instance
+        to perform multiple sampling procedures or to prevent overwriting a file
+        during a restart.
+
+        :param save_file: the file path where particle information will be saved
+            during sampling.
+        :type save_file: string
+        '''
+        self._save_file = save_file
+        return None
 
 
     def _setup_communicator(self,):
@@ -34,7 +50,7 @@ class SMCSampler(object):
 
     def sample(self, num_particles, num_time_steps, num_mcmc_steps,
                measurement_std_dev, ESS_threshold=None, proposal_center=None,
-               proposal_scales=None, restart_time=0, hdf5_file_path='smc.h5'):
+               proposal_scales=None, restart_time=0, hdf5_to_load=None):
         '''
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
@@ -64,9 +80,9 @@ class SMCSampler(object):
             zero, meaning the sampling process starts at the prior distribution;
             note that restart_time < num_time_steps.
         :type restart_time: int
-        :param hdf5_file_path: file path of a particle chain saved using the
+        :param hdf5_to_load: file path of a particle chain saved using the
             ParticleChain.save() method.
-        :type hdf5_file_path: string
+        :type hdf5_to_load: string
 
 
         :Returns: A ParticleChain class instance that stores all particles and
@@ -84,7 +100,7 @@ class SMCSampler(object):
             particle_chain = self._initialize_particle_chain(particles)
         elif 0 < restart_time <= num_time_steps:
             self._set_start_time_equal_to_restart_time(restart_time)
-            particle_chain = self._load_particle_chain_from_hdf5(hdf5_file_path)
+            particle_chain = self.load_particle_chain(hdf5_to_load)
         else:
             raise ValueError('restart_time not in range [0, num_time_steps]')
 
@@ -98,8 +114,7 @@ class SMCSampler(object):
                                                            measurement_std_dev,
                                                            temperature_step)
             self._update_particle_chain_with_new_particles(mutated_particles)
-            #TODO:
-            #self.save_particle_chain_to_hdf5(hdf5_file_path)
+        self.save_particle_chain(self._save_file)
         return self.particle_chain
 
 
@@ -249,6 +264,10 @@ class SMCSampler(object):
         return None
 
 
+    def _file_exists(hdf5_file):
+        return os.path.exists(hdf5_file)
+
+
     def _compute_current_step_covariance(self):
         if self._rank == 0:
             covariance = self.particle_chain.calculate_step_covariance(step=-1)
@@ -352,33 +371,34 @@ class SMCSampler(object):
         return None
 
 
-    def save_particle_chain(self, hdf5_file_path):
+    def save_particle_chain(self, h5_file):
         '''
         Saves self.particle_chain to an hdf5 file using the HDF5Storage class.
 
-        :param hdf5_file_path: file path at which to save particle chain
-        :type hdf5_file_path: string
+        :param hdf5_to_load: file path at which to save particle chain
+        :type hdf5_to_load: string
         '''
         if self._rank == 0:
-            hdf5 = HDF5Storage(hdf5_file_path, mode='w')
+            hdf5 = HDF5Storage(h5_file, mode='w')
             hdf5.write_chain(self.particle_chain)
             hdf5.close()
         return None
 
 
-    def load_particle_chain(self, hdf5_file_path):
+    def load_particle_chain(self, h5_file):
         '''
         Loads and returns a particle chain object stored using the HDF5Storage
         class.
 
-        :param hdf5_file_path: file path of a particle chain saved using the
+        :param hdf5_to_load: file path of a particle chain saved using the
             ParticleChain.save() or self.save_particle_chain() methods.
-        :type hdf5_file_path: string
+        :type hdf5_to_load: string
         '''
         if self._rank == 0:
-            hdf5 = HDF5Storage(hdf5_file_path, mode='r')
+            hdf5 = HDF5Storage(h5_file, mode='r')
             particle_chain = hdf5.read_chain()
             hdf5.close()
+            print 'Particle chain loaded from %s.' % h5_file
         else:
             particle_chain = None
         return particle_chain
