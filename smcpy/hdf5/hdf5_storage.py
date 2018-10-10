@@ -43,7 +43,7 @@ class HDF5Storage(object):
         :param step_index: index of step that the particle belongs too
         :type step_index: integer
         '''
-        step_name = 'step_%s' % step_index
+        step_name = 'step_{0:03}'.format(step_index)
         return len(self._step_parent_grp[step_name].keys())
 
 
@@ -60,7 +60,7 @@ class HDF5Storage(object):
         :param particle_index: index of particle within a given step
         :type particle_index: integer
         '''
-        step_name = 'step_%s' % step_index
+        step_name = 'step_{0:03}'.format(step_index)
         particle_name = 'particle_%s' % particle_index
         if not step_name in self._step_parent_grp:
             step_grp = self._create_step_group(step_index)
@@ -102,7 +102,7 @@ class HDF5Storage(object):
         :param step_index: index of step being written
         :type step_index: integer
         '''
-        step_name = 'step_%s' % step_index
+        step_name = 'step_{0:03}'.format(step_index)
         step_grp = self._create_step_group(step_index)
         for particle_index, particle in enumerate(step):
             self.write_particle(particle, step_index, particle_index)
@@ -152,7 +152,7 @@ class HDF5Storage(object):
 
 
     def _create_step_group(self, step_index):
-        self._step_parent_grp.create_group('step_%s' % step_index)
+        self._step_parent_grp.create_group('step_{0:03}'.format(step_index))
         return None
 
 
@@ -174,12 +174,12 @@ class HDF5Storage(object):
 
 
     def _get_particle_group(self, step_index, particle_index):
-        step_name = 'step_%s' % step_index
+        step_name = 'step_{0:03}'.format(step_index)
         particle_name = 'particle_%s' % particle_index
         path = os.path.join(step_name, particle_name)
         return self._step_parent_grp[path]
 
 
     def _get_step_group(self, step_index):
-        step_name = 'step_%s' % step_index
+        step_name = 'step_{0:03}'.format(step_index)
         return self._step_parent_grp[step_name]
