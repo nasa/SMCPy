@@ -1,56 +1,45 @@
+import numpy as np
+import os
+import warnings
+
 from copy import copy
 from mpi4py import MPI
 from mcmc.MCMC import MCMC
-import numpy as np
 from pymc import Normal
 from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
 from ..hdf5.hdf5_storage import HDF5Storage
-import warnings
 
 
 class SMCSampler(object):
     '''
-    Class for performing parallel Sequential Monte Carlo sampling 
+    Class for performing parallel Sequential Monte Carlo sampling
     '''
 
-    def __init__(self, data, model, param_priors, save_file='smc.h5'):
-        self.set_save_file(save_file)
+    def __init__(self, data, model, param_priors):
         self._comm, self._size, self._rank = self._setup_communicator()
         self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
 
 
-    def set_save_file(self, save_file):
-        '''
-        Sets the file to which particle information will be saved during
-        sampling. This method can allow a user to use an existing class instance
-        to perform multiple sampling procedures or to prevent overwriting a file
-        during a restart.
-
-        :param save_file: the file path where particle information will be saved
-            during sampling.
-        :type save_file: string
-        '''
-        self._save_file = save_file
-        return None
-
-
-    def _setup_communicator(self,):
+    @staticmethod
+    def _setup_communicator():
         comm = MPI.COMM_WORLD
         size = comm.Get_size()
         my_rank = comm.Get_rank()
         return comm, size, my_rank
 
 
-    def _setup_mcmc_sampler(self, data, model, param_priors):
+    @staticmethod
+    def _setup_mcmc_sampler(data, model, param_priors):
         mcmc = MCMC(data=data, model=model, params=param_priors,
                     storage_backend='ram')
         return mcmc
-    
+
 
     def sample(self, num_particles, num_time_steps, num_mcmc_steps,
                measurement_std_dev, ESS_threshold=None, proposal_center=None,
-               proposal_scales=None, restart_time=0, hdf5_to_load=None):
+               proposal_scales=None, restart_time_step=0, hdf5_to_load=None,
+               autosave_file=None):
         '''
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
@@ -76,10 +65,12 @@ class SMCSampler(object):
             respectively. The default is None, which sets initial proposal
             distribution = prior.
         :type proposal_scales: dict
-        :param restart_time: time step at which to restart sampling; default is
-            zero, meaning the sampling process starts at the prior distribution;
-            note that restart_time < num_time_steps.
-        :type restart_time: int
+        :param restart_time_step: time step at which to restart sampling;
+            default is zero, meaning the sampling process starts at the prior
+            distribution; note that restart_time_step < num_time_steps. The
+            step at restart_time is retained, and the sampling begins at the
+            next step (t=restart_time_step+1).
+        :type restart_time_step: int
         :param hdf5_to_load: file path of a particle chain saved using the
             ParticleChain.save() method.
         :type hdf5_to_load: string
@@ -92,19 +83,23 @@ class SMCSampler(object):
         self._set_temperature_schedule(num_time_steps)
         self._set_num_mcmc_steps(num_mcmc_steps)
         self._set_ESS_threshold(ESS_threshold)
+        self._set_autosave_behavior(autosave_file)
 
-        if restart_time == 0:
+        if restart_time_step == 0:
             self._set_proposal_distribution(proposal_center, proposal_scales)
             self._set_start_time_based_on_proposal()
             particles = self._initialize_particles(measurement_std_dev)
             particle_chain = self._initialize_particle_chain(particles)
-        elif 0 < restart_time <= num_time_steps:
-            self._set_start_time_equal_to_restart_time(restart_time)
+        elif 0 < restart_time_step <= num_time_steps:
+            self._set_start_time_equal_to_restart_time_step(restart_time_step)
             particle_chain = self.load_particle_chain(hdf5_to_load)
+            particle_chain = self._trim_particle_chain(particle_chain,
+                                                       restart_time_step)
         else:
-            raise ValueError('restart_time not in range [0, num_time_steps]')
+            raise ValueError('restart time outside range [0, num_time_steps]')
 
         self._set_particle_chain(particle_chain)
+        self._autosave_particle_chain()
         for t in range(num_time_steps)[self._start_time_step+1:]:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t-1]
             new_particles = self._create_new_particles(temperature_step)
@@ -114,7 +109,8 @@ class SMCSampler(object):
                                                            measurement_std_dev,
                                                            temperature_step)
             self._update_particle_chain_with_new_particles(mutated_particles)
-        self.save_particle_chain(self._save_file)
+            self._autosave_particle_step()
+        self._close_autosaver()
         return self.particle_chain
 
 
@@ -137,6 +133,13 @@ class SMCSampler(object):
         if ESS_threshold is None:
             ESS_threshold = 0.5*self.num_particles
         self.ESS_threshold = ESS_threshold
+        return None
+
+
+    def _set_autosave_behavior(self, autosave_file):
+        self._autosave_file = autosave_file
+        if self._autosave_file is not None and self._rank == 0:
+            self._autosaver = HDF5Storage(autosave_file, mode='w')
         return None
 
 
@@ -177,9 +180,9 @@ class SMCSampler(object):
             proposal_variables = self._create_proposal_random_variables()
         else:
             proposal_variables = None
-        for i in range(num_particles_per_partition):
-            p = self._create_particle(prior_variables, proposal_variables)
-            particles.append(p)
+        for _ in range(num_particles_per_partition):
+            part = self._create_particle(prior_variables, proposal_variables)
+            particles.append(part)
         return particles
 
 
@@ -247,6 +250,8 @@ class SMCSampler(object):
         particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
             particle_chain = ParticleChain()
+            if self._start_time_step == 1:
+                particle_chain.add_step([]) # empty 0th step
             particle_chain.add_step(np.concatenate(particles))
             particle_chain.normalize_step_weights()
         else:
@@ -259,11 +264,20 @@ class SMCSampler(object):
         return None
 
 
-    def _set_start_time_equal_to_restart_time(self, restart_time):
-        self._start_time_step = restart_time
+    def _set_start_time_equal_to_restart_time_step(self, restart_time_step):
+        self._start_time_step = restart_time_step
         return None
 
 
+    def _trim_particle_chain(self, particle_chain, restart_time_step):
+        if self._rank == 0:
+            to_keep = range(0, restart_time_step + 1)
+            trimmed_steps = [particle_chain.get_particles(i) for i in to_keep]
+            particle_chain._steps = trimmed_steps
+        return particle_chain
+
+
+    @staticmethod
     def _file_exists(hdf5_file):
         return os.path.exists(hdf5_file)
 
@@ -350,7 +364,7 @@ class SMCSampler(object):
         mcmc = copy(self._mcmc)
         step_method = 'smc_metropolis'
         new_particles = []
-        for i, particle in enumerate(particles):
+        for particle in particles:
             mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
                                      q0=particle.params)
             mcmc.sample(self.num_mcmc_steps, burnin=0, step_method=step_method,
@@ -368,6 +382,26 @@ class SMCSampler(object):
         if self._rank == 0:
             particles = np.concatenate(new_particles)
             self.particle_chain.overwrite_step(step=-1, particle_list=particles)
+        return None
+
+
+    def _autosave_particle_chain(self):
+        if self._rank == 0 and self._autosave_file is not None:
+            self._autosaver.write_chain(self.particle_chain)
+        return None
+
+
+    def _autosave_particle_step(self):
+        if self._rank == 0 and self._autosave_file is not None:
+            step_index = self.particle_chain.get_num_steps() - 1
+            step = self.particle_chain.get_particles(step_index)
+            self._autosaver.write_step(step, step_index)
+        return None
+
+
+    def _close_autosaver(self):
+        if self._rank == 0 and self._autosave_file is not None:
+            self._autosaver.close()
         return None
 
 
