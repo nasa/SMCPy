@@ -1,6 +1,30 @@
 SMCPy - **S**equential **M**onte **C**arlo **S**ampling with **Py**thon 
 ==========================================================================
-Python module for uncertainty quantification using a parallel sequential Monte Carlo sampler.
+Python module for uncertainty quantification using a parallel sequential Monte
+Carlo sampler.
+
+Uncertainty quantification (UQ) is essential to provide meaningful and reliable
+predictions of real-world system performance. One major obstacle for the
+implementation of statistical methods for UQ is the use of expensive
+computational models. Classical UQ methods such as Markov chain Monte Carlo
+(MCMC) generally require thousands to millions of model evaluations, and, when
+coupled with an expensive model, result in excessive solve times that can render
+the analysis intractable. These methods are also inherently serial, which
+prohibits speedup by high performance computing. Recently, Sequential Monte 
+Carlo (SMC) has emerged as a powerful alternative to MCMC. In contrast, this
+method allows for parallel model evaluations, realizing significant speedup.
+This software is an implementation of SMC that uses the Message Passing
+Interface (MPI) to provide users general access to parallel UQ methods in
+Python 2.7. The algorithm used is based on the work by Nguyen et al. ["Efficient
+Sequential Monte-Carlo Samplers for Bayesian Inference" IEEE Transactions on
+Signal Processing, Vol. 64, No. 5 (2016)]
+
+To operate the code, the user supplies a computational model built in Python
+2.7, defines prior distributions for each of the model parameters to be
+estimated, and provides data to be used for calibration. SMC sampling can then
+be conducted with ease through instantiation of the SMC class and a call to the
+sample() method. The output of this process is an approximation of the parameter
+posterior probability distribution conditioned on the data provided.
 
 ==========================================================================
 
