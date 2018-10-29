@@ -3,6 +3,7 @@ SMCPy - **S**equential **M**onte **C**arlo **S**ampling with **Py**thon
 Python module for uncertainty quantification using a parallel sequential Monte Carlo sampler.
 
 ==========================================================================
+
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of the National Aeronautics and Space Administration. No copyright is claimed in the United States under Title 17, U.S. Code. All Other Rights Reserved.
  
