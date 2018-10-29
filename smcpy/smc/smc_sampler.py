@@ -3,8 +3,8 @@ import os
 import warnings
 
 from copy import copy
+from ..mcmc.mcmc_sampler import MCMCSampler
 from mpi4py import MPI
-from mcmc.MCMC import MCMC
 from pymc import Normal
 from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
