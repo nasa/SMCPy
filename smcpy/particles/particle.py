@@ -16,7 +16,7 @@ ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
 RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
 RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS." 
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS."
  
 Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
 UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
@@ -55,6 +55,9 @@ class Particle():
 
 
     def print_particle_info(self):
+        '''
+        Prints particle parameters, weight, and log likelihood to screen.
+        '''
         print 'params = %s' % self.params
         print 'weight = %s' % self.weight
         print 'log_like = %s' % self.log_like
@@ -62,4 +65,7 @@ class Particle():
 
 
     def copy(self):
+        '''
+        Returns a deep copy of self.
+        '''
         return copy.deepcopy(self)

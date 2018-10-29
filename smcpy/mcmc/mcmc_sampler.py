@@ -16,7 +16,7 @@ ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
 RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
 RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS." 
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS."
  
 Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
 UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
@@ -63,13 +63,15 @@ class MCMCSampler:
             exists in the Model module that is recommended to define the model
             object; i.e., model.__bases__ == <class model.Model.Model>,)
         :type model: object
-        : : dict : map where keys are the unknown parameter 
+        :param params: map where keys are the unknown parameter 
             names (string) and values are lists that define the prior
             distribution of the parameter [dist name, dist. arg #1, dist. arg
             #2, etc.]. The distribution arguments are defined in the PyMC
             documentation: https://pymc-devs.github.io/pymc/.
-        :storage_backend : str : determines which format to store mcmc data,
+        :type params: dict
+        :storage_backend: determines which format to store mcmc data,
             see self.avail_backends for a list of options.
+        :type storage_backend: str
         '''
 
         self.params = params
