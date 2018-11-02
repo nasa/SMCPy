@@ -12,13 +12,6 @@ SMC Module Documentation
 .. autoclass:: SMCSampler
     :members:
 
-MCMC Module Documentation
---------------------------
-
-.. automodule:: smcpy.mcmc
-.. autoclass:: MCMCSampler
-    :members:
-
 Particle Module Documentation
 ------------------------------
 
@@ -27,3 +20,12 @@ Particle Module Documentation
     :members:
 .. autoclass:: ParticleChain
     :members:
+
+MCMC Module Documentation
+--------------------------
+
+.. automodule:: smcpy.mcmc
+.. autoclass:: MCMCSampler
+    :members:
+
+
