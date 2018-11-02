@@ -55,7 +55,7 @@ class SMCSampler(object):
 
     @staticmethod
     def _setup_communicator():
-        comm = MPI.COMM_WORLD
+        comm = MPI.COMM_WORLD.Clone()
         size = comm.Get_size()
         my_rank = comm.Get_rank()
         return comm, size, my_rank
