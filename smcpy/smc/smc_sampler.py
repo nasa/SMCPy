@@ -63,7 +63,7 @@ class SMCSampler(object):
 
     @staticmethod
     def _setup_mcmc_sampler(data, model, param_priors):
-        mcmc = MCMC(data=data, model=model, params=param_priors,
+        mcmc = MCMCSampler(data=data, model=model, params=param_priors,
                     storage_backend='ram')
         return mcmc
 

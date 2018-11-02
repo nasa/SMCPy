@@ -25,8 +25,7 @@ if __name__ == '__main__':
     particle_chain = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
                                 std_dev, ESS_threshold=0.5*num_particles,
                                 #proposal_center=center, proposal_scales=scales,
-                                hdf5_file_path='test.h5')
-    smc.save_particle_chain('test.h5')
+                                autosave_file='test.h5')
     try:
         particle_chain.plot_pairwise_weights()
     except:
