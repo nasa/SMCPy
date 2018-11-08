@@ -10,6 +10,9 @@ be conducted with ease through instantiation of the SMC class and a call to the
 sample() method. The output of this process is an approximation of the parameter
 posterior probability distribution conditioned on the data provided.
 
+This software was funded by and developed under the High Performance Computing 
+Incubator (HPCI) at NASA Langley Research Center.
+
 ==========================================================================
 
 Notices:
