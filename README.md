@@ -13,7 +13,7 @@ posterior probability distribution conditioned on the data provided.
 This software was funded by and developed under the High Performance Computing 
 Incubator (HPCI) at NASA Langley Research Center.
 
-==========================================================================
+------------------------------------------------------------------------------
 
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
