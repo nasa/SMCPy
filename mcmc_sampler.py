@@ -46,9 +46,9 @@ from ..plotting.mcmc_plots import time_vs_observations, pdf, pairwise, residuals
 
 class MCMCSampler:
     '''
-    PySHM MCMC module based on PyMC. Uses Bayesian inference, MCMC, and a 
-    model to estimate parameters with quantified uncertainty based on a set
-    of observations. 
+    Class for MCMC sampling; based on PyMC (https://github.com/pymc-devs/pymc).
+    Uses Bayesian inference, MCMC, and a model to estimate parameters with
+    quantified uncertainty based on a set of observations. 
     '''
 
     def __init__(self, data, model, params, working_dir='./',
@@ -65,19 +65,20 @@ class MCMCSampler:
             exists in the Model module that is recommended to define the model
             object; i.e., model.__bases__ == <class model.Model.Model>,)
         :type model: object
-        : : dict : map where keys are the unknown parameter 
+        :param params: map where keys are the unknown parameter 
             names (string) and values are lists that define the prior
             distribution of the parameter [dist name, dist. arg #1, dist. arg
             #2, etc.]. The distribution arguments are defined in the PyMC
             documentation: https://pymc-devs.github.io/pymc/.
-        :storage_backend : str : determines which format to store mcmc data,
+        :type params: dict
+        :storage_backend: determines which format to store mcmc data,
             see self.avail_backends for a list of options.
+        :type storage_backend: str
         '''
 
         self.params = params
         self.model = model
         self.working_dir = working_dir
-
 
         # Check for valid storage backend
         self.avail_backends = ['pickle', 'ram', 'no_trace', 'txt', 'sqlite',
@@ -513,29 +514,6 @@ class MCMCSampler:
             raise TypeError('Data must be a single list of floats.')
 
 
-    #def _check_mcmc_database(self, mcmc_database):
-    #    '''
-    #    Checks whether a PyMC database is already loaded. If mcmc_database
-    #    is given (ie not None), then it will override the currently loaded
-    #    database. If neither exist, raise IOError.
-    #    '''
-    #    # Check if MCMC database is already defined, load from mcmc_database
-    #    if mcmc_database != None:
-    #        # throw warning if overwriting self.db
-    #        if self.db != None:
-    #            raise Warning('Overwriting currently loaded MCMC database!')
-    #        # overwrite / load
-    #        if os.path.isfile(mcmc_database):
-    #            self.db = self.loader.load(mcmc_database)
-    #        else:
-    #            raise IOError('MCMC database file '+mcmc_database+\
-    #                           ' does not exist!')
-    #    elif self.db == None and mcmc_database == None:
-    #        raise IOError('MCMC database cannot be found: either self.db must'
-    #                      ' be defined (using the sample() method), or the arg'
-    #                      ' mcmc_database must be passed to ict().')
-
-
     def _create_kde_stochastic(self, kde, kde_name, param_names):
         '''
         Creates custom pymc stochastic object based on a multivariate kernel
@@ -652,19 +630,8 @@ class MCMCSampler:
 
 
 
-#
-#    def plot_pairwise(self, keys, labels=None, color='C0', xylim=None,
-#             fname='pairwise.png', fig='new', nbins=None, label_font_size=None,
-#             tick_label_font_size = None):
-#        trace = self.trace
-#        pairwise(trace, keys, labels, color, xylim, fname, fig, nbins,
-#                 label_font_size, tick_label_font_size)
-#        return None
+# Helpful functions:
 
-#TODO: OPTION TO LOAD A NEW DATA FILE
-#TODO: inherit plot as static
-
-# HELPFUL FUNCTIONS:
 def multivariate_kde_from_samples(prior_pymc_db, param_names):
     '''
     Kernel density estimation of an arbitrary, n-dimensional distribution
