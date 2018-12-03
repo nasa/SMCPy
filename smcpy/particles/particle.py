@@ -30,8 +30,7 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-import copy
-import numpy as np
+from copy import deepcopy
 
 class Particle():
     '''
@@ -45,22 +44,21 @@ class Particle():
             name and values = parameter value.
         :type params: dictionary
         :param weight: the computed weight of the particle
-        :type weight: float
+        :type weight: float or int
         :param log_like: the log likelihood of the particle
-        :type log_like: float
+        :type log_like: float or int
         '''
-        self.params = params
-        self.weight = weight
-        self.log_like = log_like
+        self.params = self._check_params(params)
+        self.weight = self._check_weight(weight)
+        self.log_like = self._check_log_like(log_like)
 
 
     def print_particle_info(self):
         '''
         Prints particle parameters, weight, and log likelihood to screen.
         '''
-        print 'params = %s' % self.params
-        print 'weight = %s' % self.weight
-        print 'log_like = %s' % self.log_like
+        info = (self.params, self.weight, self.log_like)
+        print('params = %s\nweight = %s\nlog_like = %s' % info)
         return None
 
 
@@ -68,4 +66,29 @@ class Particle():
         '''
         Returns a deep copy of self.
         '''
-        return copy.deepcopy(self)
+        return deepcopy(self)
+
+
+    @staticmethod
+    def _check_params(params):
+        if type(params) is not dict:
+            raise TypeError('Input "params" must be a dictionary.')
+        return params
+
+
+    @staticmethod
+    def _check_weight(weight):
+        if type(weight) is not int and type(weight) is not float:
+            raise TypeError('Input "weight" must be an integer or float')
+        if weight < 0:
+            raise ValueError('Input "weight" must be positive.')
+        return weight
+        
+
+    @staticmethod
+    def _check_log_like(log_like):
+        if type(log_like) is not int and type(log_like) is not float:
+            raise TypeError('Input "log_like" must be an integer or float')
+        if log_like > 0:
+            raise ValueError('Input "log_like" must be negative.')
+        return log_like
