@@ -1,4 +1,4 @@
-from model import model
+from model import Model
 import numpy as np
 from smcpy.particles.particle import Particle
 from smcpy.smc.smc_sampler import SMCSampler
@@ -10,13 +10,13 @@ if __name__ == '__main__':
     a = 2
     b = 3.5
     x = np.arange(50)
-    m = model(x)
+    m = Model(x)
     std_dev = 0.6
     y_noisy = np.genfromtxt('noisy_data.txt')
     
     param_priors = {'a': ['Uniform', -5.0, 5.0],
-                     'b': ['Uniform', -5.0, 5.0]}
-    
+                    'b': ['Uniform', -5.0, 5.0]}
+
     # run smc
     num_particles = 1000
     num_time_steps = 20
