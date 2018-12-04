@@ -51,6 +51,7 @@ class SMCSampler(object):
     def __init__(self, data, model, param_priors):
         self._comm, self._size, self._rank = self._setup_communicator()
         self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
+        self.parameter_names = param_priors.keys()
 
 
     @staticmethod
@@ -111,11 +112,11 @@ class SMCSampler(object):
         :Returns: A ParticleChain class instance that stores all particles and
             their past generations at every time step.
         '''
-        self._set_num_particles(num_particles)
-        self._set_temperature_schedule(num_time_steps)
-        self._set_num_mcmc_steps(num_mcmc_steps)
-        self._set_ESS_threshold(ESS_threshold)
-        self._set_autosave_behavior(autosave_file)
+        self.num_particles = self._check_num_particles(num_particles)
+        self.temp_schedule = self._check_temperature_schedule(num_time_steps)
+        self.num_mcmc_steps = self._check_num_mcmc_steps(num_mcmc_steps)
+        self.ESS_threshold = self._set_ESS_threshold(ESS_threshold)
+        self._autosaver = self._set_autosave_behavior(autosave_file)
 
         if restart_time_step == 0:
             self._set_proposal_distribution(proposal_center, proposal_scales)
@@ -146,44 +147,96 @@ class SMCSampler(object):
         return self.particle_chain
 
 
-    def _set_num_particles(self, num_particles):
-        self.num_particles = num_particles
+    def _check_num_particles(self, num_particles):
+        self._check_is_positive_integer(num_particles, "num_particles")
+        return num_particles
+
+
+    def _check_is_positive_integer(self, input_, name):
+        if input_ < 1:
+            raise ValueError('"%s" must be > 0' % name)
+        if type(input_) is not int:
+            raise TypeError('"%s" must be integer.' % name)
         return None
 
 
-    def _set_temperature_schedule(self, num_cooling_steps):
-        self.temp_schedule = np.linspace(0, 1, num_cooling_steps)
-        return None
+    def _check_temperature_schedule(self, num_time_steps):
+        self._check_is_positive_integer(num_time_steps, "num_time_steps")
+        return np.linspace(0, 1, num_time_steps)
 
 
-    def _set_num_mcmc_steps(self, num_mcmc_steps):
-        self.num_mcmc_steps = num_mcmc_steps
-        return None
+    def _check_num_mcmc_steps(self, num_mcmc_steps):
+        self._check_is_positive_integer(num_mcmc_steps, "num_mcmc_steps")
+        return num_mcmc_steps
 
 
     def _set_ESS_threshold(self, ESS_threshold):
         if ESS_threshold is None:
-            ESS_threshold = 0.5*self.num_particles
-        self.ESS_threshold = ESS_threshold
-        return None
+            ESS_threshold = 0.5 * self.num_particles
+        ESS_threshold = self._check_ESS_threshold(ESS_threshold)
+        return ESS_threshold
+
+
+    def _check_ESS_threshold(self, ESS_threshold):
+        if type(ESS_threshold) is not int and type(ESS_threshold) is not float:
+            raise TypeError('"ESS_threshold" must be int or float')
+        if ESS_threshold < 0:
+            raise ValueError('"ESS_threshold" must be >= 0')
+        return ESS_threshold
 
 
     def _set_autosave_behavior(self, autosave_file):
-        self._autosave_file = autosave_file
-        if self._autosave_file is not None and self._rank == 0:
-            self._autosaver = HDF5Storage(autosave_file, mode='w')
+        autosave_file = self._check_autosave_file(autosave_file)
+        if autosave_file is not None and self._rank == 0:
+            return HDF5Storage(autosave_file, mode='w')
         return None
 
 
+    @staticmethod
+    def _check_autosave_file(autosave_file):
+        if type(autosave_file) is not str and autosave_file is not None:
+            raise TypeError('"autosave_file" must be a string or None type.')
+        return autosave_file
+
+
     def _set_proposal_distribution(self, proposal_center, proposal_scales):
+        self._check_proposal_dist_inputs(proposal_center, proposal_scales)
         if proposal_center is not None and proposal_scales is None:
             msg = 'No scales given; setting scales to identity matrix.'
             warnings.warn(msg)
             proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
-        elif proposal_center is None and proposal_scales is not None:
+        self._check_proposal_dist_input_keys(proposal_center, proposal_scales)
+        self._check_proposal_dist_input_vals(proposal_center, proposal_scales)
+        self.proposal_center = proposal_center
+        self.proposal_scales = proposal_scales
+        return None
+
+
+    def _check_proposal_dist_inputs(self, proposal_center, proposal_scales):
+        if not isinstance(proposal_center, (dict, None.__class__)):
+            raise TypeError('Proposal center must be a dictionary or None.')
+        if not isinstance(proposal_scales, (dict, None.__class__)):
+            raise TypeError('Proposal scales must be a dictionary or None.')
+        if proposal_center is None and proposal_scales is not None:
             raise ValueError('Proposal scales given but center == None.')
-        self._proposal_center = proposal_center
-        self._proposal_scales = proposal_scales
+        return None
+
+
+    def _check_proposal_dist_input_keys(self, proposal_center, proposal_scales):
+        if sorted(proposal_center.keys()) != sorted(self.parameter_names):
+            raise KeyError('"proposal_center" keys != self.parameter_names')
+        if sorted(proposal_scales.keys()) != sorted(self.parameter_names):
+            raise KeyError('"proposal_scales" keys != self.parameter_names')
+        return None
+
+
+    def _check_proposal_dist_input_vals(self, proposal_center, proposal_scales):
+        center_vals = proposal_center.values()
+        scales_vals = proposal_scales.values()
+        if not all(isinstance(x, (float, int)) for x in center_vals):
+            raise TypeError('"proposal_center" values should be int or float')
+        if not all(isinstance(x, (float, int)) for x in scales_vals):
+            raise TypeError('"proposal_scales" values should be int or float')
         return None
 
 
@@ -195,7 +248,7 @@ class SMCSampler(object):
         estimating the prior (i.e., time = 0). This is a result of the way
         the temperature schedule is defined.
         '''
-        if self._proposal_center is None:
+        if self.proposal_center is None:
             self._start_time_step = 1
         else:
             self._start_time_step = 0
@@ -208,7 +261,7 @@ class SMCSampler(object):
         num_particles_per_partition = self._get_num_particles_per_partition()
         particles = []
         prior_variables = self._create_prior_random_variables()
-        if self._proposal_center is not None:
+        if self.proposal_center is not None:
             proposal_variables = self._create_proposal_random_variables()
         else:
             proposal_variables = None
@@ -237,8 +290,8 @@ class SMCSampler(object):
 
 
     def _create_proposal_random_variables(self,):
-        centers = self._proposal_center
-        scales = self._proposal_scales
+        centers = self.proposal_center
+        scales = self.proposal_scales
         random_variables = dict()
         for key in self._mcmc.params.keys():
             variance = (centers[key] * scales[key])**2

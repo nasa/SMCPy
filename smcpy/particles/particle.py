@@ -78,7 +78,7 @@ class Particle():
 
     @staticmethod
     def _check_weight(weight):
-        if type(weight) is not int and type(weight) is not float:
+        if not isinstance(weight, int) and not isinstance(weight, float):
             raise TypeError('Input "weight" must be an integer or float')
         if weight < 0:
             raise ValueError('Input "weight" must be positive.')
