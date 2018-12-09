@@ -6,9 +6,9 @@ the United States under Title 17, U.S. Code. All Other Rights Reserved.
 
 Disclaimers
 No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
 TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
-IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
 FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
 FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
 SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
@@ -23,7 +23,7 @@ UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
 LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
 INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
 UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
 ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
@@ -41,6 +41,7 @@ from pymc import Normal
 from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
 from ..hdf5.hdf5_storage import HDF5Storage
+from ..utils.properties import Properties
 
 
 class SMCSampler(object):
@@ -52,6 +53,8 @@ class SMCSampler(object):
         self._comm, self._size, self._rank = self._setup_communicator()
         self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
         self.parameter_names = param_priors.keys()
+
+        #super(SMCSampler, self).__init__()
 
 
     @staticmethod
@@ -70,7 +73,7 @@ class SMCSampler(object):
 
 
     def sample(self, num_particles, num_time_steps, num_mcmc_steps,
-               measurement_std_dev, ESS_threshold=None, proposal_center=None,
+               measurement_std_dev, ess_threshold=None, proposal_center=None,
                proposal_scales=None, restart_time_step=0, hdf5_to_load=None,
                autosave_file=None):
         '''
@@ -83,9 +86,9 @@ class SMCSampler(object):
         :param num_mcmc_steps: int
         :param measurement_std_dev: standard deviation of the measurement error
         :type measurement_std_dev: float
-        :param ESS_threshold: threshold equivalent sample size; triggers
-            resampling when ESS > ESS_threshold
-        :type ESS_threshold: float or int
+        :param ess_threshold: threshold equivalent sample size; triggers
+            resampling when ess > ess_threshold
+        :type ess_threshold: float or int
         :param proposal_center: initial parameter dictionary, which is used to
             define the initial proposal distribution when generating particles;
             default is None, and initial proposal distribution = prior.
@@ -113,26 +116,34 @@ class SMCSampler(object):
             their past generations at every time step.
         '''
         self.num_particles = self._check_num_particles(num_particles)
-        self.temp_schedule = self._check_temperature_schedule(num_time_steps)
+        self.num_time_steps = num_time_steps
+        self.temp_schedule = np.linspace(0, 1, self.num_time_steps)
         self.num_mcmc_steps = self._check_num_mcmc_steps(num_mcmc_steps)
-        self.ESS_threshold = self._set_ESS_threshold(ESS_threshold)
-        self._autosaver = self._set_autosave_behavior(autosave_file)
+        self.ess_threshold = self._set_ess_threshold(ess_threshold)
+        self.autosaver = self._set_autosave_behavior(autosave_file)
+        self.restart_time_step = self._check_restart_time_step(restart_time_step, num_time_steps)
 
-        if restart_time_step == 0:
+        #self.num_particles = num_particles
+        #self.num_time_steps = num_time_steps
+        #self.temp_schedule = np.linspace(0., 1., self.num_time_steps)
+        #self.num_mcmc_steps = num_mcmc_steps
+        #self.ess_threshold = ess_threshold
+        #self.autosaver = autosave_file
+        #self.restart_time_step = restart_time_step
+
+        if self.restart_time_step == 0:
             self._set_proposal_distribution(proposal_center, proposal_scales)
             self._set_start_time_based_on_proposal()
             particles = self._initialize_particles(measurement_std_dev)
             particle_chain = self._initialize_particle_chain(particles)
-        elif 0 < restart_time_step <= num_time_steps:
-            self._set_start_time_equal_to_restart_time_step(restart_time_step)
+        elif 0 < self.restart_time_step <= num_time_steps:
+            self._set_start_time_equal_to_restart_time_step()
             particle_chain = self.load_particle_chain(hdf5_to_load)
             particle_chain = self._trim_particle_chain(particle_chain,
-                                                       restart_time_step)
-        else:
-            raise ValueError('restart time outside range [0, num_time_steps]')
-
+                                                       self.restart_time_step)
         self._set_particle_chain(particle_chain)
         self._autosave_particle_chain()
+
         for t in range(num_time_steps)[self._start_time_step+1:]:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t-1]
             new_particles = self._create_new_particles(temperature_step)
@@ -160,7 +171,7 @@ class SMCSampler(object):
         return None
 
 
-    def _check_temperature_schedule(self, num_time_steps):
+    def _set_temperature_schedule(self, num_time_steps):
         self._check_is_positive_integer(num_time_steps, "num_time_steps")
         return np.linspace(0, 1, num_time_steps)
 
@@ -170,19 +181,19 @@ class SMCSampler(object):
         return num_mcmc_steps
 
 
-    def _set_ESS_threshold(self, ESS_threshold):
-        if ESS_threshold is None:
-            ESS_threshold = 0.5 * self.num_particles
-        ESS_threshold = self._check_ESS_threshold(ESS_threshold)
-        return ESS_threshold
+    def _set_ess_threshold(self, ess_threshold):
+        if ess_threshold is None:
+            ess_threshold = 0.5 * self.num_particles
+        ess_threshold = self._check_ess_threshold(ess_threshold)
+        return ess_threshold
 
 
-    def _check_ESS_threshold(self, ESS_threshold):
-        if type(ESS_threshold) is not int and type(ESS_threshold) is not float:
-            raise TypeError('"ESS_threshold" must be int or float')
-        if ESS_threshold < 0:
-            raise ValueError('"ESS_threshold" must be >= 0')
-        return ESS_threshold
+    def _check_ess_threshold(self, ess_threshold):
+        if type(ess_threshold) is not int and type(ess_threshold) is not float:
+            raise TypeError('"ess_threshold" must be int or float')
+        if ess_threshold < 0:
+            raise ValueError('"ess_threshold" must be >= 0')
+        return ess_threshold
 
 
     def _set_autosave_behavior(self, autosave_file):
@@ -190,6 +201,13 @@ class SMCSampler(object):
         if autosave_file is not None and self._rank == 0:
             return HDF5Storage(autosave_file, mode='w')
         return None
+
+
+    def _check_restart_time_step(self, restart_time_step, num_time_steps):
+        self._check_is_positive_integer(restart_time_step, "num_mcmc_steps")
+        if restart_time_step > num_time_steps:
+            raise ValueError('restart time outside range [0, num_time_steps]')
+        return restart_time_step
 
 
     @staticmethod
@@ -205,8 +223,11 @@ class SMCSampler(object):
             msg = 'No scales given; setting scales to identity matrix.'
             warnings.warn(msg)
             proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
-        self._check_proposal_dist_input_keys(proposal_center, proposal_scales)
-        self._check_proposal_dist_input_vals(proposal_center, proposal_scales)
+        if proposal_center is not None and proposal_scales is not None:
+            self._check_proposal_dist_input_keys(proposal_center,
+                                                 proposal_scales)
+            self._check_proposal_dist_input_vals(proposal_center,
+                                                 proposal_scales)
         self.proposal_center = proposal_center
         self.proposal_scales = proposal_scales
         return None
@@ -300,22 +321,36 @@ class SMCSampler(object):
 
 
     def _create_particle(self, prior_variables, prop_variables=None):
-        param_vals, prior_logp = self._draw_random_variables(prior_variables)
         if prop_variables is None:
+            params = self._sample_random_variables(prior_variables)
+            prior_logp = self._compute_log_prob(prior_variables)
             prop_logp = prior_logp
         else:
-            param_vals, prop_logp = self._draw_random_variables(prop_variables)
-        log_like = self._evaluate_likelihood(param_vals)
+            params = self._sample_random_variables(prop_variables)
+            prop_logp = self._compute_log_prob(prop_variables)
+            self._set_random_variables_value(prior_variables, params)
+            prior_logp = self._compute_log_prob(prior_variables)
+        log_like = self._evaluate_likelihood(params)
         temp_step = self.temp_schedule[self._start_time_step]
         log_weight = log_like*temp_step + prior_logp - prop_logp
-        return Particle(param_vals, np.exp(log_weight), log_like)
+        return Particle(params, np.exp(log_weight), log_like)
 
 
-    def _draw_random_variables(self, random_variables):
+    def _sample_random_variables(self, random_variables):
         param_keys = self._mcmc.params.keys()
-        param_vals = {key: random_variables[key].random() for key in param_keys}
+        params = {key: random_variables[key].random() for key in param_keys}
+        return params
+
+
+    def _set_random_variables_value(self, random_variables, params):
+        for key, value in params.iteritems():
+            random_variables[key].value = value
+        return None
+        
+
+    def _compute_log_prob(self, random_variables):
         param_log_prob = np.sum([rv.logp for rv in random_variables.values()])
-        return param_vals, param_log_prob
+        return param_log_prob
 
 
     def _evaluate_likelihood(self, param_vals):
@@ -327,7 +362,8 @@ class SMCSampler(object):
             index = mcmc.pymc_mod_order.index(key)
             mcmc.pymc_mod[index].value = value
         results_index = mcmc.pymc_mod_order.index('results')
-        log_like = mcmc.pymc_mod[results_index].logp
+        results_rv = mcmc.pymc_mod[results_index]
+        log_like = results_rv.logp
         return log_like
 
 
@@ -350,7 +386,7 @@ class SMCSampler(object):
 
 
     def _set_start_time_equal_to_restart_time_step(self, restart_time_step):
-        self._start_time_step = restart_time_step
+        self._start_time_step = self.restart_time_step
         return None
 
 
@@ -421,15 +457,15 @@ class SMCSampler(object):
 
     def _resample_if_needed(self):
         '''
-        Checks if ESS below threshold; if yes, resample with replacement.
+        Checks if ess below threshold; if yes, resample with replacement.
         '''
-        ESS = self.particle_chain.compute_ESS()
-        if ESS < self.ESS_threshold:
-            print 'ESS = %s' % ESS
+        ess = self.particle_chain.compute_ess()
+        if ess < self.ess_threshold:
+            print 'ess = %s' % ess
             print 'resampling...'
             self.particle_chain.resample(overwrite=True)
         else:
-            print 'ESS = %s' % ESS
+            print 'ess = %s' % ess
             print 'no resampling required.'
         return None
 
@@ -472,7 +508,7 @@ class SMCSampler(object):
 
     def _autosave_particle_chain(self):
         if self._rank == 0 and self._autosave_file is not None:
-            self._autosaver.write_chain(self.particle_chain)
+            self.autosaver.write_chain(self.particle_chain)
         return None
 
 
@@ -480,13 +516,13 @@ class SMCSampler(object):
         if self._rank == 0 and self._autosave_file is not None:
             step_index = self.particle_chain.get_num_steps() - 1
             step = self.particle_chain.get_particles(step_index)
-            self._autosaver.write_step(step, step_index)
+            self.autosaver.write_step(step, step_index)
         return None
 
 
     def _close_autosaver(self):
         if self._rank == 0 and self._autosave_file is not None:
-            self._autosaver.close()
+            self.autosaver.close()
         return None
 
 

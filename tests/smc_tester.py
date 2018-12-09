@@ -35,7 +35,7 @@ class SMCTester(SMCSampler):
 
     @staticmethod
     def _set_param_priors():
-        return {'a': ['Uniform', -5.0, 5.0], 'b': ['Uniform', -5.0, 5.0]}
+        return {'a': ['Uniform', -10., 10.], 'b': ['Uniform', -10., 10.]}
 
 
     @staticmethod
@@ -47,7 +47,7 @@ class SMCTester(SMCSampler):
     @staticmethod
     def _generate_data(model):
         std_dev = 0.6
-        true_params = {'a': 2.0, 'b': 3.5}
+        true_params = {'a': 2.5, 'b': 1.3}
         return model.generate_noisy_data_with_model(std_dev, true_params)
 
 
@@ -58,6 +58,21 @@ class SMCTester(SMCSampler):
         except:
             pass
         return None
+
+
+    @staticmethod
+    def calc_log_like_manually(model_eval, data, std_dev):
+        '''
+        Assuming iid normally distributed errors, this function computes the
+        likelihood given model evaluations at a specific param vector, data,
+        and assumed noise standard deviation. This function is intended to test
+        the pymc likelihood computation; i.e., results_rv.logp.
+        '''
+        M = len(data)
+        var = std_dev**2
+        diff = data - model_eval
+        ssq = np.linalg.norm(diff)**2
+        return np.log(1./(2*np.pi*var)**(M/2.)*np.exp(-1./(2*var)*ssq))
 
 
     def when_proposal_dist_set_with_scales(self):
@@ -78,6 +93,25 @@ class SMCTester(SMCSampler):
         return None
 
 
+    def when_sampling(self, restart_time_step, hdf5_to_load, autosave_file):
+        '''
+        Perform SMC sampling with predefined sampling parameters.
+        '''
+        num_particles = self.comm.Get_size()
+        num_time_steps = 2
+        num_mcmc_steps = 1
+        measurement_std_dev = 0.6
+        ess_threshold = 0.8 * num_particles
+        proposal_center = {'a': 2.0, 'b': 3.5}
+        proposal_scales = {'a': 0.5, 'b': 0.5}
+        self.sample(num_particles, num_time_steps, num_mcmc_steps,
+                    measurement_std_dev, ess_threshold, proposal_center,
+                    proposal_scales, restart_time_step, hdf5_to_load,
+                    autosave_file)
+        return None
+
+
+
     def when_sampling_parameters_set(self):
         '''
         Testing checkpoint. This returns an instance of the SMCSampler class
@@ -87,21 +121,20 @@ class SMCTester(SMCSampler):
         num_particles = self.comm.Get_size()
         num_time_steps = 2
         num_mcmc_steps = 1
-        ESS_threshold = 0.8 * num_particles
+        ess_threshold = 0.8 * num_particles
         autosave_file = None
 
         self.num_particles = self._check_num_particles(num_particles)
-        self.temp_schedule = self._check_temperature_schedule(num_time_steps)
+        self.temp_schedule = self._set_temperature_schedule(num_time_steps)
         self.num_mcmc_steps = self._check_num_mcmc_steps(num_mcmc_steps)
-        self.ESS_threshold = self._set_ESS_threshold(ESS_threshold)
+        self.ess_threshold = self._set_ess_threshold(ess_threshold)
         self._autosaver = self._set_autosave_behavior(autosave_file)
         return None
 
 
-    def when_initial_particles_sampled_from_proposal(self):
+    def when_initial_particles_sampled_from_proposal(self, measurement_std_dev):
         proposal_center = {'a': 2.0, 'b': 3.5}
         proposal_scales = {'a': 0.5, 'b': 0.5}
-        measurement_std_dev = 0.6
 
         self.when_sampling_parameters_set()
         self._set_proposal_distribution(proposal_center, proposal_scales)
@@ -109,3 +142,24 @@ class SMCTester(SMCSampler):
         self.particles = self._initialize_particles(measurement_std_dev)
         return None
 
+
+    def when_initial_particles_sampled_from_proposal_outside_prior(self):
+        proposal_center = {'a': 1000.0, 'b': 3.5}
+        proposal_scales = {'a': 1000.0, 'b': 0.5}
+
+        self.when_sampling_parameters_set()
+        self._set_proposal_distribution(proposal_center, proposal_scales)
+        self._set_start_time_based_on_proposal()
+        self.particles = self._initialize_particles(0.1)
+        return None
+
+
+    def when_initial_particles_sampled_from_prior(self, measurement_std_dev):
+        proposal_center = None
+        proposal_scales = None
+
+        self.when_sampling_parameters_set()
+        self._set_proposal_distribution(proposal_center, proposal_scales)
+        self._set_start_time_based_on_proposal()
+        self.particles = self._initialize_particles(measurement_std_dev)
+        return None
