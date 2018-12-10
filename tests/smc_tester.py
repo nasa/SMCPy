@@ -123,12 +123,15 @@ class SMCTester(SMCSampler):
         num_mcmc_steps = 1
         ess_threshold = 0.8 * num_particles
         autosave_file = None
+        restart_time_step = 0
 
-        self.num_particles = self._check_num_particles(num_particles)
-        self.temp_schedule = self._set_temperature_schedule(num_time_steps)
-        self.num_mcmc_steps = self._check_num_mcmc_steps(num_mcmc_steps)
-        self.ess_threshold = self._set_ess_threshold(ess_threshold)
-        self._autosaver = self._set_autosave_behavior(autosave_file)
+        self.num_particles = num_particles
+        self.num_time_steps = num_time_steps
+        self.temp_schedule = np.linspace(0., 1., self.num_time_steps)
+        self.num_mcmc_steps = num_mcmc_steps
+        self.ess_threshold = ess_threshold
+        self.autosaver = autosave_file
+        self.restart_time_step = restart_time_step
         return None
 
 

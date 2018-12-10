@@ -64,9 +64,11 @@ def test_setup_mcmc_sampler(smc_tester):
                                               ([1], TypeError)])
 def test_pos_integer_input_checks(input_, exp_error, smc_tester):
     with pytest.raises(exp_error):
-        smc_tester._check_num_particles(input_)
-        smc_tester._set_temperature_schedule(input_)
-        smc_tester._check_num_mcmc_steps(input_)
+        smc_tester.num_particles = input_
+    with pytest.raises(exp_error):
+        smc_tester.num_time_steps = input_
+    with pytest.raises(exp_error):
+        smc_tester.num_mcmc_steps = input_
 
 
 @pytest.mark.parametrize("input_,exp_error", [(-1, ValueError),
@@ -75,14 +77,14 @@ def test_pos_integer_input_checks(input_, exp_error, smc_tester):
                                               ([1], TypeError)])
 def test_ess_threshold_input_checks(input_, exp_error, smc_tester):
     with pytest.raises(exp_error):
-        smc_tester._check_ess_threshold(input_)
+        smc_tester.ess_threshold = input_
 
 
 def test_ess_threshold_default_is_set(smc_tester):
     smc_tester.num_particles = 50
-    ess_threshold = smc_tester._set_ess_threshold(None)
+    smc_tester.ess_threshold = None
     expected = smc_tester.num_particles / 2.
-    assert ess_threshold == expected
+    assert smc_tester.ess_threshold == expected
 
 
 @pytest.mark.parametrize("input_,exp_error", [(1., TypeError),
@@ -90,18 +92,19 @@ def test_ess_threshold_default_is_set(smc_tester):
                                               (dict(), TypeError)])
 def test_autosave_file_input_checks(input_, exp_error, smc_tester):
     with pytest.raises(exp_error):
-        smc_tester._check_autosave_file(input_)
+        smc_tester.autosaver = input_
 
 
-@pytest.mark.parametrize("input_,expected", [('test.h5', HDF5Storage),
-                                             (None, None.__class__)])
-def test_autosave_behavior_is_set(input_, expected, smc_tester, cloned_comm):
-    autosaver = smc_tester._set_autosave_behavior(input_)
+@pytest.mark.parametrize("autosave_file,expected", [('test.h5', HDF5Storage),
+                                                    (None, None.__class__)])
+def test_autosave_behavior_is_set(autosave_file, expected, smc_tester,
+                                  cloned_comm):
+    smc_tester.autosaver = autosave_file
     if cloned_comm.Get_rank() > 0:
-        assert autosaver is None
+        assert smc_tester.autosaver is None
     else:
-        assert isinstance(autosaver, expected)
-        smc_tester.cleanup_file(input_)
+        assert isinstance(smc_tester.autosaver, expected)
+        smc_tester.cleanup_file(autosave_file)
 
 
 @pytest.mark.parametrize("prop_center,prop_scales,exp_error",

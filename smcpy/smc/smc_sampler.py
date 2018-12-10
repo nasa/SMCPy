@@ -44,7 +44,7 @@ from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
 
 
-class SMCSampler(object):
+class SMCSampler(Properties):
     '''
     Class for performing parallel Sequential Monte Carlo sampling
     '''
@@ -54,7 +54,7 @@ class SMCSampler(object):
         self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
         self.parameter_names = param_priors.keys()
 
-        #super(SMCSampler, self).__init__()
+        super(SMCSampler, self).__init__()
 
 
     @staticmethod
@@ -115,21 +115,13 @@ class SMCSampler(object):
         :Returns: A ParticleChain class instance that stores all particles and
             their past generations at every time step.
         '''
-        self.num_particles = self._check_num_particles(num_particles)
+        self.num_particles = num_particles
         self.num_time_steps = num_time_steps
-        self.temp_schedule = np.linspace(0, 1, self.num_time_steps)
-        self.num_mcmc_steps = self._check_num_mcmc_steps(num_mcmc_steps)
-        self.ess_threshold = self._set_ess_threshold(ess_threshold)
-        self.autosaver = self._set_autosave_behavior(autosave_file)
-        self.restart_time_step = self._check_restart_time_step(restart_time_step, num_time_steps)
-
-        #self.num_particles = num_particles
-        #self.num_time_steps = num_time_steps
-        #self.temp_schedule = np.linspace(0., 1., self.num_time_steps)
-        #self.num_mcmc_steps = num_mcmc_steps
-        #self.ess_threshold = ess_threshold
-        #self.autosaver = autosave_file
-        #self.restart_time_step = restart_time_step
+        self.temp_schedule = np.linspace(0., 1., self.num_time_steps)
+        self.num_mcmc_steps = num_mcmc_steps
+        self.ess_threshold = ess_threshold
+        self.autosaver = autosave_file
+        self.restart_time_step = restart_time_step
 
         if self.restart_time_step == 0:
             self._set_proposal_distribution(proposal_center, proposal_scales)
@@ -156,65 +148,6 @@ class SMCSampler(object):
             self._autosave_particle_step()
         self._close_autosaver()
         return self.particle_chain
-
-
-    def _check_num_particles(self, num_particles):
-        self._check_is_positive_integer(num_particles, "num_particles")
-        return num_particles
-
-
-    def _check_is_positive_integer(self, input_, name):
-        if input_ < 1:
-            raise ValueError('"%s" must be > 0' % name)
-        if type(input_) is not int:
-            raise TypeError('"%s" must be integer.' % name)
-        return None
-
-
-    def _set_temperature_schedule(self, num_time_steps):
-        self._check_is_positive_integer(num_time_steps, "num_time_steps")
-        return np.linspace(0, 1, num_time_steps)
-
-
-    def _check_num_mcmc_steps(self, num_mcmc_steps):
-        self._check_is_positive_integer(num_mcmc_steps, "num_mcmc_steps")
-        return num_mcmc_steps
-
-
-    def _set_ess_threshold(self, ess_threshold):
-        if ess_threshold is None:
-            ess_threshold = 0.5 * self.num_particles
-        ess_threshold = self._check_ess_threshold(ess_threshold)
-        return ess_threshold
-
-
-    def _check_ess_threshold(self, ess_threshold):
-        if type(ess_threshold) is not int and type(ess_threshold) is not float:
-            raise TypeError('"ess_threshold" must be int or float')
-        if ess_threshold < 0:
-            raise ValueError('"ess_threshold" must be >= 0')
-        return ess_threshold
-
-
-    def _set_autosave_behavior(self, autosave_file):
-        autosave_file = self._check_autosave_file(autosave_file)
-        if autosave_file is not None and self._rank == 0:
-            return HDF5Storage(autosave_file, mode='w')
-        return None
-
-
-    def _check_restart_time_step(self, restart_time_step, num_time_steps):
-        self._check_is_positive_integer(restart_time_step, "num_mcmc_steps")
-        if restart_time_step > num_time_steps:
-            raise ValueError('restart time outside range [0, num_time_steps]')
-        return restart_time_step
-
-
-    @staticmethod
-    def _check_autosave_file(autosave_file):
-        if type(autosave_file) is not str and autosave_file is not None:
-            raise TypeError('"autosave_file" must be a string or None type.')
-        return autosave_file
 
 
     def _set_proposal_distribution(self, proposal_center, proposal_scales):
