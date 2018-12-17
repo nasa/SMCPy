@@ -6,9 +6,9 @@ the United States under Title 17, U.S. Code. All Other Rights Reserved.
  
 Disclaimers
 No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF 
-ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
 TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
-IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
 FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
 FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
 SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
@@ -23,7 +23,7 @@ UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
 LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
 INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
 UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
 ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
@@ -80,6 +80,10 @@ class ParticleChain():
         Returns number of steps in the particle chain.
         '''
         return len(self._steps)
+
+
+    def get_steps(self,):
+        return self._steps
 
 
     def get_likes(self, step=-1):
@@ -165,9 +169,9 @@ class ParticleChain():
         return cov_matrix
 
 
-    def compute_ESS(self, step=-1):
+    def compute_ess(self, step=-1):
         '''
-        Computes the effective sample size (ESS) of a given step in the particle
+        Computes the effective sample size (ess) of a given step in the particle
         chain.
         '''
         weights = self.get_weights(step)
@@ -179,9 +183,16 @@ class ParticleChain():
 
     def copy_step(self, step=-1):
         '''
-        Returns a copy of particle chain at step (most recent step by default).
+        Returns a copy of particle chain's step (most recent step by default).
         '''
-        return copy.deepcopy(self._steps[-1])
+        return copy.deepcopy(self._steps[step])
+
+
+    def copy(self):
+        '''
+        Returns a copy of the entire particle chain.
+        '''
+        return copy.deepcopy(self)
 
     
     def normalize_step_weights(self, step=-1):

@@ -23,7 +23,7 @@ if __name__ == '__main__':
     num_mcmc_steps = 5
     smc = SMCSampler(y_noisy, m, param_priors)
     particle_chain = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
-                                std_dev, ESS_threshold=0.5*num_particles,
+                                std_dev, ess_threshold=0.5*num_particles,
                                 #proposal_center=center, proposal_scales=scales,
                                 autosave_file='test.h5')
     try:

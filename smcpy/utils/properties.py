@@ -1,5 +1,6 @@
 from checks import Checks
 from ..hdf5.hdf5_storage import HDF5Storage
+from ..particles.particle_chain import ParticleChain
 
 
 class Properties(Checks):
@@ -7,13 +8,14 @@ class Properties(Checks):
 
     def __init__(self):
         super(Properties, self).__init__()
-        self.num_particles = 1
-        self.num_time_steps = 1
-        self.temp_schedule = [0.0, 1.0]
-        self.num_mcmc_steps = 1
-        self.ess_threshold = 0
-        self.autosaver = None
-        self.restart_time_step = 0
+        self._num_particles = 1
+        self._num_time_steps = 1
+        self._temp_schedule = [0.0, 1.0]
+        self._num_mcmc_steps = 1
+        self._ess_threshold = 0
+        self._autosaver = None
+        self._restart_time_step = 0
+        self._particle_chain = ParticleChain()
 
 
     @property
@@ -129,4 +131,19 @@ class Properties(Checks):
         if restart_time_step > self.num_time_steps:
             raise ValueError('restart_time_step cannot be > num_time_steps')
         self._restart_time_step = restart_time_step
+        return None
+
+
+    @property
+    def particle_chain(self):
+        return self._particle_chain
+
+
+    @particle_chain.setter
+    def particle_chain(self, particle_chain):
+        input_ = 'particle_chain'
+        if not isinstance(particle_chain, ParticleChain) and \
+           not self._is_none(particle_chain):
+            self._raise_type_error(input_, 'ParticleChain instance or None')
+        self._particle_chain = particle_chain
         return None

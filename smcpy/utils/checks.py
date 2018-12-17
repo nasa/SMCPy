@@ -1,3 +1,5 @@
+import numpy as np
+
 class Checks(object):
 
 
@@ -44,6 +46,15 @@ class Checks(object):
     @staticmethod
     def _is_zero(input_):
         return input_ == 0
+
+
+    @staticmethod
+    def _is_positive_definite(input_):
+        try:
+            np.linalg.cholesky(input_)
+            return True
+        except np.linalg.linalg.LinAlgError:
+            return False
 
 
     @staticmethod

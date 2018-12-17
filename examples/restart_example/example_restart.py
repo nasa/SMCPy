@@ -23,12 +23,12 @@ if __name__ == '__main__':
     num_mcmc_steps = 5
     smc = SMCSampler(y_noisy, m, param_priors)
     particle_chain = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
-                                std_dev, ESS_threshold=0.5*num_particles,
+                                std_dev, ess_threshold=0.5*num_particles,
                                 autosave_file='smc.h5')
 
     # try a restart
     restarted_chain = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
-                                 std_dev, ESS_threshold=0.5*num_particles,
+                                 std_dev, ess_threshold=0.5*num_particles,
                                  restart_time_step=10, hdf5_to_load='smc.h5',
                                  autosave_file='smc_restart.h5')
 

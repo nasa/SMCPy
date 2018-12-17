@@ -87,7 +87,7 @@ class Particle():
 
     @staticmethod
     def _check_log_like(log_like):
-        if type(log_like) is not int and type(log_like) is not float:
+        if not isinstance(log_like, float) and not isinstance(log_like, int):
             raise TypeError('Input "log_like" must be an integer or float')
         if log_like > 0:
             raise ValueError('Input "log_like" must be negative.')

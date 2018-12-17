@@ -1,5 +1,6 @@
 from mpi4py import MPI
 import numpy as np
+from os import remove
 from smcpy.smc.smc_sampler import SMCSampler
 from smcpy.model.base_model import BaseModel
 
@@ -54,7 +55,7 @@ class SMCTester(SMCSampler):
     @staticmethod
     def cleanup_file(filename):
         try:
-            os.remove(filename)
+            remove(filename)
         except:
             pass
         return None
@@ -73,6 +74,23 @@ class SMCTester(SMCSampler):
         diff = data - model_eval
         ssq = np.linalg.norm(diff)**2
         return np.log(1./(2*np.pi*var)**(M/2.)*np.exp(-1./(2*var)*ssq))
+
+
+    @classmethod
+    def assert_particle_chains_almost_equal(class_, pc1, pc2):
+        assert pc1.get_num_steps() == pc2.get_num_steps()
+        for i in range(pc1.get_num_steps()):
+            class_.assert_particle_chain_steps_almost_equal(pc1, pc2, i)
+        return None
+
+
+    @staticmethod
+    def assert_particle_chain_steps_almost_equal(pc1, pc2, step_index):
+        aae = np.testing.assert_array_almost_equal
+        aae(pc1.get_log_likes(step_index), pc2.get_log_likes(step_index))
+        aae(pc1.get_weights(step_index), pc2.get_weights(step_index))
+        aae(pc1.get_params('a', step_index), pc2.get_params('a', step_index))
+        aae(pc1.get_params('b', step_index), pc2.get_params('b', step_index))
 
 
     def when_proposal_dist_set_with_scales(self):
@@ -112,18 +130,17 @@ class SMCTester(SMCSampler):
 
 
 
-    def when_sampling_parameters_set(self):
+    def when_sampling_parameters_set(self, num_time_steps = 2,
+                                     num_particles_per_processor = 1,
+                                     num_mcmc_steps = 1, autosave_file = None,
+                                     restart_time_step = 0): 
         '''
         Testing checkpoint. This returns an instance of the SMCSampler class
         that has initialized the sampler parameters and is preparing to
         initialize the particles.
         '''
-        num_particles = self.comm.Get_size()
-        num_time_steps = 2
-        num_mcmc_steps = 1
+        num_particles = self.comm.Get_size() * num_particles_per_processor
         ess_threshold = 0.8 * num_particles
-        autosave_file = None
-        restart_time_step = 0
 
         self.num_particles = num_particles
         self.num_time_steps = num_time_steps
@@ -139,7 +156,6 @@ class SMCTester(SMCSampler):
         proposal_center = {'a': 2.0, 'b': 3.5}
         proposal_scales = {'a': 0.5, 'b': 0.5}
 
-        self.when_sampling_parameters_set()
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
         self.particles = self._initialize_particles(measurement_std_dev)
@@ -150,7 +166,6 @@ class SMCTester(SMCSampler):
         proposal_center = {'a': 1000.0, 'b': 3.5}
         proposal_scales = {'a': 1000.0, 'b': 0.5}
 
-        self.when_sampling_parameters_set()
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
         self.particles = self._initialize_particles(0.1)
@@ -161,8 +176,32 @@ class SMCTester(SMCSampler):
         proposal_center = None
         proposal_scales = None
 
-        self.when_sampling_parameters_set()
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
         self.particles = self._initialize_particles(measurement_std_dev)
         return None
+
+
+    def when_particle_chain_created(self):
+        self.when_initial_particles_sampled_from_proposal(0.6)
+        particles = self.particles
+        particle_chain = self._initialize_particle_chain(particles)
+        if self.comm.Get_rank() == 0:
+            particle_chain.add_step(particle_chain.copy_step())
+            self.particle_chain = particle_chain
+        else:
+            self.particle_chain = None
+        return None
+
+
+    def when_particles_mutated(self):
+        temp_step = 0.2
+        std_dev = 0.6
+
+        new_particles = self._create_new_particles(temp_step)
+        cov = np.eye(2)
+        self.mutated_particles = self._mutate_new_particles(new_particles,
+                                                            cov, std_dev,
+                                                            temp_step)
+        return None
+

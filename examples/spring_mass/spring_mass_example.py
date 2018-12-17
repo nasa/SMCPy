@@ -21,6 +21,6 @@ num_time_steps = 20
 num_mcmc_steps = 1
 smc = SMCSampler(displacement_data, model, param_priors)
 pchain = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
-                    ESS_threshold=num_particles*0.5)
-if smc.rank == 0:
+                    ess_threshold=num_particles*0.5)
+if smc._rank == 0:
     pchain.plot_pairwise_weights(save=True)

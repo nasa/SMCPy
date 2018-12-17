@@ -2,8 +2,10 @@ import pytest
 import numpy as np
 import pymc
 from mpi4py import MPI
+from os import path
 from smcpy.hdf5.hdf5_storage import HDF5Storage
 from smcpy.particles.particle_chain import ParticleChain
+from smcpy.particles.particle import Particle
 from smc_tester import SMCTester
 
 '''
@@ -23,7 +25,7 @@ def error_std_dev():
 
 
 @pytest.fixture()
-def smc_tester(request):
+def smc_tester():
     np.random.seed(2)
     return SMCTester()
 
@@ -36,6 +38,17 @@ def mpi_comm_world():
 @pytest.fixture
 def cloned_comm():
     return MPI.COMM_WORLD.Clone()
+
+
+@pytest.fixture
+def smc_tester_rank_seed(cloned_comm):
+    np.random.seed(cloned_comm.Get_rank())
+    return SMCTester()
+
+
+@pytest.fixture
+def h5_filename():
+    return 'test.h5'
 
 
 def test_communicator_is_clone(smc_tester, mpi_comm_world):
@@ -95,15 +108,15 @@ def test_autosave_file_input_checks(input_, exp_error, smc_tester):
         smc_tester.autosaver = input_
 
 
-@pytest.mark.parametrize("autosave_file,expected", [('test.h5', HDF5Storage),
+@pytest.mark.parametrize("autosave_file,expect", [(h5_filename(), HDF5Storage),
                                                     (None, None.__class__)])
-def test_autosave_behavior_is_set(autosave_file, expected, smc_tester,
+def test_autosave_behavior_is_set(autosave_file, expect, smc_tester,
                                   cloned_comm):
     smc_tester.autosaver = autosave_file
     if cloned_comm.Get_rank() > 0:
         assert smc_tester.autosaver is None
     else:
-        assert isinstance(smc_tester.autosaver, expected)
+        assert isinstance(smc_tester.autosaver, expect)
         smc_tester.cleanup_file(autosave_file)
 
 
@@ -169,6 +182,7 @@ def test_likelihood_from_pymc(smc_tester, params, error_std_dev):
 
 
 def test_val_error_when_proposal_beyond_prior_support(smc_tester):
+    smc_tester.when_sampling_parameters_set()
     with pytest.raises(ValueError):
         smc_tester.when_initial_particles_sampled_from_proposal_outside_prior()
 
@@ -178,6 +192,7 @@ def test_initialize_from_proposal(smc_tester, error_std_dev):
     weight = 0.06836560508406836
     log_like = -706.453419056
 
+    smc_tester.when_sampling_parameters_set()
     smc_tester.when_initial_particles_sampled_from_proposal(error_std_dev)
 
     first_particle = smc_tester.particles[0]
@@ -194,6 +209,7 @@ def test_initialize_from_prior(smc_tester, error_std_dev):
     log_like = -1242179.09405
 
     error_std_dev = 0.6
+    smc_tester.when_sampling_parameters_set()
     smc_tester.when_initial_particles_sampled_from_prior(error_std_dev)
 
     first_particle = smc_tester.particles[0]
@@ -207,6 +223,7 @@ def test_initialize_from_prior(smc_tester, error_std_dev):
 def test_initialize_particle_chain(smc_tester, cloned_comm):
     error_std_dev = 0.6
 
+    smc_tester.when_sampling_parameters_set()
     smc_tester.when_initial_particles_sampled_from_proposal(error_std_dev)
     particle_chain = smc_tester._initialize_particle_chain(smc_tester.particles)
     if cloned_comm.Get_rank() == 0:
@@ -225,5 +242,163 @@ def test_raise_value_error_when_restart_step_invalid(smc_tester, restart_step):
                                  autosave_file=None)
 
 
-def test_load_save_particle_chain(smc_tester):
-    pass
+def test_save_particle_chain(smc_tester, h5_filename, cloned_comm):
+    if cloned_comm.Get_rank() == 0:
+        assert not path.exists(h5_filename)
+    smc_tester.when_sampling_parameters_set()
+    smc_tester.when_particle_chain_created()
+    smc_tester.save_particle_chain(h5_filename)
+    if cloned_comm.Get_rank() == 0:
+        assert path.exists(h5_filename)
+        smc_tester.cleanup_file(h5_filename)
+
+
+def test_particle_chain_trimmer(smc_tester, cloned_comm, h5_filename):
+    smc_tester.when_sampling_parameters_set()
+    smc_tester.save_particle_chain(h5_filename)
+    assert path.exists(h5_filename)
+    particle_chain = smc_tester.load_particle_chain(h5_filename)
+    if cloned_comm.Get_rank() == 0:
+        smc_tester.assert_particle_chains_almost_equal(particle_chain,
+                                                      smc_tester.particle_chain)
+    smc_tester.cleanup_file(h5_filename)
+
+
+@pytest.mark.parametrize("restart_time", [0, 1])
+def test_set_start_time_equal_to_restart_time_step(smc_tester, restart_time):
+    smc_tester.num_time_steps = 2
+    smc_tester.restart_time_step = restart_time
+    smc_tester._set_start_time_equal_to_restart_time_step()
+    assert smc_tester._start_time_step == restart_time
+
+
+def test_trim_particle_chain(smc_tester, cloned_comm):
+    smc_tester.when_sampling_parameters_set()
+    smc_tester.when_particle_chain_created()
+    if cloned_comm.Get_rank() == 0:
+        assert smc_tester.particle_chain.get_num_steps() == 2
+        smc_tester._trim_particle_chain(smc_tester.particle_chain, 0)
+        assert smc_tester.particle_chain.get_num_steps() == 1
+    else:
+        assert smc_tester.particle_chain is None
+
+
+@pytest.mark.parametrize("input_", [0, [1], dict()])
+def test_set_particle_chain_type_error(smc_tester, input_):
+    with pytest.raises(TypeError):
+        smc_tester.particle_chain = input_
+
+
+def test_autosave_particle_chain(smc_tester, h5_filename, cloned_comm):
+    smc_tester.when_sampling_parameters_set(autosave_file=h5_filename)
+    smc_tester.when_particle_chain_created()
+    smc_tester._autosave_particle_chain()
+    if cloned_comm.Get_rank() == 0:
+        assert path.exists(h5_filename)
+        smc_tester.cleanup_file(h5_filename)
+
+
+def test_create_new_particles(smc_tester, cloned_comm):
+    weight = 1.0
+    log_like = -706.4534190556333
+    params = {'a': np.array(2.43349633), 'b': np.array(5.73716365)}
+
+    smc_tester.when_sampling_parameters_set()
+    smc_tester.when_particle_chain_created()
+    new_particles = smc_tester._create_new_particles(0.2)
+    if cloned_comm.Get_rank() > 0:
+        assert isinstance(new_particles, list)
+        assert all([isinstance(x, Particle) for x in new_particles])
+    else:
+        assert isinstance(new_particles, list)
+        assert all([isinstance(x, Particle) for x in new_particles])
+        arr_alm_eq(new_particles[0].log_like, log_like)
+        arr_alm_eq(new_particles[0].params.values(), params.values())
+
+
+def test_compute_step_covariance(smc_tester):
+    '''
+    Rank is same on each processor so each processor returns a duplicate set
+    of particles, meaning this test will pass regardless of processes. Simply
+    here to test the plumbing.
+    '''
+    cov_test = np.array([[ 0.91459139, -0.30873497],
+                         [-0.30873497,  3.44351062]])
+
+    smc_tester.when_sampling_parameters_set(num_particles_per_processor=10)
+    smc_tester.when_particle_chain_created()
+    cov = smc_tester._compute_current_step_covariance()
+    assert isinstance(cov, np.ndarray)
+    arr_alm_eq(cov, cov_test)
+
+
+def test_mutate_new_particles(smc_tester, cloned_comm):
+    params = {'a': np.array(2.43349633), 'b': np.array(5.73716365)}
+    weight = 1.0
+    log_like = -712.444883603
+ 
+    smc_tester.when_sampling_parameters_set(num_particles_per_processor=10)
+    smc_tester.when_particle_chain_created()
+    smc_tester.when_particles_mutated()
+    mutated_particles = smc_tester.mutated_particles
+
+    if cloned_comm.Get_rank() > 0:
+        assert mutated_particles is None
+    else:
+        assert isinstance(mutated_particles, list)
+        assert all([isinstance(x, Particle) for x in mutated_particles])
+        arr_alm_eq(mutated_particles[0].log_like, log_like)
+        arr_alm_eq(mutated_particles[0].params.values(), params.values())
+
+
+def test_update_particle_chain_with_new_particles(smc_tester, cloned_comm):
+    smc_tester.when_sampling_parameters_set()
+    smc_tester.when_particle_chain_created()
+    smc_tester.when_particles_mutated()
+    mutated_particles = smc_tester.mutated_particles
+
+    if cloned_comm.Get_rank() == 0:
+        pc1 = smc_tester.particle_chain.copy()
+        smc_tester._update_particle_chain_with_new_particles(mutated_particles)
+        pc2 = smc_tester.particle_chain
+        pc3 = ParticleChain()
+        pc3.add_step(mutated_particles)
+        assert pc1.get_num_steps() == pc2.get_num_steps()
+        smc_tester.assert_particle_chain_steps_almost_equal(pc1, pc2, 0)
+        smc_tester.assert_particle_chain_steps_almost_equal(pc2, pc3, -1)
+    else:
+        assert mutated_particles is None
+        assert smc_tester._update_particle_chain_with_new_particles( \
+                                                     mutated_particles) is None
+
+
+def test_autosave_particle_step(smc_tester, h5_filename, cloned_comm):
+    assert not path.exists(h5_filename)
+    smc_tester.when_sampling_parameters_set(autosave_file = h5_filename)
+    smc_tester.when_particle_chain_created()
+    smc_tester._autosave_particle_chain()
+    smc_tester.when_particles_mutated()
+    mutated_particles = smc_tester.mutated_particles
+    smc_tester._update_particle_chain_with_new_particles(mutated_particles)
+    smc_tester._autosave_particle_step()
+
+    if cloned_comm.Get_rank() == 0:
+        pc1 = smc_tester.particle_chain
+        pc2 = smc_tester.load_particle_chain(h5_filename)
+        smc_tester.assert_particle_chains_almost_equal(pc1, pc2)
+        smc_tester.cleanup_file(h5_filename)
+    else:
+        assert smc_tester.autosaver is None
+
+
+def test_close_autosaver(smc_tester, h5_filename, cloned_comm):
+    smc_tester.when_sampling_parameters_set(autosave_file=h5_filename)
+    if cloned_comm.Get_rank() == 0:
+        assert path.exists(h5_filename)
+        smc_tester.autosaver.close()
+        with pytest.raises(ValueError):
+            smc_tester.autosaver._h5.mode
+        smc_tester.cleanup_file(h5_filename)
+        assert not path.exists(h5_filename)
+    else:
+        assert smc_tester.autosaver is None
