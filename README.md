@@ -47,7 +47,7 @@ if smc._rank == 0:
 
 The above code produces probabilistic estimates of K, the spring stiffness divided by mass, and g, the gravitational constant. These estimates are in the form of weighted particles and can be visualized by plotting the pairwise weights as shown below.
 
-![CDF comparison](https://github.com/nasa/SMCPy/blob/master/examples/spring_mass/pairwise.png)
+![Pairwise](https://github.com/nasa/SMCPy/blob/master/examples/spring_mass/pairwise.png)
 
 ------------------------------------------------------------------------------
 
