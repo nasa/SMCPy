@@ -18,7 +18,7 @@ Incubator (HPCI) at NASA Langley Research Center.
 
 ```python
 import numpy as np
-from spring_mass_models import SpringMassModel
+from smcpy.examples.spring_mass.spring_mass_models import SpringMassModel
 from smcpy.smc.smc_sampler import SMCSampler
 
 # Initialize model
@@ -45,7 +45,7 @@ if smc._rank == 0:
     pchain.plot_pairwise_weights(save=True)
 ```
 
-The above code produces probabilistic estimates of K, the spring stiffness divided by mass, and g, the gravitational constant. These estimates are in the form of weighted particles and can be visualized by plotting the pairwise weights as shown below.
+The above code produces probabilistic estimates of K, the spring stiffness divided by mass, and g, the gravitational constant on an unknown planet. These estimates are in the form of weighted particles and can be visualized by plotting the pairwise weights as shown below. The mean of each parameter is marked by the dashed red line. The true values for this example were K = 1.67 and g = 4.62. More details can be found in the spring mass example (smcpy/examples/spring_mass/).
 
 ![Pairwise](https://github.com/nasa/SMCPy/blob/master/examples/spring_mass/pairwise.png)
 
