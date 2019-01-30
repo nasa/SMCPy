@@ -8,7 +8,7 @@ To operate the code, the user supplies a computational model built in Python
 estimated, and provides data to be used for calibration. SMC sampling can then
 be conducted with ease through instantiation of the SMC class and a call to the
 sample() method. The output of this process is an approximation of the parameter
-posterior probability distribution conditioned on the data provided.
+posterior probability distribution conditional on the data provided.
 
 This software was funded by and developed under the High Performance Computing 
 Incubator (HPCI) at NASA Langley Research Center.
@@ -47,7 +47,7 @@ if smc._rank == 0:
 
 The above code produces probabilistic estimates of K, the spring stiffness divided by mass, and g, the gravitational constant. These estimates are in the form of weighted particles and can be visualized by plotting the pairwise weights as shown below.
 
-
+![CDF comparison](https://github.com/nasa/SMCPy/blob/master/examples/spring_mass/pairwise.png)
 
 ------------------------------------------------------------------------------
 
