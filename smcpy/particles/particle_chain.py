@@ -379,7 +379,7 @@ class ParticleChain():
 
         # colorbar
         if L <= 2:
-            plt.colorbar(sc, ax=ax[key1+'+'+key2])
+            cb = plt.colorbar(sc, ax=ax[key1+'+'+key2])
         else:
             ax1_position = fig.axes[0].get_position()
             ax3_position = fig.axes[2].get_position()
@@ -391,6 +391,11 @@ class ParticleChain():
             cb = plt.colorbar(sc, cax=empty_ax)
             if tick_size is not None:
                 empty_ax.tick_params(labelsize=tick_size)
+
+        cb.ax.get_yaxis().labelpad = 15
+        cb.ax.set_ylabel('Normalized weights', rotation=270)
+
+        plt.tight_layout()
 
         if save==True:
             plt.savefig(prefix+'.png')
