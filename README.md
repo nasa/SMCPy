@@ -14,7 +14,7 @@ This software was funded by and developed under the High Performance Computing
 Incubator (HPCI) at NASA Langley Research Center.
 
 ------------------------------------------------------------------------------
-* Example Usage
+# Example Usage
 
 ```python
 import numpy as np
