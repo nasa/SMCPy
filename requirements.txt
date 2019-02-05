@@ -1,4 +1,5 @@
 h5py
+scipy
 mpi4py
 numpy
 pymc==2.3.6
