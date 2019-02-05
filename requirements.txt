@@ -1,0 +1,4 @@
+h5py
+mpi4py
+numpy
+pymc==2.3.6
