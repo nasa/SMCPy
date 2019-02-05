@@ -5,3 +5,4 @@
 docs/_*
 *.sh
 *pytest_cache*
+.coverage
