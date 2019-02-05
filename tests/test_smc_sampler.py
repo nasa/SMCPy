@@ -256,12 +256,12 @@ def test_save_particle_chain(smc_tester, h5_filename, cloned_comm):
 def test_particle_chain_trimmer(smc_tester, cloned_comm, h5_filename):
     smc_tester.when_sampling_parameters_set()
     smc_tester.save_particle_chain(h5_filename)
-    assert path.exists(h5_filename)
-    particle_chain = smc_tester.load_particle_chain(h5_filename)
     if cloned_comm.Get_rank() == 0:
+        assert path.exists(h5_filename)
+        particle_chain = smc_tester.load_particle_chain(h5_filename)
         smc_tester.assert_particle_chains_almost_equal(particle_chain,
                                                       smc_tester.particle_chain)
-    smc_tester.cleanup_file(h5_filename)
+        smc_tester.cleanup_file(h5_filename)
 
 
 @pytest.mark.parametrize("restart_time", [0, 1])
