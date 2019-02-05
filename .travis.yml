@@ -1,0 +1,15 @@
+language: python
+python:
+  - "2.7"
+
+install:
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)/SMCPy
+  - python setup.py install
+  - pip install pytest==4.0 pytest-cov
+  - pip install coveralls
+
+script:
+  - pytest tests --cov=SMCPy
+
+after_script:
+- coveralls
