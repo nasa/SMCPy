@@ -8,7 +8,7 @@ measure_t_grid = np.arange(0., 5., 0.2)  #time
 model = SpringMassModel(state0, measure_t_grid)
 
 # Load data
-noise_stddev = 0.94
+noise_stddev = 0.2
 displacement_data = np.genfromtxt('noisy_data.txt')
 
 # Define prior distributions
