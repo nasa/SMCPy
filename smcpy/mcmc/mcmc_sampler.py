@@ -438,9 +438,9 @@ class MCMCSampler:
 
             if dist == 'Normal':
                 if q0 == None:
-                    RV = [pymc.Normal(key, mu=args[1], tau=1/args[2])]
+                    RV = [pymc.Normal(key, mu=args[1], tau=1./args[2])]
                 else:
-                    RV = [pymc.Normal(key, mu=args[1], tau=1/args[2],
+                    RV = [pymc.Normal(key, mu=args[1], tau=1./args[2],
                           value=q0[key])]
             elif dist == 'Uniform':
                 if q0 == None:
@@ -457,10 +457,10 @@ class MCMCSampler:
                                                upper=args[2], value=q0[key])]
             elif dist == 'TruncatedNormal':
                 if q0 == None:
-                    RV = [pymc.TruncatedNormal(key, mu=args[1], tau=1/args[2],
+                    RV = [pymc.TruncatedNormal(key, mu=args[1], tau=1./args[2],
                           a=args[3], b=args[4])]
                 else:
-                    RV = [pymc.TruncatedNormal(key, mu=args[1], tau=1/args[2],
+                    RV = [pymc.TruncatedNormal(key, mu=args[1], tau=1./args[2],
                           a=args[3], b=args[4], value=q0[key])]
             elif dist == 'KDE':
                 kde = multivariate_kde_from_samples(args[1], args[2])
