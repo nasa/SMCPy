@@ -114,9 +114,12 @@ class SMCSampler(Properties):
         :param hdf5_to_load: file path of a particle chain saved using the
             ParticleChain.save() method.
         :type hdf5_to_load: string
+        :param autosave_file: name of file to store all particle data up to
+            current time step. Saves after every mutation.
+        :type autosave_file: string
 
 
-        :Returns: A ParticleChain class instance that stores all particles and
+        :returns: A ParticleChain class instance that stores all particles and
             their past generations at every time step.
         '''
         self.num_particles = num_particles
