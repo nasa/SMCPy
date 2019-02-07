@@ -200,10 +200,13 @@ class ParticleChain():
         Normalizes weights for all particles in a given step.
 
         :param int step: step identifier, default is most recent (i.e., step=-1)
+        :raises ValueError: sum of all particle weights is zero
         '''
         weights = self.get_weights(step)
         particles = self.get_particles(step)
         total_weight = np.sum(weights)
+        if total_weight == 0:
+            raise ValueError('Sum of all particle weights is zero.')
         for p in particles:
             p.weight = p.weight/total_weight
         return None
