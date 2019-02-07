@@ -13,7 +13,7 @@ truth_model = SpringMassModel(state0, truth_t_grid)
 truth = truth_model.evaluate(truth_params)
 
 # Add noise
-noise_std_dev = 0.94
+noise_std_dev = 0.5
 noisy_data = model.generate_noisy_data_with_model(noise_std_dev, truth_params)
 noisy_data = noisy_data
 
