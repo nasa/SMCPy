@@ -1,0 +1,227 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Example - Spring Mass System &#8212; SMCPy 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Source Code Documentation" href="source_code.html" />
+    <link rel="prev" title="Introduction" href="introduction.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="example-spring-mass-system">
+<h1>Example - Spring Mass System<a class="headerlink" href="#example-spring-mass-system" title="Permalink to this headline">¶</a></h1>
+<p>This example provides a simple demonstration of SMCPy functionality. The goal
+is to inversely determine the uncertainty in the model parameters given a set
+of noisy observations of the spring mass system using Sequential Monte Carlo
+(SMC) and to compare the results to Markov chain Monte Carlo (MCMC). As SMC
+relies on a MCMC kernel, a fully functional MCMC sampler is included in the
+SMCPy package. In this example, it is used for verification of the SMC sampler.
+The example covers all steps for implementing SMC and MCMC samplers using
+SMCPy, including the creation of a user-defined computational model (spring
+mass numerical integrator) that uses the standardized SMCPy interface, defining
+prior distributions, initializing the samplers, computing statistical moments
+with the resulting estimators, and plotting the results. The full source code
+for this example can be found in the SMCPy repository:
+<code class="docutils literal notranslate"><span class="pre">/SMCPy/examples/spring_mass/spring_mass_example.py</span></code> and
+<code class="docutils literal notranslate"><span class="pre">/SMCPy/examples/spring_mass/mcmc_verify/spring_mass_mcmc.py</span></code> for the SMC and
+MCMC samplers, respectively. Data generation was conducted using
+<code class="docutils literal notranslate"><span class="pre">/SMCPy/examples/spring_mass/generate_noisy_data.py</span></code>.</p>
+<div class="figure align-center" id="spring-mass">
+<a class="reference internal image-reference" href="_images/spring_mass_diagram.png"><img alt="_images/spring_mass_diagram.png" src="_images/spring_mass_diagram.png" style="width: 2in;" /></a>
+</div>
+<div class="section" id="problem-specification">
+<h2>Problem Specification<a class="headerlink" href="#problem-specification" title="Permalink to this headline">¶</a></h2>
+<p>The governing equation of motion for the system is given by</p>
+<div class="math notranslate nohighlight" id="equation-springmass">
+<span class="eqno">(1)<a class="headerlink" href="#equation-springmass" title="Permalink to this equation">¶</a></span>\[m_s \ddot{z}  = -k_s z + m_s g\]</div>
+<p>where <span class="math notranslate nohighlight">\(m_s\)</span> is the mass, <span class="math notranslate nohighlight">\(k_s\)</span> is the spring stiffness, <span class="math notranslate nohighlight">\(g\)</span>
+is the acceleration due to gravity, <span class="math notranslate nohighlight">\(z\)</span> is the vertical displacement of
+the mass, and <span class="math notranslate nohighlight">\(\ddot{z}\)</span> is the acceleration of the mass. The true
+stiffness and gravitational constant are unknown. The goal of this example is
+to, by observing the motion of the mass over time, <span class="math notranslate nohighlight">\(z_t\)</span>, estimate both
+<span class="math notranslate nohighlight">\(K_s\)</span> and <span class="math notranslate nohighlight">\(G\)</span>, which are random variables representing the
+uncertainty in the value of spring stiffness and the gravitational constant,
+respectively. For reasons outside the scope of this example, the problem
+becomes ill-posed unless the stiffness is normalized by mass such that
+realizations are now <span class="math notranslate nohighlight">\(k_s^*\)</span> of random variable of interest <span class="math notranslate nohighlight">\(K_s^*\)</span>
+and the equation of motion given by Equation (1) is now</p>
+<div class="math notranslate nohighlight" id="equation-springmass-mod">
+<span class="eqno">(2)<a class="headerlink" href="#equation-springmass-mod" title="Permalink to this equation">¶</a></span>\[\ddot{z}  = -k_s^* z + g.\]</div>
+<p>Given observations <span class="math notranslate nohighlight">\(z_t\)</span> which, assuming measurement noise exists, are realizations of the random variable <span class="math notranslate nohighlight">\(Z_t\)</span>, the relationship between the computational model, measurement noise, and observations is</p>
+<div class="math notranslate nohighlight" id="equation-springmass-stat-model">
+<span class="eqno">(3)<a class="headerlink" href="#equation-springmass-stat-model" title="Permalink to this equation">¶</a></span>\[Z_t  = f_t(K_s^*, G) + \epsilon_t\]</div>
+<p>Here, <span class="math notranslate nohighlight">\(\epsilon_t\)</span> is the measurement noise associated with each observation of displacement taken over time (also a random variable), and <span class="math notranslate nohighlight">\(f_t\)</span> is the computational model response at time <span class="math notranslate nohighlight">\(t\)</span>, which involves numerical integration of Equation (2).</p>
+<p>The inverse solution of equations in the form of (2) is the posterior
+distribution, or, in the context of this example, the joint distribution of
+<span class="math notranslate nohighlight">\(K_s^*\)</span> and <span class="math notranslate nohighlight">\(G\)</span> conditional on the observed data, <span class="math notranslate nohighlight">\(z_t\)</span>. While
+difficult to solve directly, the posterior distribution can be approximated via
+sampling methods such as SMC and MCMC. This example covers this process using
+the SMCSampler and MCMCSampler classes in the SMCPy Python module. In
+particular, the objective is to approximate the expected value of the model
+parameters given observations <span class="math notranslate nohighlight">\(z_t\)</span>.</p>
+<p>The MCMC sampler draws samples from the unknown posterior distribution
+by forming a Markov chain through the parameter space whose stationary
+distribution is the posterior. The samples forming the chain can then be used
+to build an estimator of the expected value</p>
+<div class="math notranslate nohighlight">
+\[E[X] = \frac{1}{N}\Sum_{i=1}^N X_i\]</div>
+<p>where <span class="math notranslate nohighlight">\(X_i\)</span> is the random variable of interest, and <span class="math notranslate nohighlight">\(i=1,\ldots,N\)</span>, with <span class="math notranslate nohighlight">\(N\)</span> being the number of equally-weighted samples drawn using the MCMC sampler.</p>
+<p>While MCMC is a proven approach to evaluting the quantities of interest, it can
+be slow if the computational model is expensive. The Markovian nature of MCMC
+means it is inherently a serial process. SMC, on the other hand, is a
+parallelizable alternative that uses weighted samples called “particles.” In
+SMC, a sequence of target distributions is defined that gradually transitions
+from the typically-known prior distribution to the posterior distribution of
+interest. A particle filtering framework based on importance sampling can then
+be introduced that allows for recursive estimation of each target in the
+sequence. Taking the final particle state, the SMC estimator is</p>
+<div class="math notranslate nohighlight">
+\[E[X] = \Sum_{j=1}^M W_j X_j\]</div>
+<p>where <span class="math notranslate nohighlight">\(W_j\)</span> is the normalized weight associated with the <span class="math notranslate nohighlight">\(j^{th}\)</span> particle and <span class="math notranslate nohighlight">\(M\)</span> is the total number of particles.</p>
+<p>For this example, synthetic data will be generated by adding noise to a model response for a given set of “true” parameters. Next, MCMC and SMC will be used to estimate the expected value of these parameters with the expectation that these estimates are close to the true parameter values. Note that the code used to generate results in this example is actually split between two files in the SMCPy package. The two will be combined here and redundant code will be skipped.</p>
+</div>
+<div class="section" id="step-1-initialization-define-the-model-and-generate-the-data">
+<h2>Step 1: Initialization; define the model and generate the data<a class="headerlink" href="#step-1-initialization-define-the-model-and-generate-the-data" title="Permalink to this headline">¶</a></h2>
+<p>Begin by importing the needed Python modules, including SMCPy classes and the SpringMassModel class that defines the spring mass numerical integrator:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">spring_mass_models</span> <span class="kn">import</span> <span class="n">SpringMassModel</span>
+<span class="kn">from</span> <span class="nn">smcpy.smc.smc_sampler</span> <span class="kn">import</span> <span class="n">SMCSampler</span>
+</pre></div>
+</div>
+<p>Below is a snippet of the SpringMassModel class; the entire class can be found in the SMCPy repo (<code class="docutils literal notranslate"><span class="pre">/SMCPy/examples/spring_mass/spring_mass_model.py</span></code>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">smcpy.model.base_model</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="o">...</span>
+
+<span class="k">class</span> <span class="nc">SpringMassModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Defines Spring Mass model with 2 free params (spring stiffness, k &amp;</span>
+<span class="sd">    mass, m)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state0</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">time_grid</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+</pre></div>
+</div>
+<p>Note that user-defined models in SMCPy must inherit from the SMCPy abstract class <code class="docutils literal notranslate"><span class="pre">BaseModel</span></code> and implement an  <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> function that accepts and returns numpy arrays for inputs and outputs, respectively. Here, the <code class="docutils literal notranslate"><span class="pre">state0</span></code> argument defines the initial state of the spring mass system, and <code class="docutils literal notranslate"><span class="pre">time_grid</span></code> defines the times at which to return displacement.</p>
+<p>The first step in an analysis is to obtain data from which to make an
+inference. In this example, this data will come in the form of observations of
+the z-displacement of the mass made over time. For demonstration purposes, the
+data will be generated from the spring mass model, and noise will be added by
+sampling from a zero-mean Gaussian distribution and adding these values to the
+model output. While not a realistic case, it is typical to generate and use
+synthetic data in this manner for verification purposes when performing inverse
+uncertainty quantification.</p>
+</div>
+<div class="section" id="step-2-perform-parameter-estimation-using-smcpy">
+<h2>Step 2: Perform Parameter Estimation using SMCPy<a class="headerlink" href="#step-2-perform-parameter-estimation-using-smcpy" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="step-3-perform-parameter-estimation-using-mcmcpy">
+<h2>Step 3: Perform Parameter Estimation using MCMCPy<a class="headerlink" href="#step-3-perform-parameter-estimation-using-mcmcpy" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">SMCPy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Example - Spring Mass System</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#problem-specification">Problem Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-initialization-define-the-model-and-generate-the-data">Step 1: Initialization; define the model and generate the data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-perform-parameter-estimation-using-smcpy">Step 2: Perform Parameter Estimation using SMCPy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-perform-parameter-estimation-using-mcmcpy">Step 3: Perform Parameter Estimation using MCMCPy</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source_code.html">Source Code Documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="introduction.html" title="previous chapter">Introduction</a></li>
+      <li>Next: <a href="source_code.html" title="next chapter">Source Code Documentation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Patrick Leser.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/example.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

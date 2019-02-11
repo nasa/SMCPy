@@ -1,0 +1,136 @@
+
+Example - Spring Mass System
+=============================
+
+This example provides a simple demonstration of SMCPy functionality. The goal
+is to inversely determine the uncertainty in the model parameters given a set
+of noisy observations of the spring mass system using Sequential Monte Carlo
+(SMC) and to compare the results to Markov chain Monte Carlo (MCMC). As SMC
+relies on a MCMC kernel, a fully functional MCMC sampler is included in the
+SMCPy package. In this example, it is used for verification of the SMC sampler.
+The example covers all steps for implementing SMC and MCMC samplers using
+SMCPy, including the creation of a user-defined computational model (spring
+mass numerical integrator) that uses the standardized SMCPy interface, defining
+prior distributions, initializing the samplers, computing statistical moments
+with the resulting estimators, and plotting the results. The full source code
+for this example can be found in the SMCPy repository:
+``/SMCPy/examples/spring_mass/spring_mass_example.py`` and
+``/SMCPy/examples/spring_mass/mcmc_verify/spring_mass_mcmc.py`` for the SMC and
+MCMC samplers, respectively. Data generation was conducted using
+``/SMCPy/examples/spring_mass/generate_noisy_data.py``.
+
+.. _spring-mass:
+
+.. figure:: images/spring_mass_diagram.png
+    :align: center
+    :width: 2in
+
+Problem Specification
+----------------------
+
+The governing equation of motion for the system is given by
+
+.. math:: m_s \ddot{z}  = -k_s z + m_s g
+    :label: springmass
+
+where :math:`m_s` is the mass, :math:`k_s` is the spring stiffness, :math:`g`
+is the acceleration due to gravity, :math:`z` is the vertical displacement of
+the mass, and :math:`\ddot{z}` is the acceleration of the mass. The true
+stiffness and gravitational constant are unknown. The goal of this example is
+to, by observing the motion of the mass over time, :math:`z_t`, estimate both
+:math:`K_s` and :math:`G`, which are random variables representing the
+uncertainty in the value of spring stiffness and the gravitational constant,
+respectively. For reasons outside the scope of this example, the problem
+becomes ill-posed unless the stiffness is normalized by mass such that
+realizations are now :math:`k_s^*` of random variable of interest :math:`K_s^*`
+and the equation of motion given by Equation (1) is now
+
+.. math:: \ddot{z}  = -k_s^* z + g.
+    :label: springmass_mod
+
+Given observations :math:`z_t` which, assuming measurement noise exists, are realizations of the random variable :math:`Z_t`, the relationship between the computational model, measurement noise, and observations is
+
+.. math:: Z_t = f_t(K_s^*, G) + \epsilon_t
+    :label: springmass_stat_model
+
+Here, :math:`\epsilon_t` is the measurement noise associated with each observation of displacement taken over time (also a random variable), and :math:`f_t` is the computational model response at time :math:`t`, which involves numerical integration of Equation (2).
+
+The inverse solution of equations in the form of (2) is the posterior
+distribution, or, in the context of this example, the joint distribution of
+:math:`K_s^*` and :math:`G` conditional on the observed data, :math:`z_t`. While
+difficult to solve directly, the posterior distribution can be approximated via
+sampling methods such as SMC and MCMC. This example covers this process using
+the SMCSampler and MCMCSampler classes in the SMCPy Python module. In
+particular, the objective is to approximate the expected value of the model
+parameters given observations :math:`z_t`.
+
+The MCMC sampler draws samples from the unknown posterior distribution
+by forming a Markov chain through the parameter space whose stationary
+distribution is the posterior. The samples forming the chain can then be used
+to build an estimator of the expected value
+
+.. math:: E[X] = \frac{1}{N} \sum_{i=1}^N X_i
+
+where :math:`X_i` is the random variable of interest, and :math:`i=1,\ldots,N`, with :math:`N` being the number of equally-weighted samples drawn using the MCMC sampler.
+
+While MCMC is a proven approach to evaluting the quantities of interest, it can
+be slow if the computational model is expensive. The Markovian nature of MCMC
+means it is inherently a serial process. SMC, on the other hand, is a
+parallelizable alternative that uses weighted samples called "particles." In
+SMC, a sequence of target distributions is defined that gradually transitions
+from the typically-known prior distribution to the posterior distribution of
+interest. A particle filtering framework based on importance sampling can then
+be introduced that allows for recursive estimation of each target in the
+sequence. Taking the final particle state, the SMC estimator is
+
+.. math:: E[X] = \sum_{j=1}^M W_j X_j
+
+where :math:`W_j` is the normalized weight associated with the :math:`j^{th}` particle and :math:`M` is the total number of particles.
+
+For this example, synthetic data will be generated by adding noise to a model response for a given set of "true" parameters. Next, MCMC and SMC will be used to estimate the expected value of these parameters with the expectation that these estimates are close to the true parameter values. Note that the code used to generate results in this example is actually split between two files in the SMCPy package. The two will be combined here and redundant code will be skipped.
+
+
+Step 1: Initialization; define the model and generate the data
+--------------------------------------------------------------
+
+Begin by importing the needed Python modules, including SMCPy classes and the SpringMassModel class that defines the spring mass numerical integrator:
+
+.. code-block:: python
+
+    import numpy as np
+    from spring_mass_models import SpringMassModel
+    from smcpy.smc.smc_sampler import SMCSampler
+
+Below is a snippet of the SpringMassModel class; the entire class can be found in the SMCPy repo (``/SMCPy/examples/spring_mass/spring_mass_model.py``):
+
+.. code-block:: python
+
+  from smcpy.model.base_model import BaseModel
+
+  ...
+
+  class SpringMassModel(BaseModel):
+      '''
+      Defines Spring Mass model with 2 free params (spring stiffness, k &
+      mass, m)
+      '''
+      def __init__(self, state0=None, time_grid=None):
+
+
+Note that user-defined models in SMCPy must inherit from the SMCPy abstract class ``BaseModel`` and implement an  ``evaluate`` function that accepts and returns numpy arrays for inputs and outputs, respectively. Here, the ``state0`` argument defines the initial state of the spring mass system, and ``time_grid`` defines the times at which to return displacement.
+
+The first step in an analysis is to obtain data from which to make an
+inference. In this example, this data will come in the form of observations of
+the z-displacement of the mass made over time. For demonstration purposes, the
+data will be generated from the spring mass model, and noise will be added by
+sampling from a zero-mean Gaussian distribution and adding these values to the
+model output. While not a realistic case, it is typical to generate and use
+synthetic data in this manner for verification purposes when performing inverse
+uncertainty quantification.
+
+Step 2: Perform Parameter Estimation using SMCPy
+------------------------------------------------
+
+Step 3: Perform Parameter Estimation using MCMCPy
+-------------------------------------------------
+
