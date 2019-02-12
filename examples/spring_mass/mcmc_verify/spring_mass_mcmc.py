@@ -22,7 +22,7 @@ param_priors = {'K': ['Uniform', 0.0, 10.0],
                 'g': ['Uniform', 0.0, 10.0]}
 
 # SMC sampling
-num_samples = 10000
+num_samples = 100000
 num_samples_burnin = 5000
 mcmc = MCMCSampler(displacement_data, model, param_priors)
 mcmc.generate_pymc_model(q0=initial_guess, std_dev0=noise_stddev, fix_var=True)
