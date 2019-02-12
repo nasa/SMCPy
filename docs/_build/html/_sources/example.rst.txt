@@ -202,7 +202,7 @@ Before moving on, a pairwise plot can be generated to visualize parameter uncert
 
 .. figure:: ../examples/spring_mass/pairwise.png
     :align: center
-    :width: 4in
+    :width: 3.5in
 
 Step 3: Perform Parameter Estimation using MCMCPy
 -------------------------------------------------
@@ -210,6 +210,7 @@ Step 3: Perform Parameter Estimation using MCMCPy
 Repeating the estimation of parameter means is similar with the MCMCPy submodule. Instancing the ``MCMCSampler`` class is done in the same way as before.
 
 .. code-block:: python
+
   mcmc = MCMCSampler(displacement_data, model, param_priors)
 
 Additional parameters have to be set prior to sampling, however. In this
@@ -219,6 +220,7 @@ when generating the data, previously. Additionally, an initial guess (i.e.,
 where to initialize the Markov chain within the parameter space) are specified.
 
 .. code-block:: python
+
   initial_guess = {'K': 1.0, 'g': 1.0}
   mcmc.generate_pymc_model(q0=initial_guess, std_dev0=noise_stddev, fix_var=True)
 
@@ -229,26 +231,29 @@ reaching its stationary condition. In practice, the number of samples in the
 burn-in period is unknown and conservatively estimated.
 
 .. code-block:: python
+
   num_samples = 100000
   num_samples_burnin = 5000
   mcmc.sample(num_samples, num_samples_burnin)
 
-The MCMC module is a wrapper built around the [PyMC package](https://github.com/pymc-devs/pymc). The stored samples can be accessed through the PyMC trace object as follows: ``<mcmc_object>.MCMC.trace(<param_name>)[:]``. The means can be calculated from the trace.
+The MCMC module is a wrapper built around the PyMC package (https://github.com/pymc-devs/pymc). The stored samples can be accessed through the PyMC trace object as follows: ``<mcmc_object>.MCMC.trace(<param_name>)[:]``. The means can be calculated from the trace.
 
 .. code-block:: python
+
   Kmean = np.mean(mcmc.MCMC.trace('K')[:])
   gmean = np.mean(mcmc.MCMC.trace('g')[:])
 
 A pairwise plot can also be generated with the MCMC results. Note that the samples are not weighted in this case.
 
 .. code-block:: python
+
   mcmc.plot_pairwise(keys=['K', 'g'], filename='mcmc_pairwise.png')
 
 .. _mcmc_pairwise:
 
 .. figure:: ../examples/spring_mass/mcmc_verify/pairwise.png
     :align: center
-    :width: 4in
+    :width: 3.25in
 
 
 Comparing the Results
@@ -268,4 +273,4 @@ Parameter                MCMC-estimated Mean       SMC-estimated mean
 Running the SMCSampler in Parallel with mpi4py
 ----------------------------------------------
 
-As mentioned, the ``SMCSampler`` class was designed with high performance computing in mind. The sampler uses the [mpi4py package](https://bitbucket.org/mpi4py/mpi4py) to run model evaluations at each SMC step in parallel. The SMC example script can be run in parallel using ``mpirun -np <number of processors> python spring_mass_example.py``.
+As mentioned, the ``SMCSampler`` class was designed with high performance computing in mind. The sampler uses the mpi4py package (https://bitbucket.org/mpi4py/mpi4py) to run model evaluations at each SMC step in parallel. The SMC example script can be run in parallel using ``mpirun -np <number of processors> python spring_mass_example.py``.

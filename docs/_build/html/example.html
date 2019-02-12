@@ -195,26 +195,45 @@ likelihoods computed at each step in the sampling process. This object has some 
 </pre></div>
 </div>
 <div class="figure align-center" id="pairwise">
-<a class="reference internal image-reference" href="_images/pairwise.png"><img alt="_images/pairwise.png" src="_images/pairwise.png" style="width: 4in;" /></a>
+<a class="reference internal image-reference" href="_images/pairwise.png"><img alt="_images/pairwise.png" src="_images/pairwise.png" style="width: 3.5in;" /></a>
 </div>
 </div>
 <div class="section" id="step-3-perform-parameter-estimation-using-mcmcpy">
 <h2>Step 3: Perform Parameter Estimation using MCMCPy<a class="headerlink" href="#step-3-perform-parameter-estimation-using-mcmcpy" title="Permalink to this headline">¶</a></h2>
 <p>Repeating the estimation of parameter means is similar with the MCMCPy submodule. Instancing the <code class="docutils literal notranslate"><span class="pre">MCMCSampler</span></code> class is done in the same way as before.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mcmc</span> <span class="o">=</span> <span class="n">MCMCSampler</span><span class="p">(</span><span class="n">displacement_data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">param_priors</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Additional parameters have to be set prior to sampling, however. In this
 example, it is assumed that the measurement noise variance is known, so the
 variance will be fixed and provided in the form of the standard deviation used
 when generating the data, previously. Additionally, an initial guess (i.e.,
 where to initialize the Markov chain within the parameter space) are specified.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">initial_guess</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;K&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">}</span>
+<span class="n">mcmc</span><span class="o">.</span><span class="n">generate_pymc_model</span><span class="p">(</span><span class="n">q0</span><span class="o">=</span><span class="n">initial_guess</span><span class="p">,</span> <span class="n">std_dev0</span><span class="o">=</span><span class="n">noise_stddev</span><span class="p">,</span> <span class="n">fix_var</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>When using the <code class="docutils literal notranslate"><span class="pre">sample()</span></code> method, the number of samples, <span class="math notranslate nohighlight">\(N\)</span>, must be
 defined along with the number of those samples that will be discarded as
 burn-in. Burn-in is defined as the samples generated prior to the Markov chain
 reaching its stationary condition. In practice, the number of samples in the
 burn-in period is unknown and conservatively estimated.</p>
-<p>The MCMC module is a wrapper built around the [PyMC package](<a class="reference external" href="https://github.com/pymc-devs/pymc">https://github.com/pymc-devs/pymc</a>). The stored samples can be accessed through the PyMC trace object as follows: <code class="docutils literal notranslate"><span class="pre">&lt;mcmc_object&gt;.MCMC.trace(&lt;param_name&gt;)[:]</span></code>. The means can be calculated from the trace.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">num_samples</span> <span class="o">=</span> <span class="mi">100000</span>
+<span class="n">num_samples_burnin</span> <span class="o">=</span> <span class="mi">5000</span>
+<span class="n">mcmc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">num_samples</span><span class="p">,</span> <span class="n">num_samples_burnin</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The MCMC module is a wrapper built around the PyMC package (<a class="reference external" href="https://github.com/pymc-devs/pymc">https://github.com/pymc-devs/pymc</a>). The stored samples can be accessed through the PyMC trace object as follows: <code class="docutils literal notranslate"><span class="pre">&lt;mcmc_object&gt;.MCMC.trace(&lt;param_name&gt;)[:]</span></code>. The means can be calculated from the trace.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Kmean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">mcmc</span><span class="o">.</span><span class="n">MCMC</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s1">&#39;K&#39;</span><span class="p">)[:])</span>
+<span class="n">gmean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">mcmc</span><span class="o">.</span><span class="n">MCMC</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s1">&#39;g&#39;</span><span class="p">)[:])</span>
+</pre></div>
+</div>
 <p>A pairwise plot can also be generated with the MCMC results. Note that the samples are not weighted in this case.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mcmc</span><span class="o">.</span><span class="n">plot_pairwise</span><span class="p">(</span><span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;K&#39;</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">],</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;mcmc_pairwise.png&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
 <div class="figure align-center" id="mcmc-pairwise">
-<a class="reference internal image-reference" href="_images/pairwise1.png"><img alt="_images/pairwise1.png" src="_images/pairwise1.png" style="width: 4in;" /></a>
+<a class="reference internal image-reference" href="_images/pairwise1.png"><img alt="_images/pairwise1.png" src="_images/pairwise1.png" style="width: 3.25in;" /></a>
 </div>
 </div>
 <div class="section" id="comparing-the-results">
@@ -248,7 +267,7 @@ numbers will be slightly different for every run. The true parameters set in the
 </div>
 <div class="section" id="running-the-smcsampler-in-parallel-with-mpi4py">
 <h2>Running the SMCSampler in Parallel with mpi4py<a class="headerlink" href="#running-the-smcsampler-in-parallel-with-mpi4py" title="Permalink to this headline">¶</a></h2>
-<p>As mentioned, the <code class="docutils literal notranslate"><span class="pre">SMCSampler</span></code> class was designed with high performance computing in mind. The sampler uses the [mpi4py package](<a class="reference external" href="https://bitbucket.org/mpi4py/mpi4py">https://bitbucket.org/mpi4py/mpi4py</a>) to run model evaluations at each SMC step in parallel. The SMC example script can be run in parallel using <code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">-np</span> <span class="pre">&lt;number</span> <span class="pre">of</span> <span class="pre">processors&gt;</span> <span class="pre">python</span> <span class="pre">spring_mass_example.py</span></code>.</p>
+<p>As mentioned, the <code class="docutils literal notranslate"><span class="pre">SMCSampler</span></code> class was designed with high performance computing in mind. The sampler uses the mpi4py package (<a class="reference external" href="https://bitbucket.org/mpi4py/mpi4py">https://bitbucket.org/mpi4py/mpi4py</a>) to run model evaluations at each SMC step in parallel. The SMC example script can be run in parallel using <code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">-np</span> <span class="pre">&lt;number</span> <span class="pre">of</span> <span class="pre">processors&gt;</span> <span class="pre">python</span> <span class="pre">spring_mass_example.py</span></code>.</p>
 </div>
 </div>
 
