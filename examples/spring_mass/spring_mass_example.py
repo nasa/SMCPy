@@ -16,7 +16,7 @@ param_priors = {'K': ['Uniform', 0.0, 10.0],
                 'g': ['Uniform', 0.0, 10.0]}
 
 # SMC sampling
-num_particles = 5000
+num_particles = 500
 num_time_steps = 20
 num_mcmc_steps = 1
 smc = SMCSampler(displacement_data, model, param_priors)
