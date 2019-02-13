@@ -141,11 +141,11 @@ class SMCSampler(Properties):
         self.particle_chain = particle_chain
         self._autosave_particle_chain()
 
-        prog_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
-        for t in prog_bar:
-            prog_bar.set_description("Step {} of {}:".format(t, num_time_steps))
+        p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
+        last_ess = 0
+        for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
-            new_particles = self._create_new_particles(temperature_step)
+            new_particles, ess, resample = self._create_new_particles(temperature_step)
             covariance = self._compute_current_step_covariance()
             mutated_particles = self._mutate_new_particles(new_particles,
                                                            covariance,
@@ -153,6 +153,9 @@ class SMCSampler(Properties):
                                                            temperature_step)
             self._update_particle_chain_with_new_particles(mutated_particles)
             self._autosave_particle_step()
+            p_bar.set_description("Last ess: {:8.2f}|Current ess: {:8.2f}|{}"
+                                  .format(last_ess, ess, resample))
+            last_ess = ess
 
         self._close_autosaver()
         return self.particle_chain
@@ -345,12 +348,12 @@ class SMCSampler(Properties):
             self._initialize_new_particles()
             self._compute_new_particle_weights(temperature_step)
             self._normalize_new_particle_weights()
-            self._resample_if_needed()
+            ess, resample = self._resample_if_needed()
             new_particles = self._partition_new_particles()
         else:
             new_particles = [None]
         new_particles = self._comm.scatter(new_particles, root=0)
-        return list(new_particles)
+        return list(new_particles), ess, resample
 
     def _initialize_new_particles(self):
         new_particles = self.particle_chain.copy_step(step=-1)
@@ -372,15 +375,11 @@ class SMCSampler(Properties):
         '''
         ess = self.particle_chain.compute_ess()
         if ess < self.ess_threshold:
-            sys.stdout.write('ess = %s, ' % ess)
-            sys.stdout.write('resampling...\r')
-            sys.stdout.flush()
+            resample = "Resampling..."
             self.particle_chain.resample(overwrite=True)
         else:
-            sys.stdout.write('ess = %s, ' % ess)
-            sys.stdout.write('no resampling required.\r')
-            sys.stdout.flush()
-        return None
+            resample = "No resampling"
+        return ess, resample
 
     def _partition_new_particles(self):
         partitions = np.array_split(self.particle_chain.get_particles(-1),
