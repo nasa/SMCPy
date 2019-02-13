@@ -32,6 +32,8 @@ AGREEMENT.
 
 import os
 import warnings
+import sys
+from tqdm import tqdm
 
 
 from copy import copy
@@ -139,8 +141,9 @@ class SMCSampler(Properties):
         self.particle_chain = particle_chain
         self._autosave_particle_chain()
 
-        for t in range(num_time_steps)[self._start_time_step + 1:]:
-            print 'Step {} of {}:'.format(t, num_time_steps)
+        prog_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
+        for t in prog_bar:
+            prog_bar.set_description("Step {} of {}:".format(t, num_time_steps))
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
             new_particles = self._create_new_particles(temperature_step)
             covariance = self._compute_current_step_covariance()
@@ -369,12 +372,14 @@ class SMCSampler(Properties):
         '''
         ess = self.particle_chain.compute_ess()
         if ess < self.ess_threshold:
-            print 'ess = %s' % ess
-            print 'resampling...'
+            sys.stdout.write('ess = %s, ' % ess)
+            sys.stdout.write('resampling...\r')
+            sys.stdout.flush()
             self.particle_chain.resample(overwrite=True)
         else:
-            print 'ess = %s' % ess
-            print 'no resampling required.'
+            sys.stdout.write('ess = %s, ' % ess)
+            sys.stdout.write('no resampling required.\r')
+            sys.stdout.flush()
         return None
 
     def _partition_new_particles(self):
