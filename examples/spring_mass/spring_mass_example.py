@@ -1,10 +1,10 @@
 import numpy as np
-from spring_mass_models import SpringMassModel
+from spring_mass_model import SpringMassModel
 from smcpy.smc.smc_sampler import SMCSampler
 
 # Initialize model
-state0 = [0., 0.]                        #initial conditions
-measure_t_grid = np.arange(0., 5., 0.2)  #time 
+state0 = [0., 0.]  # initial conditions
+measure_t_grid = np.arange(0., 5., 0.2)  # time
 model = SpringMassModel(state0, measure_t_grid)
 
 # Load data
@@ -21,7 +21,7 @@ num_time_steps = 20
 num_mcmc_steps = 1
 smc = SMCSampler(displacement_data, model, param_priors)
 pchain = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
-                    ess_threshold=num_particles*0.5)
+                    ess_threshold=num_particles * 0.5)
 
 # Calculate means
 means = pchain.get_mean()
