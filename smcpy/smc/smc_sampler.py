@@ -1,3 +1,5 @@
+# TODO: Mutate new particles check by comparing old/new particles params
+
 '''
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
@@ -152,9 +154,11 @@ class SMCSampler(Properties):
                                                            temperature_step)
             self._update_particle_chain_with_new_particles(mutated_particles)
             self._autosave_particle_step()
-            p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} |"
-                                  "Current ess: {:8.2f} | {}"
+            p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
+                                  "Current ess: {:8.2f} | Samples accepted: "
+                                  "{:.1%} | {} | "
                                   .format(t + 1, last_ess, self._ess,
+                                          self._acceptance_ratio,
                                           self._resample_status))
             last_ess = self._ess
 
@@ -374,7 +378,6 @@ class SMCSampler(Properties):
         '''
         Checks if ess below threshold; if yes, resample with replacement.
         '''
-        # use self.variable to pass resample information
         self._ess = self.particle_chain.compute_ess()
         if self._ess < self.ess_threshold:
             self._resample_status = "Resampling..."
@@ -397,6 +400,7 @@ class SMCSampler(Properties):
         mcmc = copy(self._mcmc)
         step_method = 'smc_metropolis'
         new_particles = []
+        acceptance_count = 0
         for particle in particles:
             mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
                                      q0=particle.params)
@@ -404,11 +408,13 @@ class SMCSampler(Properties):
                         cov=covariance, verbose=-1, phi=temperature_step)
             stochastics = mcmc.MCMC.db.getstate()['stochastics']
             params = {key: stochastics[key] for key in particle.params.keys()}
+            if particle.params != params:
+                acceptance_count += 1
             particle.params = params
-            # check to see if particle.params is the same as before
             particle.log_like = mcmc.MCMC.logp
             new_particles.append(particle)
         new_particles = self._comm.gather(new_particles, root=0)
+        self._acceptance_ratio = float(acceptance_count) / len(particles)
         # new list of accepted particles
 
         if self._rank == 0:
