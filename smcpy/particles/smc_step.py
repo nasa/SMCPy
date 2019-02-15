@@ -78,10 +78,41 @@ class SMCStep():
         particles = self.get_particles()
         return [p.params for p in particles]
 
+    def resample(self):
+        particles = self.get_particles()
+        num_particles = len(particles)
+        weights = self.get_weights()
+        weights_cs = np.cumsum(weights)
+
+        # intervals based on weights to use for discrete probability draw
+        intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
+
+        # generate random numbers, iterate to find intervals for resample
+        R = np.random.uniform(0, 1, [num_particles, ])
+        new_particles = []
+        uniform_weight = 1. / num_particles
+        for r in R:
+            for i, (a, b) in enumerate(intervals):
+
+                if a <= r < b:
+                    # resample
+                    new_particles.append(particles[i].copy())
+                    # assign uniform weight
+                    new_particles[-1].weight = uniform_weight
+                    break
+        return None
+
+    def print_particle_info(self, particle_num):
+        particle = self._particles[particle_num]
+        print '-----------------------------------------------------'
+        print 'Particle: %s' % particle_num
+        particle.print_particle_info()
+        return None
+
 
 test = SMCStep()
 test.add_particle(5 * [Particle({'a': 1, 'b': 2}, 0.2, -0.2)])
 print test.get_log_likes()
 print(test.calculate_covariance())
 print(np.array([[0, 0], [0, 0]]))
-print(type(test.get_param_dicts()))
+test.print_particle_info(3)
