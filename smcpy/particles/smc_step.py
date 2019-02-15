@@ -107,3 +107,132 @@ class SMCStep():
         print 'Particle: %s' % particle_num
         particle.print_particle_info()
         return None
+
+    def plot_marginal(self, key, save=False, show=True,
+                      prefix='marginal_'):
+        '''
+        Plots a single marginal approximation for param given by <key>.
+        '''
+        try:
+            plt
+        except:
+            import matplotlib.pyplot as plt
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        for p in self._particles:
+            ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
+            ax.plot(p.params[key], p.weight, 'o')
+        if save:
+            plt.savefig(prefix + key + '.png')
+        if show:
+            plt.show()
+        plt.close(fig)
+        return None
+
+    def plot_pairwise_weights(self, param_names=None, labels=None,
+                              save=False, show=True, param_lims=None,
+                              label_size=None, tick_size=None, nbins=None,
+                              prefix='pairwise'):
+        '''
+        Plots pairwise distributions of all parameter combos. Color codes each
+        by weight.
+        '''
+        try:
+            plt
+        except:
+            import matplotlib.pyplot as plt
+        # get particles
+        particles = self._particles
+
+        # set up label dictionary
+        if param_names is None:
+            param_names = particles[0].params.keys()
+        if labels is None:
+            labels = param_names
+        label_dict = {key: lab for key, lab in zip(param_names, labels)}
+        if param_lims is not None:
+            lim_dict = {key: l for key, l in zip(param_names, param_lims)}
+        if nbins is not None:
+            bin_dict = {key: n for key, n in zip(param_names, nbins)}
+        L = len(param_names)
+
+        # setup figure
+        fig = plt.figure(figsize=[10 * (L - 1) / 2, 10 * (L - 1) / 2])
+
+        # create lower triangle to obtain param combos
+        tril = np.tril(np.arange(L**2).reshape([L, L]), -1)
+        ikeys = np.transpose(np.nonzero(tril)).tolist()
+
+        # use lower triangle to id subplots
+        tril = np.tril(np.arange((L - 1)**2).reshape([L - 1, L - 1]) + 1)
+        iplts = [i for i in tril.flatten() if i > 0]
+
+        weights = self.get_weights()
+        means = self.get_mean()
+        for i in zip(iplts, ikeys):
+            iplt = i[0]     # subplot index
+            ikey1 = i[1][1]  # key index for xparam
+            ikey2 = i[1][0]  # key index for yparam
+            key1 = param_names[ikey1]
+            key2 = param_names[ikey2]
+            ax = {key1 + '+' + key2: fig.add_subplot(L - 1, L - 1, iplt)}
+            # get list of all particle params for key1, key2 combinations
+            pkey1 = []
+            pkey2 = []
+            for p in particles:
+                pkey1.append(p.params[key1])
+                pkey2.append(p.params[key2])
+            # plot parameter combos with weight as color
+
+            def rnd_to_sig(x):
+                return round(x, -int(np.floor(np.log10(abs(x)))) + 1)
+            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=weights, vmin=0.0,
+                                               vmax=rnd_to_sig(max(weights)))
+            ax[key1 + '+' + key2].axvline(means[key1], color='C1', linestyle='--')
+            ax[key1 + '+' + key2].axhline(means[key2], color='C1', linestyle='--')
+            ax[key1 + '+' + key2].set_xlabel(label_dict[key1])
+            ax[key1 + '+' + key2].set_ylabel(label_dict[key2])
+
+            # if provided, set x y lims
+            if param_lims is not None:
+                ax[key1 + '+' + key2].set_xlim(lim_dict[key1])
+                ax[key1 + '+' + key2].set_ylim(lim_dict[key2])
+            # if provided set font sizes
+            if tick_size is not None:
+                ax[key1 + '+' + key2].tick_params(labelsize=tick_size)
+            if label_size is not None:
+                ax[key1 + '+' + key2].xaxis.label.set_size(label_size)
+                ax[key1 + '+' + key2].yaxis.label.set_size(label_size)
+            # if provided, set x ticks
+            if nbins is not None:
+                ax[key1 + '+' + key2].locator_params(axis='x', nbins=bin_dict[key1])
+                ax[key1 + '+' + key2].locator_params(axis='y', nbins=bin_dict[key2])
+
+        fig.tight_layout()
+
+        # colorbar
+        if L <= 2:
+            cb = plt.colorbar(sc, ax=ax[key1 + '+' + key2])
+        else:
+            ax1_position = fig.axes[0].get_position()
+            ax3_position = fig.axes[2].get_position()
+            y0 = ax1_position.y0
+            x0 = ax3_position.x0
+            w = 0.02
+            h = abs(ax1_position.y1 - ax1_position.y0)
+            empty_ax = fig.add_axes([x0, y0, w, h])
+            cb = plt.colorbar(sc, cax=empty_ax)
+            if tick_size is not None:
+                empty_ax.tick_params(labelsize=tick_size)
+
+        cb.ax.get_yaxis().labelpad = 15
+        cb.ax.set_ylabel('Normalized weights', rotation=270)
+
+        plt.tight_layout()
+
+        if save:
+            plt.savefig(prefix + '.png')
+        if show:
+            plt.show()
+        plt.close(fig)
+        return None
