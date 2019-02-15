@@ -62,3 +62,11 @@ def test_calcuate_covariance(filled_step):
 
 def test_compute_ess(filled_step):
     assert filled_step.compute_ess() == pytest.approx(5.0)
+
+
+def test_get_params(filled_step):
+    assert np.array_equal(filled_step.get_params('a'), np.array(5 * [1]))
+
+
+def test_get_param_dicts(filled_step):
+    assert filled_step.get_param_dicts() == 5 * [{'a': 1, 'b': 2}]

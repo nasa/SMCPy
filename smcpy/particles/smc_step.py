@@ -72,12 +72,16 @@ class SMCStep():
 
     def get_params(self, key):
         particles = self.get_particles()
-        return np.array()
+        return np.array([p.params[key] for p in particles])
+
+    def get_param_dicts(self):
+        particles = self.get_particles()
+        return [p.params for p in particles]
 
 
-# test = SMCStep()
-# test.add_particle(5 * [Particle({'a': 1, 'b': 2}, 0.2, -0.2)])
-# print test.get_log_likes()
-# print(test.calculate_covariance())
-# print(np.array([[0, 0], [0, 0]]))
-# print(test.compute_ess())
+test = SMCStep()
+test.add_particle(5 * [Particle({'a': 1, 'b': 2}, 0.2, -0.2)])
+print test.get_log_likes()
+print(test.calculate_covariance())
+print(np.array([[0, 0], [0, 0]]))
+print(type(test.get_param_dicts()))
