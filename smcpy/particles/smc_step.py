@@ -35,9 +35,6 @@ class SMCStep():
             mean[pn] = np.sum(mean[pn])
         return mean
 
-    def get_particles(self):
-        return self._particles
-
     def get_weights(self):
         return [p.weight for p in self._particles]
 
@@ -58,7 +55,7 @@ class SMCStep():
 
     def normalize_step_weights(self):
         weights = self.get_weights()
-        particles = self.get_particles()
+        particles = self._particles
         total_weight = np.sum(weights)
         for p in particles:
             p.weight = p.weight / total_weight
@@ -71,15 +68,15 @@ class SMCStep():
         return 1 / np.sum([w**2 for w in weights])
 
     def get_params(self, key):
-        particles = self.get_particles()
+        particles = self._particles
         return np.array([p.params[key] for p in particles])
 
     def get_param_dicts(self):
-        particles = self.get_particles()
+        particles = self._particles
         return [p.params for p in particles]
 
-    def resample(self):
-        particles = self.get_particles()
+    def resample(self, overwrite=True):
+        particles = self._particles
         num_particles = len(particles)
         weights = self.get_weights()
         weights_cs = np.cumsum(weights)
@@ -100,6 +97,8 @@ class SMCStep():
                     # assign uniform weight
                     new_particles[-1].weight = uniform_weight
                     break
+        if overwrite:
+            self._particles = new_particles
         return None
 
     def print_particle_info(self, particle_num):
@@ -108,11 +107,3 @@ class SMCStep():
         print 'Particle: %s' % particle_num
         particle.print_particle_info()
         return None
-
-
-test = SMCStep()
-test.add_particle(5 * [Particle({'a': 1, 'b': 2}, 0.2, -0.2)])
-print test.get_log_likes()
-print(test.calculate_covariance())
-print(np.array([[0, 0], [0, 0]]))
-test.print_particle_info(3)

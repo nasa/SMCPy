@@ -48,10 +48,6 @@ def test_get_mean(filled_step):
     assert filled_step.get_mean()['a'] == 1.0
 
 
-def test_get_particles(filled_step, particle_list):
-    assert filled_step.get_particles() == particle_list
-
-
 def test_get_weights(filled_step):
     assert filled_step.get_weights()[0] == 0.2
 
@@ -70,3 +66,15 @@ def test_get_params(filled_step):
 
 def test_get_param_dicts(filled_step):
     assert filled_step.get_param_dicts() == 5 * [{'a': 1, 'b': 2}]
+
+
+def test_resample(filled_step):
+    prior_particle = filled_step._particles
+    filled_step.resample(overwrite=True)
+    assert filled_step._particles != prior_particle
+
+
+def test_print_particle_info(filled_step, capfd):
+    filled_step.print_particle_info(3)
+    out, err = capfd.readouterr()
+    assert "params = {'a': 1, 'b': 2}" in out
