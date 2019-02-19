@@ -340,7 +340,7 @@ class SMCSampler(Properties):
 
     def _compute_current_step_covariance(self):
         if self._rank == 0:
-            covariance = self.particle_chain.calculate_step_covariance()
+            covariance = self.particle_chain.calculate_covariance()
             if not self._is_positive_definite(covariance):
                 msg = 'current step cov not pos def, setting to identity matrix'
                 warnings.warn(msg)
@@ -352,7 +352,7 @@ class SMCSampler(Properties):
 
     def _create_new_particles(self, temperature_step):
         if self._rank == 0:
-            self._initialize_new_particles()
+            # self._initialize_new_particles()
             self._compute_new_particle_weights(temperature_step)
             self._normalize_new_particle_weights()
             self._resample_if_needed()
