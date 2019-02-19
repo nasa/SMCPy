@@ -140,9 +140,9 @@ class SMCSampler(Properties):
             step = self._trim_particle_chain(step,
                                              self.restart_time_step)
 
-        self.step = step  # do this or use method?
+        self.step = step
         self._autosave_particle_chain()
-        step_list = [step]
+        self.step_list = [step]
 
         p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
         last_ess = 0
@@ -156,7 +156,7 @@ class SMCSampler(Properties):
                                                            measurement_std_dev,
                                                            temperature_step)
             self._update_particle_chain_with_new_particles(mutated_particles)
-            step_list.append(mutated_particles)  # new list of particles
+            self.step_list.append(self.step.copy())
             self._autosave_particle_step()
             p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
                                   "Current ess: {:8.2f} | Samples accepted: "
@@ -167,7 +167,7 @@ class SMCSampler(Properties):
             last_ess = self._ess
 
         self._close_autosaver()
-        return self.step
+        return self.step, step_list
 
     def _set_proposal_distribution(self, proposal_center, proposal_scales):
         self._check_proposal_dist_inputs(proposal_center, proposal_scales)

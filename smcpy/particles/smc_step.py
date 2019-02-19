@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 from smcpy.particles.particle import Particle
 
 
@@ -9,8 +10,8 @@ class SMCStep():
 
     @staticmethod
     def _check_input(params):
-        if not isinstance(params, list):
-            raise TypeError('Input must be a list')
+        if not isinstance(params, (list, np.ndarray)):
+            raise TypeError('Input must be a list or numpy array')
         for param in params:
             if not isinstance(param, Particle):
                 raise TypeError('Input must be a of the Particle class')
@@ -26,8 +27,20 @@ class SMCStep():
         '''
         Add an entire step to the chain, providing a list of particles.
         '''
-        self._particles = particle_list
+        self._particles = self._check_input(particle_list)
         return None
+
+    def copy_step(self):
+        '''
+        Returns a copy of particle chain's step (most recent step by default).
+        '''
+        return copy.deepcopy(self._particles)
+
+    def copy(self):
+        '''
+        Returns a copy of the entire particle chain.
+        '''
+        return copy.deepcopy(self)
 
     def get_likes(self):
         return [np.exp(p.log_like) for p in self._particles]
