@@ -319,10 +319,6 @@ class SMCSampler(Properties):
             step = None
         return step
 
-    def _set_particle_chain(self, step):
-        self.step = step
-        return None
-
     def _set_start_time_equal_to_restart_time_step(self):
         self._start_time_step = self.restart_time_step
         return None
