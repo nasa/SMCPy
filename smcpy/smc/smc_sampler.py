@@ -34,7 +34,6 @@ AGREEMENT.
 
 import os
 import warnings
-import sys
 from tqdm import tqdm
 
 
@@ -47,10 +46,10 @@ from pymc import Normal
 
 from ..mcmc.mcmc_sampler import MCMCSampler
 from ..particles.particle import Particle
-from ..particles.particle_chain import ParticleChain
 from ..particles.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
+warnings.filterwarnings("ignore", message="divide by zero encountered in log")
 
 
 class SMCSampler(Properties):
@@ -132,12 +131,12 @@ class SMCSampler(Properties):
             self._set_proposal_distribution(proposal_center, proposal_scales)
             self._set_start_time_based_on_proposal()
             particles = self._initialize_particles(measurement_std_dev)
-            step = self._initialize_particle_chain(particles)
+            step = self._initialize_step(particles)
 
         elif 0 < self.restart_time_step <= num_time_steps:
             self._set_start_time_equal_to_restart_time_step()
-            step = self.load_particle_chain(hdf5_to_load)
-            step = self._trim_particle_chain(step,
+            step_list = self.load_step_list(hdf5_to_load)
+            step_list = self._trim_step_list(step_list,
                                              self.restart_time_step)
 
         self.step = step
@@ -150,12 +149,12 @@ class SMCSampler(Properties):
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
             new_particles = self._create_new_particles(temperature_step)
-            covariance = self._compute_current_step_covariance()
+            covariance = self._compute_step_covariance()
             mutated_particles = self._mutate_new_particles(new_particles,
                                                            covariance,
                                                            measurement_std_dev,
                                                            temperature_step)
-            self._update_particle_chain_with_new_particles(mutated_particles)
+            self._update_step_with_new_particles(mutated_particles)
             self.step_list.append(self.step.copy())
             self._autosave_particle_step()
             p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
@@ -167,7 +166,7 @@ class SMCSampler(Properties):
             last_ess = self._ess
 
         self._close_autosaver()
-        return self.step, step_list
+        return self.step, self.step_list
 
     def _set_proposal_distribution(self, proposal_center, proposal_scales):
         self._check_proposal_dist_inputs(proposal_center, proposal_scales)
@@ -309,7 +308,7 @@ class SMCSampler(Properties):
         log_like = results_rv.logp
         return log_like
 
-    def _initialize_particle_chain(self, particles):
+    def _initialize_step(self, particles):
         particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
             step = SMCStep()
@@ -323,18 +322,18 @@ class SMCSampler(Properties):
         self._start_time_step = self.restart_time_step
         return None
 
-    def _trim_particle_chain(self, step, restart_time_step):
+    def _trim_step_list(self, step_list, restart_time_step):
         if self._rank == 0:
             to_keep = range(0, restart_time_step + 1)
-            trimmed_steps = [step.get_particles(i) for i in to_keep]
-            step._steps = trimmed_steps
-        return step
+            trimmed_steps = [step_list[i].get_particles() for i in to_keep]
+            step_list = trimmed_steps
+        return step_list
 
     @staticmethod
     def _file_exists(hdf5_file):
         return os.path.exists(hdf5_file)
 
-    def _compute_current_step_covariance(self):
+    def _compute_step_covariance(self):
         if self._rank == 0:
             covariance = self.step.calculate_covariance()
             if not self._is_positive_definite(covariance):
@@ -420,7 +419,7 @@ class SMCSampler(Properties):
             # return the other list
         return new_particles
 
-    def _update_particle_chain_with_new_particles(self, particles):
+    def _update_step_with_new_particles(self, particles):
         if self._rank == 0:
             self.step.overwrite_step(step_list=particles)
         return None
@@ -455,7 +454,7 @@ class SMCSampler(Properties):
             hdf5.close()
         return None
 
-    def load_particle_chain(self, h5_file):
+    def load_step_list(self, h5_file):
         '''
         Loads and returns a particle chain object stored using the HDF5Storage
         class.
@@ -466,9 +465,9 @@ class SMCSampler(Properties):
         '''
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='r')
-            step = hdf5.read_chain()
+            step_list = hdf5.read_chain()
             hdf5.close()
             print 'Particle chain loaded from %s.' % h5_file
         else:
-            step = None
-        return step
+            step_list = None
+        return step_list

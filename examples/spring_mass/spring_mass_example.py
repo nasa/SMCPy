@@ -20,8 +20,8 @@ num_particles = 500
 num_time_steps = 20
 num_mcmc_steps = 1
 smc = SMCSampler(displacement_data, model, param_priors)
-pchain = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
-                    ess_threshold=num_particles * 0.5)
+pchain, step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
+                               ess_threshold=num_particles * 0.5)
 
 # Calculate means
 means = pchain.get_mean()
@@ -29,6 +29,7 @@ print '\n'
 for key, value in means.iteritems():
     print '%s mean = %s' % (key, value)
 
+print(step_list[0].get_weights())
 # Plot
 if smc._rank == 0:
     pchain.plot_pairwise_weights(save=True, show=False)
