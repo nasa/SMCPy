@@ -132,17 +132,17 @@ class SMCSampler(Properties):
             self._set_proposal_distribution(proposal_center, proposal_scales)
             self._set_start_time_based_on_proposal()
             particles = self._initialize_particles(measurement_std_dev)
-            particle_chain = self._initialize_particle_chain(particles)
+            step = self._initialize_particle_chain(particles)
 
         elif 0 < self.restart_time_step <= num_time_steps:
             self._set_start_time_equal_to_restart_time_step()
-            particle_chain = self.load_particle_chain(hdf5_to_load)
-            particle_chain = self._trim_particle_chain(particle_chain,
-                                                       self.restart_time_step)
+            step = self.load_particle_chain(hdf5_to_load)
+            step = self._trim_particle_chain(step,
+                                             self.restart_time_step)
 
-        self.particle_chain = particle_chain  # do this or use method?
+        self.step = step  # do this or use method?
         self._autosave_particle_chain()
-        particle_list = [particle_chain]
+        step_list = [step]
 
         p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
         last_ess = 0
@@ -156,7 +156,7 @@ class SMCSampler(Properties):
                                                            measurement_std_dev,
                                                            temperature_step)
             self._update_particle_chain_with_new_particles(mutated_particles)
-            particle_list.append(mutated_particles)  # new list of particles
+            step_list.append(mutated_particles)  # new list of particles
             self._autosave_particle_step()
             p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
                                   "Current ess: {:8.2f} | Samples accepted: "
@@ -167,7 +167,7 @@ class SMCSampler(Properties):
             last_ess = self._ess
 
         self._close_autosaver()
-        return self.particle_chain
+        return self.step
 
     def _set_proposal_distribution(self, proposal_center, proposal_scales):
         self._check_proposal_dist_inputs(proposal_center, proposal_scales)
@@ -312,27 +312,27 @@ class SMCSampler(Properties):
     def _initialize_particle_chain(self, particles):
         particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
-            particle_chain = SMCStep()
-            particle_chain.add_step(np.concatenate(particles))
-            particle_chain.normalize_step_weights()
+            step = SMCStep()
+            step.add_step(np.concatenate(particles))
+            step.normalize_step_weights()
         else:
-            particle_chain = None
-        return particle_chain
+            step = None
+        return step
 
-    def _set_particle_chain(self, particle_chain):
-        self.particle_chain = particle_chain
+    def _set_particle_chain(self, step):
+        self.step = step
         return None
 
     def _set_start_time_equal_to_restart_time_step(self):
         self._start_time_step = self.restart_time_step
         return None
 
-    def _trim_particle_chain(self, particle_chain, restart_time_step):
+    def _trim_particle_chain(self, step, restart_time_step):
         if self._rank == 0:
             to_keep = range(0, restart_time_step + 1)
-            trimmed_steps = [particle_chain.get_particles(i) for i in to_keep]
-            particle_chain._steps = trimmed_steps
-        return particle_chain
+            trimmed_steps = [step.get_particles(i) for i in to_keep]
+            step._steps = trimmed_steps
+        return step
 
     @staticmethod
     def _file_exists(hdf5_file):
@@ -340,7 +340,7 @@ class SMCSampler(Properties):
 
     def _compute_current_step_covariance(self):
         if self._rank == 0:
-            covariance = self.particle_chain.calculate_covariance()
+            covariance = self.step.calculate_covariance()
             if not self._is_positive_definite(covariance):
                 msg = 'current step cov not pos def, setting to identity matrix'
                 warnings.warn(msg)
@@ -363,33 +363,33 @@ class SMCSampler(Properties):
         return list(new_particles)
 
     def _initialize_new_particles(self):
-        new_particles = self.particle_chain.copy_step(step=-1)
-        self.particle_chain.add_step(new_particles)
+        new_particles = self.step.copy_step(step=-1)
+        self.step.add_step(new_particles)
         return None
 
     def _compute_new_particle_weights(self, temperature_step):
-        for p in self.particle_chain.get_particles():
+        for p in self.step.get_particles():
             p.weight = np.exp(np.log(p.weight) + p.log_like * temperature_step)
         return None
 
     def _normalize_new_particle_weights(self):
-        self.particle_chain.normalize_step_weights()
+        self.step.normalize_step_weights()
         return None
 
     def _resample_if_needed(self):
         '''
         Checks if ess below threshold; if yes, resample with replacement.
         '''
-        self._ess = self.particle_chain.compute_ess()
+        self._ess = self.step.compute_ess()
         if self._ess < self.ess_threshold:
             self._resample_status = "Resampling..."
-            self.particle_chain.resample(overwrite=True)
+            self.step.resample(overwrite=True)
         else:
             self._resample_status = "No resampling"
         return None
 
     def _partition_new_particles(self):
-        partitions = np.array_split(self.particle_chain.get_particles(),
+        partitions = np.array_split(self.step.get_particles(),
                                     self._size)
         return partitions
 
@@ -426,18 +426,18 @@ class SMCSampler(Properties):
 
     def _update_particle_chain_with_new_particles(self, particles):
         if self._rank == 0:
-            self.particle_chain.overwrite_step(particle_list=particles)
+            self.step.overwrite_step(step_list=particles)
         return None
 
     def _autosave_particle_chain(self):
         if self._rank == 0 and self._autosaver is not None:
-            self.autosaver.write_chain(self.particle_chain)
+            self.autosaver.write_chain(self.step)
         return None
 
     def _autosave_particle_step(self):
         if self._rank == 0 and self._autosaver is not None:
-            step_index = self.particle_chain.get_num_steps() - 1
-            step = self.particle_chain.get_particles(step_index)
+            step_index = self.step.get_num_steps() - 1
+            step = self.step.get_particles(step_index)
             self.autosaver.write_step(step, step_index)
         return None
 
@@ -448,14 +448,14 @@ class SMCSampler(Properties):
 
     def save_particle_chain(self, h5_file):
         '''
-        Saves self.particle_chain to an hdf5 file using the HDF5Storage class.
+        Saves self.step to an hdf5 file using the HDF5Storage class.
 
         :param hdf5_to_load: file path at which to save particle chain
         :type hdf5_to_load: string
         '''
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='w')
-            hdf5.write_chain(self.particle_chain)
+            hdf5.write_chain(self.step)
             hdf5.close()
         return None
 
@@ -470,9 +470,9 @@ class SMCSampler(Properties):
         '''
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='r')
-            particle_chain = hdf5.read_chain()
+            step = hdf5.read_chain()
             hdf5.close()
             print 'Particle chain loaded from %s.' % h5_file
         else:
-            particle_chain = None
-        return particle_chain
+            step = None
+        return step
