@@ -17,7 +17,17 @@ class SMCStep():
         return params
 
     def add_particle(self, particle):
-        self._particles = self._check_input(particle)
+        '''
+        Add a single particle to a given step.
+        '''
+        self._particles.append(particle)
+
+    def add_step(self, particle_list):
+        '''
+        Add an entire step to the chain, providing a list of particles.
+        '''
+        self._particles = particle_list
+        return None
 
     def get_likes(self):
         return [np.exp(p.log_like) for p in self._particles]
@@ -73,7 +83,21 @@ class SMCStep():
 
     def get_param_dicts(self):
         particles = self._particles
-        return [p.params for p in particles]
+        return [p.params for p in particles]\
+
+
+    def get_particles(self):
+        return self._particles
+
+    def overwrite_step(self, particle_list):
+        '''
+        Overwrite an entire step of the chain with the provided list of
+        particles.
+        '''
+        if len(particle_list) != len(self.get_particles()):
+            raise ValueError('Number of new particles must equal number of old')
+        self._particles = particle_list
+        return None
 
     def resample(self, overwrite=True):
         particles = self._particles

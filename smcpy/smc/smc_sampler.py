@@ -48,6 +48,7 @@ from pymc import Normal
 from ..mcmc.mcmc_sampler import MCMCSampler
 from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
+from ..particles.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
 
@@ -139,11 +140,13 @@ class SMCSampler(Properties):
             particle_chain = self._trim_particle_chain(particle_chain,
                                                        self.restart_time_step)
 
-        self.particle_chain = particle_chain
+        self.particle_chain = particle_chain  # do this or use method?
         self._autosave_particle_chain()
+        particle_list = [particle_chain]
 
         p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
         last_ess = 0
+
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
             new_particles = self._create_new_particles(temperature_step)
@@ -153,6 +156,7 @@ class SMCSampler(Properties):
                                                            measurement_std_dev,
                                                            temperature_step)
             self._update_particle_chain_with_new_particles(mutated_particles)
+            particle_list.append(mutated_particles)  # new list of particles
             self._autosave_particle_step()
             p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
                                   "Current ess: {:8.2f} | Samples accepted: "
@@ -308,9 +312,7 @@ class SMCSampler(Properties):
     def _initialize_particle_chain(self, particles):
         particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
-            particle_chain = ParticleChain()
-            if self._start_time_step == 1:
-                particle_chain.add_step([])  # empty 0th step
+            particle_chain = SMCStep()
             particle_chain.add_step(np.concatenate(particles))
             particle_chain.normalize_step_weights()
         else:
@@ -338,7 +340,7 @@ class SMCSampler(Properties):
 
     def _compute_current_step_covariance(self):
         if self._rank == 0:
-            covariance = self.particle_chain.calculate_step_covariance(step=-1)
+            covariance = self.particle_chain.calculate_covariance()
             if not self._is_positive_definite(covariance):
                 msg = 'current step cov not pos def, setting to identity matrix'
                 warnings.warn(msg)
@@ -350,7 +352,7 @@ class SMCSampler(Properties):
 
     def _create_new_particles(self, temperature_step):
         if self._rank == 0:
-            self._initialize_new_particles()
+            # self._initialize_new_particles()
             self._compute_new_particle_weights(temperature_step)
             self._normalize_new_particle_weights()
             self._resample_if_needed()
@@ -366,7 +368,7 @@ class SMCSampler(Properties):
         return None
 
     def _compute_new_particle_weights(self, temperature_step):
-        for p in self.particle_chain.get_particles(-1):
+        for p in self.particle_chain.get_particles():
             p.weight = np.exp(np.log(p.weight) + p.log_like * temperature_step)
         return None
 
@@ -387,7 +389,7 @@ class SMCSampler(Properties):
         return None
 
     def _partition_new_particles(self):
-        partitions = np.array_split(self.particle_chain.get_particles(-1),
+        partitions = np.array_split(self.particle_chain.get_particles(),
                                     self._size)
         return partitions
 
@@ -424,7 +426,7 @@ class SMCSampler(Properties):
 
     def _update_particle_chain_with_new_particles(self, particles):
         if self._rank == 0:
-            self.particle_chain.overwrite_step(step=-1, particle_list=particles)
+            self.particle_chain.overwrite_step(particle_list=particles)
         return None
 
     def _autosave_particle_chain(self):
