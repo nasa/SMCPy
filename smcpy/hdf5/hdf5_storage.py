@@ -33,7 +33,7 @@ AGREEMENT.
 import h5py
 import os
 from ..particles.particle import Particle
-from ..particles.particle_chain import ParticleChain
+from ..particles.smc_step import SMCStep
 
 
 class HDF5Storage(object):
@@ -167,12 +167,13 @@ class HDF5Storage(object):
         Loads and returns an entire particle chain (which consists of all
         available steps and particles within each step).
         '''
-        particle_chain = ParticleChain()
+        step_list = []
         for step_name in self._step_parent_grp.keys():
             step_index = int(step_name.split('_')[-1])
-            step = self.read_step(step_index)
-            particle_chain.add_step(step)
-        return particle_chain
+            step = SMCStep()
+            step.fill_step(self.read_step(step_index))
+            step_list.append(step)
+        return step_list
 
     def _create_step_group(self, step_index):
         self._step_parent_grp.create_group('step_{0:03}'.format(step_index))

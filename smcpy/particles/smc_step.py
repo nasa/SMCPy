@@ -23,7 +23,7 @@ class SMCStep():
         '''
         self._particles.append(particle)
 
-    def add_step(self, particle_list):
+    def fill_step(self, particle_list):
         '''
         Add an entire step to the chain, providing a list of particles.
         '''
