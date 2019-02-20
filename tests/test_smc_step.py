@@ -33,7 +33,7 @@ def test_type_error_not_particle_class(step_tester):
 
 def test_private_variable_creation(step_tester, particle_list):
     step_tester.fill_step(particle_list)
-    assert step_tester._particles == particle_list
+    assert step_tester.particles == particle_list
 
 
 def test_get_likes(filled_step):
@@ -69,9 +69,9 @@ def test_get_param_dicts(filled_step):
 
 
 def test_resample(filled_step):
-    prior_particle = filled_step._particles
+    prior_particle = filled_step.particles
     filled_step.resample(overwrite=True)
-    assert filled_step._particles != prior_particle
+    assert filled_step.particles != prior_particle
 
 
 def test_print_particle_info(filled_step, capfd):

@@ -6,7 +6,7 @@ from smcpy.particles.particle import Particle
 class SMCStep():
 
     def __init__(self,):
-        self._particles = []
+        self.particles = []
 
     @staticmethod
     def _check_input(params):
@@ -21,20 +21,20 @@ class SMCStep():
         '''
         Add a single particle to a given step.
         '''
-        self._particles.append(particle)
+        self.particles.append(particle)
 
     def fill_step(self, particle_list):
         '''
         Add an entire step to the chain, providing a list of particles.
         '''
-        self._particles = self._check_input(particle_list)
+        self.particles = self._check_input(particle_list)
         return None
 
     def copy_step(self):
         '''
         Returns a copy of particle chain's step (most recent step by default).
         '''
-        return copy.deepcopy(self._particles)
+        return copy.deepcopy(self.particles)
 
     def copy(self):
         '''
@@ -43,26 +43,26 @@ class SMCStep():
         return copy.deepcopy(self)
 
     def get_likes(self):
-        return [np.exp(p.log_like) for p in self._particles]
+        return [np.exp(p.log_like) for p in self.particles]
 
     def get_log_likes(self):
-        return [p.log_like for p in self._particles]
+        return [p.log_like for p in self.particles]
 
     def get_mean(self):
-        param_names = self._particles[0].params.keys()
+        param_names = self.particles[0].params.keys()
         mean = {}
         for pn in param_names:
             mean[pn] = []
-            for p in self._particles:
+            for p in self.particles:
                 mean[pn].append(p.weight * p.params[pn])
             mean[pn] = np.sum(mean[pn])
         return mean
 
     def get_weights(self):
-        return [p.weight for p in self._particles]
+        return [p.weight for p in self.particles]
 
     def calculate_covariance(self):
-        particle_list = self._particles
+        particle_list = self.particles
 
         means = np.array(self.get_mean().values())
 
@@ -78,7 +78,7 @@ class SMCStep():
 
     def normalize_step_weights(self):
         weights = self.get_weights()
-        particles = self._particles
+        particles = self.particles
         total_weight = np.sum(weights)
         for p in particles:
             p.weight = p.weight / total_weight
@@ -91,16 +91,16 @@ class SMCStep():
         return 1 / np.sum([w**2 for w in weights])
 
     def get_params(self, key):
-        particles = self._particles
+        particles = self.particles
         return np.array([p.params[key] for p in particles])
 
     def get_param_dicts(self):
-        particles = self._particles
+        particles = self.particles
         return [p.params for p in particles]\
 
 
     def get_particles(self):
-        return self._particles
+        return self.particles
 
     def overwrite_step(self, step_list):
         '''
@@ -109,11 +109,11 @@ class SMCStep():
         '''
         if len(step_list) != len(self.get_particles()):
             raise ValueError('Number of new particles must equal number of old')
-        self._particles = step_list
+        self.particles = step_list
         return None
 
     def resample(self, overwrite=True):
-        particles = self._particles
+        particles = self.particles
         num_particles = len(particles)
         weights = self.get_weights()
         weights_cs = np.cumsum(weights)
@@ -135,11 +135,11 @@ class SMCStep():
                     new_particles[-1].weight = uniform_weight
                     break
         if overwrite:
-            self._particles = new_particles
+            self.particles = new_particles
         return None
 
     def print_particle_info(self, particle_num):
-        particle = self._particles[particle_num]
+        particle = self.particles[particle_num]
         print '-----------------------------------------------------'
         print 'Particle: %s' % particle_num
         particle.print_particle_info()
@@ -156,7 +156,7 @@ class SMCStep():
             import matplotlib.pyplot as plt
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        for p in self._particles:
+        for p in self.particles:
             ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
             ax.plot(p.params[key], p.weight, 'o')
         if save:
@@ -179,7 +179,7 @@ class SMCStep():
         except:
             import matplotlib.pyplot as plt
         # get particles
-        particles = self._particles
+        particles = self.particles
 
         # set up label dictionary
         if param_names is None:

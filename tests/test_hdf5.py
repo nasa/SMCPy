@@ -1,7 +1,6 @@
 import pytest
 from smcpy.hdf5.hdf5_storage import HDF5Storage
 import h5py
-import numpy as np
 import os
 from smcpy.particles.smc_step import SMCStep
 from smcpy.particles.particle import Particle
@@ -51,6 +50,20 @@ def test_write_step_list(h5file, step_list):
 
 def test_read_particle(h5file, step_list):
     h5file.write_step_list(step_list)
-    particle = h5file.read_particle(step_index=1, particle_index=1)
+    particle = h5file.read_particle(step_index=1, particle_index=0)
     assert particle.weight == 0.2
+    os.remove('temp.hdf5')
+
+
+def test_read_step(h5file, step_list):
+    h5file.write_step_list(step_list)
+    step = h5file.read_step(1)
+    assert step[0].weight == 0.2
+    os.remove('temp.hdf5')
+
+
+def test_read_step_list(h5file, step_list):
+    h5file.write_step_list(step_list)
+    step_list = h5file.read_step_list()
+    assert step_list[0].particles[0].weight == 0.2
     os.remove('temp.hdf5')
