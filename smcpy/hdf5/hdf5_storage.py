@@ -129,8 +129,7 @@ class HDF5Storage(object):
         :param step_index: index of step being written
         :type step_index: integer
         '''
-        step_name = 'step_{0:03}'.format(step_index)
-        step_grp = self._create_step_group(step_index)
+        self._create_step_group(step_index)
         for particle_index, particle in enumerate(step):
             self.write_particle(particle, step_index, particle_index)
         return None
