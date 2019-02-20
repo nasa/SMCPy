@@ -111,10 +111,10 @@ class HDF5Storage(object):
         :type particle_index: integer
         '''
         particle_grp = self._get_particle_group(step_index, particle_index)
-        weight = particle_grp['weight'].value
-        log_like = particle_grp['log_like'].value
+        weight = particle_grp['weight'][()]
+        log_like = particle_grp['log_like'][()]
         params_grp = particle_grp['parameters']
-        params = {key: params_grp[key].value for key in params_grp.keys()}
+        params = {key: params_grp[key][()] for key in params_grp.keys()}
         particle = Particle(params, weight, log_like)
         return particle
 
@@ -147,7 +147,7 @@ class HDF5Storage(object):
             step.append(self.read_particle(step_index, particle_index))
         return step
 
-    def write_chain(self, step_list):
+    def write_step_list(self, step_list):
         '''
         Write a particle chain, which is a list of steps, each of which being a
         list of particles, to the hdf5 file.
@@ -160,7 +160,7 @@ class HDF5Storage(object):
             self.write_step(step, step_index)
         return None
 
-    def read_chain(self,):
+    def read_step_list(self,):
         '''
         Loads and returns an entire particle chain (which consists of all
         available steps and particles within each step).
