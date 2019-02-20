@@ -92,9 +92,8 @@ class HDF5Storage(object):
         step_name = 'step_{0:03}'.format(step_index)
         particle_name = 'particle_%s' % particle_index
         if step_name not in self._step_parent_grp:
-            step_grp = self._create_step_group(step_index)
-        else:
-            step_grp = self._step_parent_grp[step_name]
+            self._create_step_group(step_index)
+        step_grp = self._step_parent_grp[step_name]
         particle_grp = step_grp.create_group(particle_name)
         self._write_particle_params(particle.params, particle_grp)
         self._write_particle_weight(particle.weight, particle_grp)
@@ -130,7 +129,7 @@ class HDF5Storage(object):
         :type step_index: integer
         '''
         self._create_step_group(step_index)
-        for particle_index, particle in enumerate(step):
+        for particle_index, particle in enumerate(step._particles):
             self.write_particle(particle, step_index, particle_index)
         return None
 
