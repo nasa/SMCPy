@@ -91,7 +91,7 @@ class HDF5Storage(object):
         '''
         step_name = 'step_{0:03}'.format(step_index)
         particle_name = 'particle_%s' % particle_index
-        if not step_name in self._step_parent_grp:
+        if step_name not in self._step_parent_grp:
             step_grp = self._create_step_group(step_index)
         else:
             step_grp = self._step_parent_grp[step_name]
