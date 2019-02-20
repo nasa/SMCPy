@@ -149,7 +149,7 @@ class HDF5Storage(object):
             step.append(self.read_particle(step_index, particle_index))
         return step
 
-    def write_chain(self, particle_chain):
+    def write_chain(self, step_list):
         '''
         Write a particle chain, which is a list of steps, each of which being a
         list of particles, to the hdf5 file.
@@ -158,7 +158,7 @@ class HDF5Storage(object):
             particle objects.
         :type particle_chain: ParticleChain class instance
         '''
-        for step_index, step in enumerate(particle_chain._steps):
+        for step_index, step in enumerate(step_list):
             self.write_step(step, step_index)
         return None
 
