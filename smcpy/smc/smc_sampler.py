@@ -140,7 +140,7 @@ class SMCSampler(Properties):
                                              self.restart_time_step)
 
         self.step = step
-        self._autosave_particle_chain()
+        self._autosave_step_list()
         self.step_list = [step]
 
         p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
@@ -156,7 +156,7 @@ class SMCSampler(Properties):
                                                            temperature_step)
             self._update_step_with_new_particles(mutated_particles)
             self.step_list.append(self.step.copy())
-            self._autosave_particle_step()
+            self._autosave_step()
             p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
                                   "Current ess: {:8.2f} | Samples accepted: "
                                   "{:.1%} | {} | "
@@ -424,12 +424,12 @@ class SMCSampler(Properties):
             self.step.overwrite_step(step_list=particles)
         return None
 
-    def _autosave_particle_chain(self):
+    def _autosave_step_list(self):
         if self._rank == 0 and self._autosaver is not None:
             self.autosaver.write_chain(self.step)
         return None
 
-    def _autosave_particle_step(self):
+    def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
             step_index = self.step.get_num_steps() - 1
             step = self.step.get_particles(step_index)

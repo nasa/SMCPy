@@ -1,11 +1,11 @@
 '''
 Notices:
-Copyright 2018 United States Government as represented by the Administrator of 
-the National Aeronautics and Space Administration. No copyright is claimed in 
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
 the United States under Title 17, U.S. Code. All Other Rights Reserved.
- 
+
 Disclaimers
-No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF 
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
 ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
 TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
 IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
@@ -17,7 +17,7 @@ RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
 RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
 PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS."
- 
+
 Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
 UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
@@ -34,6 +34,7 @@ import h5py
 import os
 from ..particles.particle import Particle
 from ..particles.particle_chain import ParticleChain
+
 
 class HDF5Storage(object):
 
@@ -55,18 +56,15 @@ class HDF5Storage(object):
         else:
             self._step_parent_grp = self._h5['steps']
 
-
     def close(self,):
         self._h5.close()
         return None
-
 
     def get_num_steps(self,):
         '''
         Returns number of steps currently stored in the hdf5 file.
         '''
         return len(self._step_parent_grp.keys())
-
 
     def get_num_particles_in_step(self, step_index):
         '''
@@ -77,7 +75,6 @@ class HDF5Storage(object):
         '''
         step_name = 'step_{0:03}'.format(step_index)
         return len(self._step_parent_grp[step_name].keys())
-
 
     def write_particle(self, particle, step_index, particle_index):
         '''
@@ -104,7 +101,6 @@ class HDF5Storage(object):
         self._write_particle_log_like(particle.log_like, particle_grp)
         return None
 
-
     def read_particle(self, step_index, particle_index):
         '''
         Loads and returns a particle identified by specific step and particle
@@ -123,7 +119,6 @@ class HDF5Storage(object):
         particle = Particle(params, weight, log_like)
         return particle
 
-
     def write_step(self, step, step_index):
         '''
         Writes a step, which is a collection of particles, to the hdf5 file.
@@ -140,7 +135,6 @@ class HDF5Storage(object):
             self.write_particle(particle, step_index, particle_index)
         return None
 
-
     def read_step(self, step_index):
         '''
         Loads and returns a step (and all particles in that step) identified by         a specific step index.
@@ -155,7 +149,6 @@ class HDF5Storage(object):
             step.append(self.read_particle(step_index, particle_index))
         return step
 
-
     def write_chain(self, particle_chain):
         '''
         Write a particle chain, which is a list of steps, each of which being a
@@ -169,24 +162,21 @@ class HDF5Storage(object):
             self.write_step(step, step_index)
         return None
 
-
     def read_chain(self,):
         '''
         Loads and returns an entire particle chain (which consists of all
         available steps and particles within each step).
         '''
         particle_chain = ParticleChain()
-        for step_name in self._step_parent_grp.keys(): 
+        for step_name in self._step_parent_grp.keys():
             step_index = int(step_name.split('_')[-1])
             step = self.read_step(step_index)
             particle_chain.add_step(step)
         return particle_chain
 
-
     def _create_step_group(self, step_index):
         self._step_parent_grp.create_group('step_{0:03}'.format(step_index))
         return None
-
 
     def _write_particle_params(self, params, particle_grp):
         parameters_grp = particle_grp.create_group('parameters')
@@ -194,23 +184,19 @@ class HDF5Storage(object):
             parameters_grp.create_dataset(key, data=value, dtype=float)
         return None
 
-
     def _write_particle_weight(self, weight, particle_grp):
         particle_grp.create_dataset('weight', data=weight)
         return None
 
-
     def _write_particle_log_like(self, log_like, particle_grp):
         particle_grp.create_dataset('log_like', data=log_like)
         return None
-
 
     def _get_particle_group(self, step_index, particle_index):
         step_name = 'step_{0:03}'.format(step_index)
         particle_name = 'particle_%s' % particle_index
         path = os.path.join(step_name, particle_name)
         return self._step_parent_grp[path]
-
 
     def _get_step_group(self, step_index):
         step_name = 'step_{0:03}'.format(step_index)
