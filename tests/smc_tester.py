@@ -73,9 +73,9 @@ class SMCTester(SMCSampler):
 
     @classmethod
     def assert_step_lists_almost_equal(class_, pc1, pc2):
-        assert pc1.get_num_steps() == pc2.get_num_steps()
-        for i in range(pc1.get_num_steps()):
-            class_.assert_steps_almost_equal(pc1, pc2, i)
+        assert len(pc1) == len(pc2)
+        for i in range(len(pc1)):
+            class_.assert_steps_almost_equal(pc1[i], pc2[i])
         return None
 
     @staticmethod
