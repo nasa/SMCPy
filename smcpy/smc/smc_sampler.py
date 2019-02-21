@@ -421,7 +421,7 @@ class SMCSampler(Properties):
 
     def _update_step_with_new_particles(self, particles):
         if self._rank == 0:
-            self.step.overwrite_step(step_list=particles)
+            self.step.overwrite_step(step=particles)
         return None
 
     def _autosave_step(self):
