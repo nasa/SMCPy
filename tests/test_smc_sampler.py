@@ -1,11 +1,8 @@
 import pytest
 import numpy as np
-import pymc
-from copy import deepcopy
 from mpi4py import MPI
 from os import path
 from smcpy.hdf5.hdf5_storage import HDF5Storage
-from smcpy.particles.particle_chain import ParticleChain
 from smcpy.particles.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 from smc_tester import SMCTester
@@ -289,11 +286,11 @@ def test_trim_step_list(smc_tester, cloned_comm):
 @pytest.mark.parametrize("input_", [0, [1], dict()])
 def test_set_step_type_error(smc_tester, input_):
     with pytest.raises(TypeError):
-        smc_tester.step = input_
+        smc_tester.step = SMCStep()
+        smc_tester.step.fill_step(input_)
 
 
 def test_create_new_particles(smc_tester, cloned_comm):
-    weight = 1.0
     log_like = -706.4534190556333
     params = {'a': np.array(2.43349633), 'b': np.array(5.73716365)}
 
@@ -328,7 +325,6 @@ def test_compute_step_covariance(smc_tester):
 
 def test_mutate_new_particles(smc_tester, cloned_comm):
     params = {'a': np.array(2.43349633), 'b': np.array(5.73716365)}
-    weight = 1.0
     log_like = -712.444883603
 
     smc_tester.when_sampling_parameters_set(num_particles_per_processor=10)
@@ -353,12 +349,10 @@ def test_update_step_with_new_particles(smc_tester, cloned_comm):
 
     if cloned_comm.Get_rank() == 0:
         pc1 = smc_tester.step.copy()
+        pc1.fill_step(mutated_particles)
         smc_tester._update_step_with_new_particles(mutated_particles)
         pc2 = smc_tester.step
-        pc3 = SMCStep()
-        pc3.fill_step(mutated_particles)
         smc_tester.assert_steps_almost_equal(pc1, pc2)
-        smc_tester.assert_steps_almost_equal(pc2, pc3)
     else:
         assert mutated_particles is None
         assert smc_tester._update_step_with_new_particles(
