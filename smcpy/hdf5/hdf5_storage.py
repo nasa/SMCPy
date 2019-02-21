@@ -154,7 +154,7 @@ class HDF5Storage(object):
 
         :param particle_chain: a list of steps, each of which is a list of
             particle objects.
-        :type particle_chain: ParticleChain class instance
+        :type step_list: list of SMCStep classes
         '''
         for step_index, step in enumerate(step_list):
             self.write_step(step, step_index)

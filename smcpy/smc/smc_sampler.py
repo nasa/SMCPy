@@ -426,9 +426,8 @@ class SMCSampler(Properties):
 
     def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
-            step_index = len(self.step_list)
-            step = self.step_list[step_index].get_particles()
-            self.autosaver.write_step(step, step_index)
+            step_index = len(self.step_list) - 1
+            self.autosaver.write_step(self.step, step_index)
         return None
 
     def _close_autosaver(self):

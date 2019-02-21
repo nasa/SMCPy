@@ -279,9 +279,9 @@ def test_trim_step_list(smc_tester, cloned_comm):
     smc_tester.when_sampling_parameters_set()
     smc_tester.when_step_created()
     if cloned_comm.Get_rank() == 0:
-        assert len(smc_tester.step_list) == 2
-        smc_tester._trim_step_list(smc_tester.step_list, 0)
         assert len(smc_tester.step_list) == 1
+        trimmed_list = smc_tester._trim_step_list(smc_tester.step_list, -1)
+        assert len(trimmed_list) == 0
     else:
         assert smc_tester.step_list is None
 
@@ -290,15 +290,6 @@ def test_trim_step_list(smc_tester, cloned_comm):
 def test_set_step_type_error(smc_tester, input_):
     with pytest.raises(TypeError):
         smc_tester.step = input_
-
-
-def test_autosave_step_list(smc_tester, h5_filename, cloned_comm):
-    smc_tester.when_sampling_parameters_set(autosave_file=h5_filename)
-    smc_tester.when_step_created()
-    smc_tester._autosave_step_list()
-    if cloned_comm.Get_rank() == 0:
-        assert path.exists(h5_filename)
-        smc_tester.cleanup_file(h5_filename)
 
 
 def test_create_new_particles(smc_tester, cloned_comm):
@@ -378,7 +369,6 @@ def test_autosave_step(smc_tester, h5_filename, cloned_comm):
     assert not path.exists(h5_filename)
     smc_tester.when_sampling_parameters_set(autosave_file=h5_filename)
     smc_tester.when_step_created()
-    smc_tester._autosave_step_list()
     smc_tester.when_particles_mutated()
     mutated_particles = smc_tester.mutated_particles
     smc_tester._update_step_with_new_particles(mutated_particles)
