@@ -72,19 +72,19 @@ class SMCTester(SMCSampler):
         return np.log(1. / (2 * np.pi * var)**(M / 2.) * np.exp(-1. / (2 * var) * ssq))
 
     @classmethod
-    def assert_particle_chains_almost_equal(class_, pc1, pc2):
+    def assert_step_lists_almost_equal(class_, pc1, pc2):
         assert pc1.get_num_steps() == pc2.get_num_steps()
         for i in range(pc1.get_num_steps()):
-            class_.assert_particle_chain_steps_almost_equal(pc1, pc2, i)
+            class_.assert_steps_almost_equal(pc1, pc2, i)
         return None
 
     @staticmethod
-    def assert_particle_chain_steps_almost_equal(pc1, pc2, step_index):
+    def assert_steps_almost_equal(pc1, pc2):
         aae = np.testing.assert_array_almost_equal
-        aae(pc1.get_log_likes(step_index), pc2.get_log_likes(step_index))
-        aae(pc1.get_weights(step_index), pc2.get_weights(step_index))
-        aae(pc1.get_params('a', step_index), pc2.get_params('a', step_index))
-        aae(pc1.get_params('b', step_index), pc2.get_params('b', step_index))
+        aae(pc1.get_log_likes(), pc2.get_log_likes())
+        aae(pc1.get_weights(), pc2.get_weights())
+        aae(pc1.get_params('a',), pc2.get_params('a',))
+        aae(pc1.get_params('b',), pc2.get_params('b',))
 
     def when_proposal_dist_set_with_scales(self):
         proposal_center = {'a': 1, 'b': 2}
@@ -167,15 +167,17 @@ class SMCTester(SMCSampler):
         self.particles = self._initialize_particles(measurement_std_dev)
         return None
 
-    def when_particle_chain_created(self):
+    def when_step_created(self):
         self.when_initial_particles_sampled_from_proposal(0.6)
         particles = self.particles
-        particle_chain = self._initialize_particle_chain(particles)
+        step = self._initialize_step(particles)
         if self.comm.Get_rank() == 0:
-            particle_chain.add_step(particle_chain.copy_step())
-            self.particle_chain = particle_chain
+            step.fill_step(step.copy_step())
+            self.step_list = [step]
+            self.step = step
         else:
-            self.particle_chain = None
+            self.step_list = None
+            self.step = None
         return None
 
     def when_particles_mutated(self):

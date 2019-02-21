@@ -140,8 +140,8 @@ class SMCSampler(Properties):
                                              self.restart_time_step)
 
         self.step = step
-        self._autosave_step_list()
         self.step_list = [step]
+        self._autosave_step()
 
         p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
         last_ess = 0
@@ -424,15 +424,10 @@ class SMCSampler(Properties):
             self.step.overwrite_step(step_list=particles)
         return None
 
-    def _autosave_step_list(self):
-        if self._rank == 0 and self._autosaver is not None:
-            self.autosaver.write_chain(self.step)
-        return None
-
     def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
-            step_index = self.step.get_num_steps() - 1
-            step = self.step.get_particles(step_index)
+            step_index = len(self.step_list)
+            step = self.step_list[step_index].get_particles()
             self.autosaver.write_step(step, step_index)
         return None
 
@@ -441,7 +436,7 @@ class SMCSampler(Properties):
             self.autosaver.close()
         return None
 
-    def save_particle_chain(self, h5_file):
+    def save_step_list(self, h5_file):
         '''
         Saves self.step to an hdf5 file using the HDF5Storage class.
 
@@ -450,7 +445,7 @@ class SMCSampler(Properties):
         '''
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='w')
-            hdf5.write_chain(self.step)
+            hdf5.write_step_list(self.step)
             hdf5.close()
         return None
 
@@ -459,15 +454,15 @@ class SMCSampler(Properties):
         Loads and returns a particle chain object stored using the HDF5Storage
         class.
 
-        :param hdf5_to_load: file path of a particle chain saved using the
-            ParticleChain.save() or self.save_particle_chain() methods.
+        :param hdf5_to_load: file path of a step_list saved using the
+            self.save_step_list() methods.
         :type hdf5_to_load: string
         '''
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='r')
-            step_list = hdf5.read_chain()
+            step_list = hdf5.read_step_list()
             hdf5.close()
-            print 'Particle chain loaded from %s.' % h5_file
+            print 'Step list loaded from %s.' % h5_file
         else:
             step_list = None
         return step_list
