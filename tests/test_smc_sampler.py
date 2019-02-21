@@ -257,6 +257,7 @@ def test_save_step_list(smc_tester, h5_filename, cloned_comm):
 
 def test_particle_chain_trimmer(smc_tester, cloned_comm, h5_filename):
     smc_tester.when_sampling_parameters_set()
+    smc_tester.when_step_created()
     smc_tester.save_step_list(h5_filename)
     if cloned_comm.Get_rank() == 0:
         assert path.exists(h5_filename)

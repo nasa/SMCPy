@@ -445,7 +445,7 @@ class SMCSampler(Properties):
         '''
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='w')
-            hdf5.write_step_list(self.step)
+            hdf5.write_step_list(self.step_list)
             hdf5.close()
         return None
 
