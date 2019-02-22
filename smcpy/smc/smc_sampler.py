@@ -166,7 +166,7 @@ class SMCSampler(Properties):
             last_ess = self._ess
 
         self._close_autosaver()
-        return self.step, self.step_list
+        return self.step_list
 
     def _set_proposal_distribution(self, proposal_center, proposal_scales):
         self._check_proposal_dist_inputs(proposal_center, proposal_scales)
