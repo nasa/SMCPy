@@ -8,14 +8,18 @@ class SMCStep():
     def __init__(self,):
         self.particles = []
 
-    @staticmethod
-    def _check_input(params):
-        if not isinstance(params, (list, np.ndarray)):
+    def _check_step(self, particle_list):
+        if not isinstance(particle_list, (list, np.ndarray)):
             raise TypeError('Input must be a list or numpy array')
-        for param in params:
-            if not isinstance(param, Particle):
-                raise TypeError('Input must be a of the Particle class')
-        return params
+        for particle in particle_list:
+            self._check_particle(particle)
+        return particle_list
+
+    @staticmethod
+    def _check_particle(particle):
+        if not isinstance(particle, Particle):
+            raise TypeError('Input must be a of the Particle class')
+        return None
 
     def add_particle(self, particle):
         '''
@@ -27,7 +31,7 @@ class SMCStep():
         '''
         Add an entire step to the chain, providing a list of particles.
         '''
-        self.particles = self._check_input(particle_list)
+        self.particles = self._check_step(particle_list)
         return None
 
     def copy_step(self):
