@@ -396,10 +396,6 @@ def test_close_autosaver(smc_tester, h5_filename, cloned_comm):
         assert smc_tester.autosaver is None
 
 
-def test_model_evaluate(smc_tester, model):
-    smc_tester.evaluate_model()
-
-
 def test_error_processing(smc_tester):
     with pytest.raises(TypeError):
         smc_tester.error_processing_args(model)
