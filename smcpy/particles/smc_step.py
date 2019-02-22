@@ -100,8 +100,7 @@ class SMCStep():
 
     def get_param_dicts(self):
         particles = self.particles
-        return [p.params for p in particles]\
-
+        return [p.params for p in particles]
 
     def get_particles(self):
         return self.particles
