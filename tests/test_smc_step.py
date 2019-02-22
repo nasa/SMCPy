@@ -11,6 +11,13 @@ def particle_list():
 
 
 @pytest.fixture
+def mixed_particle_list():
+    particle_1 = Particle({'a': 1, 'b': 2}, 0.2, -0.2)
+    particle_2 = Particle({'a': 2, 'b': 3}, 0.1, -0.1)
+    return 3 * [particle_1] + 2 * [particle_2]
+
+
+@pytest.fixture
 def step_tester():
     return SMCStep()
 
@@ -18,6 +25,12 @@ def step_tester():
 @pytest.fixture
 def filled_step(step_tester, particle_list):
     step_tester.fill_step(particle_list)
+    return step_tester
+
+
+@pytest.fixture
+def mixed_step(step_tester, mixed_particle_list):
+    step_tester.fill_step(mixed_particle_list)
     return step_tester
 
 
@@ -37,7 +50,7 @@ def test_private_variable_creation(step_tester, particle_list):
 
 
 def test_get_likes(filled_step):
-    assert filled_step.get_likes()[0] == pytest.approx(0.818730753078)
+    assert np.array_equal(filled_step.get_likes(), [pytest.approx(0.818730753078)] * 5)
 
 
 def test_get_log_likes(filled_step):
@@ -49,7 +62,7 @@ def test_get_mean(filled_step):
 
 
 def test_get_weights(filled_step):
-    assert filled_step.get_weights()[0] == 0.2
+    assert np.array_equal(filled_step.get_weights(), [0.2] * 5)
 
 
 def test_calcuate_covariance(filled_step):
@@ -68,10 +81,16 @@ def test_get_param_dicts(filled_step):
     assert filled_step.get_param_dicts() == 5 * [{'a': 1, 'b': 2}]
 
 
-def test_resample(filled_step):
-    prior_particle = filled_step.particles
-    filled_step.resample()
-    assert filled_step.particles != prior_particle
+def test_resample(mixed_step):
+    prior_particle = mixed_step.particles
+    mixed_step.resample()
+    assert mixed_step.particles != prior_particle
+
+
+def test_resample_uniform(mixed_step):
+    mixed_step.resample()
+    weights = mixed_step.get_weights()
+    assert np.testing.assert_almost_equal(max(weights) - min(weights), 0)
 
 
 def test_print_particle_info(filled_step, capfd):
