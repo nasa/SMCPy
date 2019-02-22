@@ -5,7 +5,7 @@ from os import path
 from smcpy.hdf5.hdf5_storage import HDF5Storage
 from smcpy.particles.smc_step import SMCStep
 from smcpy.particles.particle import Particle
-from smc_tester import SMCTester
+from smc_tester import SMCTester, Model
 
 '''
 Unit and regression tests for the smc_tester.
@@ -49,6 +49,12 @@ def smc_tester_rank_seed(cloned_comm):
 @pytest.fixture
 def h5_filename():
     return 'test.h5'
+
+
+@pytest.fixture
+def model():
+    x_space = np.arange(50)
+    return Model(x_space)
 
 
 def test_communicator_is_clone(smc_tester, mpi_comm_world):
@@ -388,3 +394,12 @@ def test_close_autosaver(smc_tester, h5_filename, cloned_comm):
         assert not path.exists(h5_filename)
     else:
         assert smc_tester.autosaver is None
+
+
+def test_model_evaluate(smc_tester, model):
+    smc_tester.evaluate_model()
+
+
+def test_error_processing(smc_tester):
+    with pytest.raises(TypeError):
+        smc_tester.error_processing_args(model)
