@@ -71,8 +71,7 @@ def test_read_step(filled_h5file):
 
 def test_read_step_list(filled_h5file):
     step_list = filled_h5file.read_step_list()
-    weight = step_list[0].particles[0].weight
-    assert weight == 0.2
+    assert np.array_equal(step_list[0].get_weights(), [0.2] * 5)
     os.remove('temp.hdf5')
 
 

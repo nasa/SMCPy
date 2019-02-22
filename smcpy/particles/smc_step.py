@@ -8,19 +8,6 @@ class SMCStep():
     def __init__(self,):
         self.particles = []
 
-    def _check_step(self, particle_list):
-        if not isinstance(particle_list, (list, np.ndarray)):
-            raise TypeError('Input must be a list or numpy array')
-        for particle in particle_list:
-            self._check_particle(particle)
-        return particle_list
-
-    @staticmethod
-    def _check_particle(particle):
-        if not isinstance(particle, Particle):
-            raise TypeError('Input must be a of the Particle class')
-        return None
-
     def add_particle(self, particle):
         '''
         Add a single particle to the step.
@@ -264,4 +251,17 @@ class SMCStep():
         if show:
             plt.show()
         plt.close(fig)
+        return None
+
+    def _check_step(self, particle_list):
+        if not isinstance(particle_list, (list, np.ndarray)):
+            raise TypeError('Input must be a list or numpy array')
+        for particle in particle_list:
+            self._check_particle(particle)
+        return particle_list
+
+    @staticmethod
+    def _check_particle(particle):
+        if not isinstance(particle, Particle):
+            raise TypeError('Input must be a of the Particle class')
         return None
