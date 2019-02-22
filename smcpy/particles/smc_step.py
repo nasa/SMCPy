@@ -4,6 +4,14 @@ from smcpy.particles.particle import Particle
 
 
 class SMCStep():
+    """ A single step of the sequential monte carlo (SMC) method that contains
+    a list of Particle instances
+
+    Parameters
+    ----------
+    particles : list object
+        List of Particle instances
+    """
 
     def __init__(self,):
         self.particles = []
@@ -11,12 +19,22 @@ class SMCStep():
     def add_particle(self, particle):
         '''
         Add a single particle to the step.
+
+        Parameters
+        ----------
+        particle: Particle class object
+            Single instance of an SMC particle
         '''
-        self.particles.append(particle)
+        self.particles.append(self._check_particle(particle))
 
     def fill_step(self, particle_list):
         '''
         Fill a list of particles in the step.
+
+        Paramters
+        ---------
+        particle_list: list
+            List of Particle class objects
         '''
         self.particles = self._check_step(particle_list)
         return None
@@ -34,12 +52,21 @@ class SMCStep():
         return copy.deepcopy(self)
 
     def get_likes(self):
+        '''
+        Returns a list of likelihoods for each particle in the step
+        '''
         return [np.exp(p.log_like) for p in self.particles]
 
     def get_log_likes(self):
+        '''
+        Returns a list of log(likelihoods) for each particle in the step
+        '''
         return [p.log_like for p in self.particles]
 
     def get_mean(self):
+        '''
+        Returns the mean of each parameter within the step
+        '''
         param_names = self.particles[0].params.keys()
         mean = {}
         for pn in param_names:
@@ -50,9 +77,15 @@ class SMCStep():
         return mean
 
     def get_weights(self):
+        '''
+        Returns a list of the weights of each particle in the step
+        '''
         return [p.weight for p in self.particles]
 
     def calculate_covariance(self):
+        '''
+        Estimates the covariance matrix for the step.
+        '''
         particle_list = self.particles
 
         means = np.array(self.get_mean().values())
@@ -68,6 +101,9 @@ class SMCStep():
         return cov_matrix
 
     def normalize_step_weights(self):
+        '''
+        Normalizes weights for all particles.
+        '''
         weights = self.get_weights()
         particles = self.particles
         total_weight = np.sum(weights)
@@ -76,6 +112,9 @@ class SMCStep():
         return None
 
     def compute_ess(self):
+        '''
+        Computes the effective sample size (ess) of the step
+        '''
         weights = self.get_weights()
         if not np.isclose(np.sum(weights), 1):
             self.normalize_step_weights()
@@ -93,6 +132,10 @@ class SMCStep():
         return self.particles
 
     def resample(self):
+        '''
+        Resamples the step based on normalized weights. Assigns discrete
+        probabilities to each particle (sum to 1), resample from this discrete distribution using the particle's copy() method.
+        '''
         particles = self.particles
         num_particles = len(particles)
         weights = self.get_weights()
@@ -118,6 +161,11 @@ class SMCStep():
         return None
 
     def print_particle_info(self, particle_num):
+        """
+        Prints the particle number and its information
+
+        :param int particle_num: index of the desired particle
+        """
         particle = self.particles[particle_num]
         print '-----------------------------------------------------'
         print 'Particle: %s' % particle_num
@@ -264,4 +312,4 @@ class SMCStep():
     def _check_particle(particle):
         if not isinstance(particle, Particle):
             raise TypeError('Input must be a of the Particle class')
-        return None
+        return particle
