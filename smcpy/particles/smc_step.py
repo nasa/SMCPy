@@ -29,7 +29,7 @@ class SMCStep():
 
     def fill_step(self, particle_list):
         '''
-        Add an entire step to the chain, providing a list of particles.
+        Fill the step with a list of particles.
         '''
         self.particles = self._check_step(particle_list)
         return None
@@ -105,16 +105,6 @@ class SMCStep():
 
     def get_particles(self):
         return self.particles
-
-    def overwrite_step(self, step):
-        '''
-        Overwrite an entire step of the chain with the provided list of
-        particles.
-        '''
-        if len(step) != len(self.get_particles()):
-            raise ValueError('Number of new particles must equal number of old')
-        self.particles = step
-        return None
 
     def resample(self, overwrite=True):
         particles = self.particles
