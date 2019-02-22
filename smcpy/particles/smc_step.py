@@ -23,26 +23,26 @@ class SMCStep():
 
     def add_particle(self, particle):
         '''
-        Add a single particle to a given step.
+        Add a single particle to the step.
         '''
         self.particles.append(particle)
 
     def fill_step(self, particle_list):
         '''
-        Fill the step with a list of particles.
+        Fill a list of particles in the step.
         '''
         self.particles = self._check_step(particle_list)
         return None
 
     def copy_step(self):
         '''
-        Returns a copy of particle chain's step (most recent step by default).
+        Returns a copy of particle chain's particle list.
         '''
         return copy.deepcopy(self.particles)
 
     def copy(self):
         '''
-        Returns a copy of the entire particle chain.
+        Returns a copy of the entire step class.
         '''
         return copy.deepcopy(self)
 
@@ -106,7 +106,7 @@ class SMCStep():
     def get_particles(self):
         return self.particles
 
-    def resample(self, overwrite=True):
+    def resample(self):
         particles = self.particles
         num_particles = len(particles)
         weights = self.get_weights()
@@ -128,8 +128,7 @@ class SMCStep():
                     # assign uniform weight
                     new_particles[-1].weight = uniform_weight
                     break
-        if overwrite:
-            self.particles = new_particles
+        self.particles = new_particles
         return None
 
     def print_particle_info(self, particle_num):

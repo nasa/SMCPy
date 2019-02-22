@@ -149,7 +149,7 @@ class HDF5Storage(object):
 
     def write_step_list(self, step_list):
         '''
-        Write a particle chain, which is a list of steps, each of which being a
+        Write a step list, which is a list of steps, each of which being a
         list of particles, to the hdf5 file.
 
         :param particle_chain: a list of steps, each of which is a list of
@@ -162,7 +162,7 @@ class HDF5Storage(object):
 
     def read_step_list(self,):
         '''
-        Loads and returns an entire particle chain (which consists of all
+        Loads and returns an entire step list (which consists of all
         available steps and particles within each step).
         '''
         step_list = []

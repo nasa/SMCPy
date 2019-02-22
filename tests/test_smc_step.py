@@ -70,7 +70,7 @@ def test_get_param_dicts(filled_step):
 
 def test_resample(filled_step):
     prior_particle = filled_step.particles
-    filled_step.resample(overwrite=True)
+    filled_step.resample()
     assert filled_step.particles != prior_particle
 
 
