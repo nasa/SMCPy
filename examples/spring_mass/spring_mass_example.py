@@ -1,6 +1,6 @@
 import numpy as np
 from spring_mass_model import SpringMassModel
-from smcpy import SMCSampler
+from smcpy.smc.smc_sampler import SMCSampler
 
 # Initialize model
 state0 = [0., 0.]  # initial conditions
