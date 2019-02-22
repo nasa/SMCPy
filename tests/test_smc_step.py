@@ -54,7 +54,7 @@ def test_get_likes(filled_step):
 
 
 def test_get_log_likes(filled_step):
-    assert filled_step.get_log_likes()[0] == -0.2
+    assert np.array_equal(filled_step.get_log_likes(), [-0.2] * 5)
 
 
 def test_get_mean(filled_step):
@@ -66,7 +66,8 @@ def test_get_weights(filled_step):
 
 
 def test_calcuate_covariance(filled_step):
-    filled_step.calculate_covariance() == np.array([[0, 0], [0, 0]])
+    assert np.array_equal(filled_step.calculate_covariance(),
+                          np.array([[0, 0], [0, 0]]))
 
 
 def test_compute_ess(filled_step):
@@ -82,6 +83,7 @@ def test_get_param_dicts(filled_step):
 
 
 def test_resample(mixed_step):
+    np.random.seed(1)
     prior_particle = mixed_step.particles
     mixed_step.resample()
     assert mixed_step.particles != prior_particle
@@ -90,7 +92,7 @@ def test_resample(mixed_step):
 def test_resample_uniform(mixed_step):
     mixed_step.resample()
     weights = mixed_step.get_weights()
-    assert np.testing.assert_almost_equal(max(weights) - min(weights), 0)
+    np.testing.assert_almost_equal(max(weights) - min(weights), 0)
 
 
 def test_print_particle_info(filled_step, capfd):

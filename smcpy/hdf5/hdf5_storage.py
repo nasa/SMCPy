@@ -141,10 +141,10 @@ class HDF5Storage(object):
         :type step_index: integer
         '''
         step_grp = self._get_step_group(step_index)
-        step = []
+        step = SMCStep()
         for particle_name in step_grp.keys():
             particle_index = int(particle_name.split('_')[-1])
-            step.append(self.read_particle(step_index, particle_index))
+            step.add_particle(self.read_particle(step_index, particle_index))
         return step
 
     def write_step_list(self, step_list):
@@ -168,8 +168,7 @@ class HDF5Storage(object):
         step_list = []
         for step_name in self._step_parent_grp.keys():
             step_index = int(step_name.split('_')[-1])
-            step = SMCStep()
-            step.fill_step(self.read_step(step_index))
+            step = self.read_step(step_index)
             step_list.append(step)
         return step_list
 
