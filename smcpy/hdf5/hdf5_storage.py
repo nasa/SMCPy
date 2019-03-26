@@ -33,7 +33,7 @@ AGREEMENT.
 import h5py
 import os
 from ..particles.particle import Particle
-from ..particles.smc_step import SMCStep
+from ..smc.smc_step import SMCStep
 
 
 class HDF5Storage(object):
@@ -111,10 +111,10 @@ class HDF5Storage(object):
         :type particle_index: integer
         '''
         particle_grp = self._get_particle_group(step_index, particle_index)
-        weight = particle_grp['weight'][()]
-        log_like = particle_grp['log_like'][()]
+        weight = particle_grp['weight'].value
+        log_like = particle_grp['log_like'].value
         params_grp = particle_grp['parameters']
-        params = {key: params_grp[key][()] for key in params_grp.keys()}
+        params = {key: params_grp[key].value for key in params_grp.keys()}
         particle = Particle(params, weight, log_like)
         return particle
 

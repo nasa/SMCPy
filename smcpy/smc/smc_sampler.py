@@ -44,7 +44,7 @@ from pymc import Normal
 
 from ..mcmc.mcmc_sampler import MCMCSampler
 from ..particles.particle import Particle
-from ..particles.smc_step import SMCStep
+from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
 

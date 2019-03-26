@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from smcpy.particles.smc_step import SMCStep
+from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 
 

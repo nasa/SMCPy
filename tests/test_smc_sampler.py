@@ -3,7 +3,7 @@ import numpy as np
 from mpi4py import MPI
 from os import path
 from smcpy.hdf5.hdf5_storage import HDF5Storage
-from smcpy.particles.smc_step import SMCStep
+from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 from smc_tester import SMCTester, Model
 
@@ -244,12 +244,6 @@ def test_initialize_step(smc_tester, cloned_comm):
 def test_raise_value_error_when_restart_step_invalid(smc_tester, restart_step):
     with pytest.raises(ValueError):
         smc_tester.when_sampling(restart_step, hdf5_to_load=None,
-                                 autosave_file=None)
-
-
-def test_restart_step(smc_tester):
-    with pytest.raises(ValueError):
-        smc_tester.when_sampling(restart_time_step=2, hdf5_to_load=None,
                                  autosave_file=None)
 
 

@@ -3,7 +3,7 @@ from smcpy.hdf5.hdf5_storage import HDF5Storage
 import h5py
 import os
 import numpy as np
-from smcpy.particles.smc_step import SMCStep
+from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 
 
