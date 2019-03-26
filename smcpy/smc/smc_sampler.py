@@ -356,7 +356,7 @@ class SMCSampler(Properties):
         return list(new_particles)
 
     def _initialize_new_particles(self):
-        new_particles = self.step.copy_step(step=-1)
+        new_particles = self.step.copy_step()
         self.step.fill_step(new_particles)
         return None
 
