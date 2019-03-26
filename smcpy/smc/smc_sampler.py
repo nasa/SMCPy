@@ -111,13 +111,12 @@ class SMCSampler(Properties):
             step at restart_time is retained, and the sampling begins at the
             next step (t=restart_time_step+1).
         :type restart_time_step: int
-        :param hdf5_to_load: file path of a particle chain saved using the
-            ParticleChain.save() method.
+        :param hdf5_to_load: file path of a step list
         :type hdf5_to_load: string
 
 
-        :Returns: A ParticleChain class instance that stores all particles and
-            their past generations at every time step.
+        :Returns: A list of SMCStep class instances that contains all particles
+        and their past generations at every time step.
         '''
         self.num_particles = num_particles
         self.num_time_steps = num_time_steps
@@ -132,15 +131,16 @@ class SMCSampler(Properties):
             self._set_start_time_based_on_proposal()
             particles = self._initialize_particles(measurement_std_dev)
             step = self._initialize_step(particles)
+            self.step = step
+            self.step_list = [step]
 
         elif 0 < self.restart_time_step <= num_time_steps:
             self._set_start_time_equal_to_restart_time_step()
             step_list = self.load_step_list(hdf5_to_load)
             step_list = self._trim_step_list(step_list,
                                              self.restart_time_step)
+            self.step = step_list[0]
 
-        self.step = step
-        self.step_list = [step]
         self._autosave_step()
 
         p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
@@ -439,7 +439,7 @@ class SMCSampler(Properties):
         '''
         Saves self.step to an hdf5 file using the HDF5Storage class.
 
-        :param hdf5_to_load: file path at which to save particle chain
+        :param hdf5_to_load: file path at which to save step list
         :type hdf5_to_load: string
         '''
         if self._rank == 0:
@@ -450,7 +450,7 @@ class SMCSampler(Properties):
 
     def load_step_list(self, h5_file):
         '''
-        Loads and returns a particle chain object stored using the HDF5Storage
+        Loads and returns a step list stored using the HDF5Storage
         class.
 
         :param hdf5_to_load: file path of a step_list saved using the
