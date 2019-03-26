@@ -347,7 +347,7 @@ class SMCSampler(Properties):
         if self._rank == 0:
             # self._initialize_new_particles()
             self._compute_new_particle_weights(temperature_step)
-            self._normalize_new_particle_weights()
+            self.step.normalize_step_weights()
             self._resample_if_needed()
             new_particles = self._partition_new_particles()
         else:
@@ -363,10 +363,6 @@ class SMCSampler(Properties):
     def _compute_new_particle_weights(self, temperature_step):
         for p in self.step.get_particles():
             p.weight = np.exp(np.log(p.weight) + p.log_like * temperature_step)
-        return None
-
-    def _normalize_new_particle_weights(self):
-        self.step.normalize_step_weights()
         return None
 
     def _resample_if_needed(self):
