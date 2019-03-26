@@ -49,7 +49,6 @@ from ..particles.particle import Particle
 from ..particles.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
-warnings.filterwarnings("ignore", message="divide by zero encountered in log")
 
 
 class SMCSampler(Properties):
@@ -139,7 +138,8 @@ class SMCSampler(Properties):
             step_list = self.load_step_list(hdf5_to_load)
             step_list = self._trim_step_list(step_list,
                                              self.restart_time_step)
-            self.step = step_list[0]
+            self.step = step_list[-1]
+            self.step_list = step_list
 
         self._autosave_step()
 

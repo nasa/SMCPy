@@ -247,6 +247,12 @@ def test_raise_value_error_when_restart_step_invalid(smc_tester, restart_step):
                                  autosave_file=None)
 
 
+def test_restart_step(smc_tester):
+    with pytest.raises(ValueError):
+        smc_tester.when_sampling(restart_time_step=2, hdf5_to_load=None,
+                                 autosave_file=None)
+
+
 def test_save_step_list(smc_tester, h5_filename, cloned_comm):
     if cloned_comm.Get_rank() == 0:
         assert not path.exists(h5_filename)
@@ -258,7 +264,7 @@ def test_save_step_list(smc_tester, h5_filename, cloned_comm):
         smc_tester.cleanup_file(h5_filename)
 
 
-def test_particle_chain_trimmer(smc_tester, cloned_comm, h5_filename):
+def test_step_list_trimmer(smc_tester, cloned_comm, h5_filename):
     smc_tester.when_sampling_parameters_set()
     smc_tester.when_step_created()
     smc_tester.save_step_list(h5_filename)
