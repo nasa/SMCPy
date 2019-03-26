@@ -49,9 +49,6 @@ class SMCTester(SMCSampler):
         true_params = {'a': 2.5, 'b': 1.3}
         return model.generate_noisy_data_with_model(std_dev, true_params)
 
-    def error_processing_args(model):
-        return model.evaluate("test error")
-
     @staticmethod
     def cleanup_file(filename):
         try:

@@ -394,8 +394,3 @@ def test_close_autosaver(smc_tester, h5_filename, cloned_comm):
         assert not path.exists(h5_filename)
     else:
         assert smc_tester.autosaver is None
-
-
-def test_error_processing(smc_tester):
-    with pytest.raises(TypeError):
-        smc_tester.error_processing_args(model)
