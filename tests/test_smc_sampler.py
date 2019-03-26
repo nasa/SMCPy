@@ -1,18 +1,18 @@
 import pytest
 import numpy as np
-import pymc
 from mpi4py import MPI
 from os import path
 from smcpy.hdf5.hdf5_storage import HDF5Storage
-from smcpy.particles.particle_chain import ParticleChain
+from smcpy.particles.smc_step import SMCStep
 from smcpy.particles.particle import Particle
-from smc_tester import SMCTester
+from smc_tester import SMCTester, Model
 
 '''
 Unit and regression tests for the smc_tester.
 '''
 
 arr_alm_eq = np.testing.assert_array_almost_equal
+
 
 @pytest.fixture
 def x_space():
@@ -49,6 +49,12 @@ def smc_tester_rank_seed(cloned_comm):
 @pytest.fixture
 def h5_filename():
     return 'test.h5'
+
+
+@pytest.fixture
+def model():
+    x_space = np.arange(50)
+    return Model(x_space)
 
 
 def test_communicator_is_clone(smc_tester, mpi_comm_world):
@@ -109,7 +115,7 @@ def test_autosave_file_input_checks(input_, exp_error, smc_tester):
 
 
 @pytest.mark.parametrize("autosave_file,expect", [(h5_filename(), HDF5Storage),
-                                                    (None, None.__class__)])
+                                                  (None, None.__class__)])
 def test_autosave_behavior_is_set(autosave_file, expect, smc_tester,
                                   cloned_comm):
     smc_tester.autosaver = autosave_file
@@ -220,19 +226,18 @@ def test_initialize_from_prior(smc_tester, error_std_dev):
     assert len(smc_tester.particles) == 1
 
 
-def test_initialize_particle_chain(smc_tester, cloned_comm):
+def test_initialize_step(smc_tester, cloned_comm):
     error_std_dev = 0.6
 
     smc_tester.when_sampling_parameters_set()
     smc_tester.when_initial_particles_sampled_from_proposal(error_std_dev)
-    particle_chain = smc_tester._initialize_particle_chain(smc_tester.particles)
+    step = smc_tester._initialize_step(smc_tester.particles)
     if cloned_comm.Get_rank() == 0:
-        assert isinstance(particle_chain, ParticleChain)
-        assert len(particle_chain.get_particles()) == cloned_comm.Get_size()
-        assert particle_chain.get_num_steps() == 1
-        arr_alm_eq(sum(particle_chain.get_weights()), 1.)
+        assert isinstance(step, SMCStep)
+        assert len(step.get_particles()) == cloned_comm.Get_size()
+        arr_alm_eq(sum(step.get_weights()), 1.)
     else:
-        assert particle_chain is None
+        assert step is None
 
 
 @pytest.mark.parametrize("restart_step", [-1, 3])
@@ -242,12 +247,12 @@ def test_raise_value_error_when_restart_step_invalid(smc_tester, restart_step):
                                  autosave_file=None)
 
 
-def test_save_particle_chain(smc_tester, h5_filename, cloned_comm):
+def test_save_step_list(smc_tester, h5_filename, cloned_comm):
     if cloned_comm.Get_rank() == 0:
         assert not path.exists(h5_filename)
     smc_tester.when_sampling_parameters_set()
-    smc_tester.when_particle_chain_created()
-    smc_tester.save_particle_chain(h5_filename)
+    smc_tester.when_step_created()
+    smc_tester.save_step_list(h5_filename)
     if cloned_comm.Get_rank() == 0:
         assert path.exists(h5_filename)
         smc_tester.cleanup_file(h5_filename)
@@ -255,12 +260,13 @@ def test_save_particle_chain(smc_tester, h5_filename, cloned_comm):
 
 def test_particle_chain_trimmer(smc_tester, cloned_comm, h5_filename):
     smc_tester.when_sampling_parameters_set()
-    smc_tester.save_particle_chain(h5_filename)
+    smc_tester.when_step_created()
+    smc_tester.save_step_list(h5_filename)
     if cloned_comm.Get_rank() == 0:
         assert path.exists(h5_filename)
-        particle_chain = smc_tester.load_particle_chain(h5_filename)
-        smc_tester.assert_particle_chains_almost_equal(particle_chain,
-                                                      smc_tester.particle_chain)
+        step_list = smc_tester.load_step_list(h5_filename)
+        smc_tester.assert_step_lists_almost_equal(step_list,
+                                                  smc_tester.step_list)
         smc_tester.cleanup_file(h5_filename)
 
 
@@ -272,39 +278,30 @@ def test_set_start_time_equal_to_restart_time_step(smc_tester, restart_time):
     assert smc_tester._start_time_step == restart_time
 
 
-def test_trim_particle_chain(smc_tester, cloned_comm):
+def test_trim_step_list(smc_tester, cloned_comm):
     smc_tester.when_sampling_parameters_set()
-    smc_tester.when_particle_chain_created()
+    smc_tester.when_step_created()
     if cloned_comm.Get_rank() == 0:
-        assert smc_tester.particle_chain.get_num_steps() == 2
-        smc_tester._trim_particle_chain(smc_tester.particle_chain, 0)
-        assert smc_tester.particle_chain.get_num_steps() == 1
+        assert len(smc_tester.step_list) == 1
+        trimmed_list = smc_tester._trim_step_list(smc_tester.step_list, -1)
+        assert len(trimmed_list) == 0
     else:
-        assert smc_tester.particle_chain is None
+        assert smc_tester.step_list is None
 
 
 @pytest.mark.parametrize("input_", [0, [1], dict()])
-def test_set_particle_chain_type_error(smc_tester, input_):
+def test_set_step_type_error(smc_tester, input_):
     with pytest.raises(TypeError):
-        smc_tester.particle_chain = input_
-
-
-def test_autosave_particle_chain(smc_tester, h5_filename, cloned_comm):
-    smc_tester.when_sampling_parameters_set(autosave_file=h5_filename)
-    smc_tester.when_particle_chain_created()
-    smc_tester._autosave_particle_chain()
-    if cloned_comm.Get_rank() == 0:
-        assert path.exists(h5_filename)
-        smc_tester.cleanup_file(h5_filename)
+        smc_tester.step = SMCStep()
+        smc_tester.step.fill_step(input_)
 
 
 def test_create_new_particles(smc_tester, cloned_comm):
-    weight = 1.0
     log_like = -706.4534190556333
     params = {'a': np.array(2.43349633), 'b': np.array(5.73716365)}
 
     smc_tester.when_sampling_parameters_set()
-    smc_tester.when_particle_chain_created()
+    smc_tester.when_step_created()
     new_particles = smc_tester._create_new_particles(0.2)
     if cloned_comm.Get_rank() > 0:
         assert isinstance(new_particles, list)
@@ -322,23 +319,22 @@ def test_compute_step_covariance(smc_tester):
     of particles, meaning this test will pass regardless of processes. Simply
     here to test the plumbing.
     '''
-    cov_test = np.array([[ 0.91459139, -0.30873497],
-                         [-0.30873497,  3.44351062]])
+    cov_test = np.array([[0.91459139, -0.30873497],
+                         [-0.30873497, 3.44351062]])
 
     smc_tester.when_sampling_parameters_set(num_particles_per_processor=10)
-    smc_tester.when_particle_chain_created()
-    cov = smc_tester._compute_current_step_covariance()
+    smc_tester.when_step_created()
+    cov = smc_tester._compute_step_covariance()
     assert isinstance(cov, np.ndarray)
     arr_alm_eq(cov, cov_test)
 
 
 def test_mutate_new_particles(smc_tester, cloned_comm):
     params = {'a': np.array(2.43349633), 'b': np.array(5.73716365)}
-    weight = 1.0
     log_like = -712.444883603
- 
+
     smc_tester.when_sampling_parameters_set(num_particles_per_processor=10)
-    smc_tester.when_particle_chain_created()
+    smc_tester.when_step_created()
     smc_tester.when_particles_mutated()
     mutated_particles = smc_tester.mutated_particles
 
@@ -351,41 +347,37 @@ def test_mutate_new_particles(smc_tester, cloned_comm):
         arr_alm_eq(mutated_particles[0].params.values(), params.values())
 
 
-def test_update_particle_chain_with_new_particles(smc_tester, cloned_comm):
+def test_update_step_with_new_particles(smc_tester, cloned_comm):
     smc_tester.when_sampling_parameters_set()
-    smc_tester.when_particle_chain_created()
+    smc_tester.when_step_created()
     smc_tester.when_particles_mutated()
     mutated_particles = smc_tester.mutated_particles
 
     if cloned_comm.Get_rank() == 0:
-        pc1 = smc_tester.particle_chain.copy()
-        smc_tester._update_particle_chain_with_new_particles(mutated_particles)
-        pc2 = smc_tester.particle_chain
-        pc3 = ParticleChain()
-        pc3.add_step(mutated_particles)
-        assert pc1.get_num_steps() == pc2.get_num_steps()
-        smc_tester.assert_particle_chain_steps_almost_equal(pc1, pc2, 0)
-        smc_tester.assert_particle_chain_steps_almost_equal(pc2, pc3, -1)
+        pc1 = smc_tester.step.copy()
+        pc1.fill_step(mutated_particles)
+        smc_tester._update_step_with_new_particles(mutated_particles)
+        pc2 = smc_tester.step
+        smc_tester.assert_steps_almost_equal(pc1, pc2)
     else:
         assert mutated_particles is None
-        assert smc_tester._update_particle_chain_with_new_particles( \
-                                                     mutated_particles) is None
+        assert smc_tester._update_step_with_new_particles(
+            mutated_particles) is None
 
 
-def test_autosave_particle_step(smc_tester, h5_filename, cloned_comm):
+def test_autosave_step(smc_tester, h5_filename, cloned_comm):
     assert not path.exists(h5_filename)
-    smc_tester.when_sampling_parameters_set(autosave_file = h5_filename)
-    smc_tester.when_particle_chain_created()
-    smc_tester._autosave_particle_chain()
+    smc_tester.when_sampling_parameters_set(autosave_file=h5_filename)
+    smc_tester.when_step_created()
     smc_tester.when_particles_mutated()
     mutated_particles = smc_tester.mutated_particles
-    smc_tester._update_particle_chain_with_new_particles(mutated_particles)
-    smc_tester._autosave_particle_step()
+    smc_tester._update_step_with_new_particles(mutated_particles)
+    smc_tester._autosave_step()
 
     if cloned_comm.Get_rank() == 0:
-        pc1 = smc_tester.particle_chain
-        pc2 = smc_tester.load_particle_chain(h5_filename)
-        smc_tester.assert_particle_chains_almost_equal(pc1, pc2)
+        pc1 = smc_tester.step_list
+        pc2 = smc_tester.load_step_list(h5_filename)
+        smc_tester.assert_step_lists_almost_equal(pc1, pc2)
         smc_tester.cleanup_file(h5_filename)
     else:
         assert smc_tester.autosaver is None
@@ -402,3 +394,8 @@ def test_close_autosaver(smc_tester, h5_filename, cloned_comm):
         assert not path.exists(h5_filename)
     else:
         assert smc_tester.autosaver is None
+
+
+def test_error_processing(smc_tester):
+    with pytest.raises(TypeError):
+        smc_tester.error_processing_args(model)

@@ -2,13 +2,13 @@ import numpy as np
 from spring_mass_models import SpringMassModel
 
 # Initialize model
-state0 = [0., 0.]                        #initial conditions
-measure_t_grid = np.arange(0., 5., 0.2)  #time 
+state0 = [0., 0.]  # initial conditions
+measure_t_grid = np.arange(0., 5., 0.2)  # time
 model = SpringMassModel(state0, measure_t_grid)
 
 # Get ground truth
 true_params = {'K': 1.67, 'g': 4.62}
-true_t_grid = np.arange(0., 10., 0.02)  #time 
+true_t_grid = np.arange(0., 10., 0.02)  # time
 true_model = SpringMassModel(state0, true_t_grid)
 true = true_model.evaluate(true_params)
 
