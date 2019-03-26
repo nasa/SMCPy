@@ -75,19 +75,19 @@ class SMCTester(SMCSampler):
         return np.log(1. / (2 * np.pi * var)**(M / 2.) * np.exp(-1. / (2 * var) * ssq))
 
     @classmethod
-    def assert_step_lists_almost_equal(class_, pc1, pc2):
-        assert len(pc1) == len(pc2)
-        for i in range(len(pc1)):
-            class_.assert_steps_almost_equal(pc1[i], pc2[i])
+    def assert_step_lists_almost_equal(class_, step_list1, step_list2):
+        assert len(step_list1) == len(step_list2)
+        for i in range(len(step_list1)):
+            class_.assert_steps_almost_equal(step_list1[i], step_list2[i])
         return None
 
     @staticmethod
-    def assert_steps_almost_equal(pc1, pc2):
+    def assert_steps_almost_equal(step_list1, step_list2):
         aae = np.testing.assert_array_almost_equal
-        aae(pc1.get_log_likes(), pc2.get_log_likes())
-        aae(pc1.get_weights(), pc2.get_weights())
-        aae(pc1.get_params('a',), pc2.get_params('a',))
-        aae(pc1.get_params('b',), pc2.get_params('b',))
+        aae(step_list1.get_log_likes(), step_list2.get_log_likes())
+        aae(step_list1.get_weights(), step_list2.get_weights())
+        aae(step_list1.get_params('a',), step_list2.get_params('a',))
+        aae(step_list1.get_params('b',), step_list2.get_params('b',))
 
     def when_proposal_dist_set_with_scales(self):
         proposal_center = {'a': 1, 'b': 2}
