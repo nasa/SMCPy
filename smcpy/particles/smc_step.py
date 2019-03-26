@@ -13,9 +13,9 @@ class SMCStep():
         List of Particle instances
     """
 
-    def __init__(self):
+    def __init__(self, id):
         self.particles = []
-        self.id = 0
+        self.id = id
 
     def add_particle(self, particle):
         '''

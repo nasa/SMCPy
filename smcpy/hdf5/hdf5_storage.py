@@ -111,10 +111,10 @@ class HDF5Storage(object):
         :type particle_index: integer
         '''
         particle_grp = self._get_particle_group(step_index, particle_index)
-        weight = particle_grp['weight'].value
-        log_like = particle_grp['log_like'].value
+        weight = particle_grp['weight'][()]
+        log_like = particle_grp['log_like'][()]
         params_grp = particle_grp['parameters']
-        params = {key: params_grp[key].value for key in params_grp.keys()}
+        params = {key: params_grp[key][()] for key in params_grp.keys()}
         particle = Particle(params, weight, log_like)
         return particle
 
