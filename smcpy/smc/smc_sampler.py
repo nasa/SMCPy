@@ -1,5 +1,3 @@
-# TODO: Mutate new particles check by comparing old/new particles params
-
 '''
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
