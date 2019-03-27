@@ -28,7 +28,7 @@ class SMCStep():
         '''
         self.particles.append(self._check_particle(particle))
 
-    def fill_step(self, particle_list):
+    def set_particles(self, particle_list):
         '''
         Fill a list of particles in the step.
 

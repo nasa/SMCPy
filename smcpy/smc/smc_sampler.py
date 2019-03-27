@@ -310,7 +310,7 @@ class SMCSampler(Properties):
         particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
             step = SMCStep()
-            step.fill_step(np.concatenate(particles))
+            step.set_particles(np.concatenate(particles))
             step.normalize_step_weights()
         else:
             step = None
@@ -357,7 +357,7 @@ class SMCSampler(Properties):
 
     def _initialize_new_particles(self):
         new_particles = self.step.copy_step()
-        self.step.fill_step(new_particles)
+        self.step.set_particles(new_particles)
         return None
 
     def _compute_new_particle_weights(self, temperature_step):
@@ -415,7 +415,7 @@ class SMCSampler(Properties):
 
     def _update_step_with_new_particles(self, particles):
         if self._rank == 0:
-            self.step.fill_step(particles)
+            self.step.set_particles(particles)
         return None
 
     def _autosave_step(self):

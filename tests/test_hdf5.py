@@ -16,7 +16,7 @@ def particle():
 @pytest.fixture
 def filled_step(particle):
     step_tester = SMCStep()
-    step_tester.fill_step(5 * [particle])
+    step_tester.set_particles(5 * [particle])
     return step_tester
 
 

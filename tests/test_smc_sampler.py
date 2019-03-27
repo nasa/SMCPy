@@ -293,7 +293,7 @@ def test_trim_step_list(smc_tester, cloned_comm):
 def test_set_step_type_error(smc_tester, input_):
     with pytest.raises(TypeError):
         smc_tester.step = SMCStep()
-        smc_tester.step.fill_step(input_)
+        smc_tester.step.set_particles(input_)
 
 
 def test_create_new_particles(smc_tester, cloned_comm):
@@ -355,7 +355,7 @@ def test_update_step_with_new_particles(smc_tester, cloned_comm):
 
     if cloned_comm.Get_rank() == 0:
         pc1 = smc_tester.step.copy()
-        pc1.fill_step(mutated_particles)
+        pc1.set_particles(mutated_particles)
         smc_tester._update_step_with_new_particles(mutated_particles)
         pc2 = smc_tester.step
         smc_tester.assert_steps_almost_equal(pc1, pc2)

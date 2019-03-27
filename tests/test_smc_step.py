@@ -24,28 +24,28 @@ def step_tester():
 
 @pytest.fixture
 def filled_step(step_tester, particle_list):
-    step_tester.fill_step(particle_list)
+    step_tester.set_particles(particle_list)
     return step_tester
 
 
 @pytest.fixture
 def mixed_step(step_tester, mixed_particle_list):
-    step_tester.fill_step(mixed_particle_list)
+    step_tester.set_particles(mixed_particle_list)
     return step_tester
 
 
 def test_type_error_when_particle_not_list(step_tester):
     with pytest.raises(TypeError):
-        step_tester.fill_step("Bad param type")
+        step_tester.set_particles("Bad param type")
 
 
 def test_type_error_not_particle_class(step_tester):
     with pytest.raises(TypeError):
-        step_tester.fill_step([1, 2, 3])
+        step_tester.set_particles([1, 2, 3])
 
 
 def test_private_variable_creation(step_tester, particle_list):
-    step_tester.fill_step(particle_list)
+    step_tester.set_particles(particle_list)
     assert step_tester.particles == particle_list
 
 

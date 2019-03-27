@@ -172,7 +172,7 @@ class SMCTester(SMCSampler):
         particles = self.particles
         step = self._initialize_step(particles)
         if self.comm.Get_rank() == 0:
-            step.fill_step(step.copy_step())
+            step.set_particles(step.copy_step())
             self.step_list = [step]
             self.step = step
         else:
