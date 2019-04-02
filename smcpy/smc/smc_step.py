@@ -112,7 +112,7 @@ class SMCStep():
         '''
         Computes the effective sample size (ess) of the step
         '''
-        weights = self.get_weights()
+        weights = self.get_log_weights()
         if not np.isclose(np.sum(weights), 1):
             self.normalize_step_weights()
         return 1 / np.sum([w**2 for w in weights])
@@ -135,7 +135,7 @@ class SMCStep():
         '''
         particles = self.particles
         num_particles = len(particles)
-        weights = self.get_weights()
+        weights = self.get_log_weights()
         weights_cs = np.cumsum(weights)
 
         # intervals based on weights to use for discrete probability draw
