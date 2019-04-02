@@ -78,11 +78,11 @@ class SMCStep():
             mean[pn] = np.sum(mean[pn])
         return mean
 
-    def get_weights(self):
+    def get_log_weights(self):
         '''
         Returns a list of the weights of each particle in the step
         '''
-        return [p.weight for p in self.particles]
+        return [p.log_weight for p in self.particles]
 
     def calculate_covariance(self):
         '''
@@ -97,21 +97,16 @@ class SMCStep():
             param_vector = p.params.values()
             diff = (param_vector - means).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
-            cov_list.append(p.weight * R)
+            cov_list.append(p.log_weight * R)
         cov_matrix = np.sum(cov_list, axis=0)
 
         return cov_matrix
 
     def normalize_step_weights(self):
-        '''
-        Normalizes weights for all particles.
-        '''
-        weights = self.get_weights()
-        particles = self.particles
-        total_weight = np.sum(weights)
-        for p in particles:
-            p.weight = p.weight / total_weight
-        return None
+        weights = self.get_log_weights()
+        max_weight = weights.max()
+        normalized_weights = np.exp(weights - max_weight)
+        return normalized_weights / normalized_weights.sum()
 
     def compute_ess(self):
         '''
