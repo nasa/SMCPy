@@ -7,19 +7,17 @@ import warnings
 
 class ParticleInitializer():
 
-    def __init__(self, mcmc, num_particles, num_time_steps, mpi_comm,
-                 proposal_center, proposal_scales):
+    def __init__(self, mcmc, temp_schedule, mpi_comm,
+                 proposal_center=None, proposal_scales=None):
         self._mcmc = mcmc
-        self.num_particles = num_particles
-        self.num_time_steps = num_time_steps
-        self.temp_schedule = np.linspace(0.1, 1., self.num_time_steps)
+        self.temp_schedule = temp_schedule
         self._comm = mpi_comm
         self._size = self._comm.Get_size()
         self._rank = self._comm.Get_rank()
-        self._set_proposal_distribution(proposal_center, proposal_scales)
-        self._set_start_time_based_on_proposal()
+        self.set_proposal_distribution(proposal_center, proposal_scales)
 
-    def initialize_particles(self, measurement_std_dev):
+    def initialize_particles(self, measurement_std_dev, num_particles):
+        self.num_particles = num_particles
         m_std = measurement_std_dev
         self._mcmc.generate_pymc_model(fix_var=True, std_dev0=m_std)
         num_particles_per_partition = self._get_num_particles_per_partition()
@@ -33,6 +31,21 @@ class ParticleInitializer():
             part = self._create_particle(prior_variables, proposal_variables)
             particles.append(part)
         return particles
+
+    def set_proposal_distribution(self, proposal_center, proposal_scales):
+        self._check_proposal_dist_inputs(proposal_center, proposal_scales)
+        if proposal_center is not None and proposal_scales is None:
+            msg = 'No scales given; setting scales to identity matrix.'
+            warnings.warn(msg)
+            proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
+        if proposal_center is not None and proposal_scales is not None:
+            self._check_proposal_dist_input_keys(proposal_center,
+                                                 proposal_scales)
+            self._check_proposal_dist_input_vals(proposal_center,
+                                                 proposal_scales)
+        self.proposal_center = proposal_center
+        self.proposal_scales = proposal_scales
+        return None
 
     def _get_num_particles_per_partition(self,):
         num_particles_per_partition = self.num_particles / self._size
@@ -70,7 +83,7 @@ class ParticleInitializer():
             self._set_random_variables_value(prior_variables, params)
             prior_logp = self._compute_log_prob(prior_variables)
         log_like = self._evaluate_likelihood(params)
-        temp_step = self.temp_schedule[self._start_time_step]
+        temp_step = self.temp_schedule[1]
         log_weight = log_like * temp_step + prior_logp - prop_logp
         return Particle(params, np.exp(log_weight), log_like)
 
@@ -102,32 +115,3 @@ class ParticleInitializer():
         results_rv = mcmc.pymc_mod[results_index]
         log_like = results_rv.logp
         return log_like
-
-    def _set_start_time_based_on_proposal(self,):
-        '''
-        If proposal distribution is equal to prior distribution, can start
-        Sequential Monte Carlo sampling at time = 1, since prior can be
-        sampled directly. If using a different proposal, must first start by
-        estimating the prior (i.e., time = 0). This is a result of the way
-        the temperature schedule is defined.
-        '''
-        if self.proposal_center is None:
-            self._start_time_step = 1
-        else:
-            self._start_time_step = 0
-        return None
-
-    def _set_proposal_distribution(self, proposal_center, proposal_scales):
-        self._check_proposal_dist_inputs(proposal_center, proposal_scales)
-        if proposal_center is not None and proposal_scales is None:
-            msg = 'No scales given; setting scales to identity matrix.'
-            warnings.warn(msg)
-            proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
-        if proposal_center is not None and proposal_scales is not None:
-            self._check_proposal_dist_input_keys(proposal_center,
-                                                 proposal_scales)
-            self._check_proposal_dist_input_vals(proposal_center,
-                                                 proposal_scales)
-        self.proposal_center = proposal_center
-        self.proposal_scales = proposal_scales
-        return None
