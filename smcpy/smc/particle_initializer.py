@@ -7,13 +7,14 @@ import warnings
 
 class ParticleInitializer():
 
-    def __init__(self, mcmc, temp_schedule, mpi_comm,
-                 proposal_center=None, proposal_scales=None):
+    def __init__(self, mcmc, temp_schedule, mpi_comm):
         self._mcmc = mcmc
         self.temp_schedule = temp_schedule
         self._comm = mpi_comm
         self._size = self._comm.Get_size()
         self._rank = self._comm.Get_rank()
+        self.proposal_center = None
+        self.proposal_scales = None
 
     def initialize_particles(self, measurement_std_dev, num_particles):
         self.num_particles = num_particles
