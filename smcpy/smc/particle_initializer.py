@@ -6,11 +6,16 @@ import numpy as np
 
 class ParticleInitializer():
 
-    def __init__(self, mcmc, num_particles, num_time_steps):
+    def __init__(self, mcmc, num_particles, num_time_steps, size, rank,
+                 proposal_center, proposal_scales):
         self._mcmc = mcmc
         self.num_particles = num_particles
         self.num_time_steps = num_time_steps
         self.temp_schedule = np.linspace(0.1, 1., self.num_time_steps)
+        self._size = size
+        self._rank = rank
+        self.proposal_center = proposal_center
+        self.proposal_scales = proposal_scales
 
     def initialize_particles(self, measurement_std_dev):
         m_std = measurement_std_dev

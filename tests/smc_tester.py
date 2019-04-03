@@ -131,50 +131,48 @@ class SMCTester(SMCSampler):
         '''
         num_particles = self.comm.Get_size() * num_particles_per_processor
         ess_threshold = 0.8 * num_particles
-
-        self.num_particles = num_particles
-        self.num_time_steps = num_time_steps
-        self.temp_schedule = np.linspace(0., 1., self.num_time_steps)
+        initializer = ParticleInitializer(self._mcmc, num_particles,
+                                          num_time_steps, self._size, self._rank,
+                                          self.proposal_center, self.proposal_scales)
         self.num_mcmc_steps = num_mcmc_steps
         self.ess_threshold = ess_threshold
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
-        return None
+        return initializer
 
-    def when_initial_particles_sampled_from_proposal(self, measurement_std_dev):
+    def when_initial_particles_sampled_from_proposal(self, measurement_std_dev,
+                                                     initializer):
         proposal_center = {'a': 2.0, 'b': 3.5}
         proposal_scales = {'a': 0.5, 'b': 0.5}
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer = ParticleInitializer(self._mcmc)
         self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
-    def when_initial_particles_sampled_from_proposal_outside_prior(self):
+    def when_initial_particles_sampled_from_proposal_outside_prior(self,
+                                                                   initializer):
         proposal_center = {'a': 1000.0, 'b': 3.5}
         proposal_scales = {'a': 1000.0, 'b': 0.5}
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer = ParticleInitializer(self._mcmc)
         self.particles = initializer.initialize_particles(0.1)
         return None
 
-    def when_initial_particles_sampled_from_prior(self, measurement_std_dev):
+    def when_initial_particles_sampled_from_prior(self, measurement_std_dev,
+                                                  initializer):
         proposal_center = None
         proposal_scales = None
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer = ParticleInitializer(self._mcmc)
         self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
-    def when_step_created(self):
+    def when_step_created(self, initializer):
         self.when_initial_particles_sampled_from_proposal(0.6)
         particles = self.particles
-        initializer = ParticleInitializer(self._mcmc)
         step = initializer.initialize_step(particles)
         if self.comm.Get_rank() == 0:
             step.set_particles(step.copy_step())
