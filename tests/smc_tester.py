@@ -3,6 +3,7 @@ import numpy as np
 from os import remove
 from smcpy.smc.smc_sampler import SMCSampler
 from smcpy.model.base_model import BaseModel
+from smcpy.smc.particle_initializer import ParticleInitializer
 
 
 class Model(BaseModel):
@@ -146,7 +147,8 @@ class SMCTester(SMCSampler):
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        self.particles = self._initialize_particles(measurement_std_dev)
+        initializer = ParticleInitializer()
+        self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
     def when_initial_particles_sampled_from_proposal_outside_prior(self):
@@ -155,7 +157,8 @@ class SMCTester(SMCSampler):
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        self.particles = self._initialize_particles(0.1)
+        initializer = ParticleInitializer()
+        self.particles = initializer.initialize_particles(0.1)
         return None
 
     def when_initial_particles_sampled_from_prior(self, measurement_std_dev):
@@ -164,13 +167,15 @@ class SMCTester(SMCSampler):
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        self.particles = self._initialize_particles(measurement_std_dev)
+        initializer = ParticleInitializer()
+        self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
     def when_step_created(self):
         self.when_initial_particles_sampled_from_proposal(0.6)
         particles = self.particles
-        step = self._initialize_step(particles)
+        initializer = ParticleInitializer()
+        step = initializer.initialize_step(particles)
         if self.comm.Get_rank() == 0:
             step.set_particles(step.copy_step())
             self.step_list = [step]

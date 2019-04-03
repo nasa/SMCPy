@@ -6,7 +6,7 @@ from smcpy.hdf5.hdf5_storage import HDF5Storage
 from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 from smc_tester import SMCTester, Model
-
+from smcpy.smc.particle_initializer import ParticleInitializer
 '''
 Unit and regression tests for the smc_tester.
 '''
@@ -182,7 +182,8 @@ def test_likelihood_from_pymc(smc_tester, params, error_std_dev):
     data = smc_tester._mcmc.data
     model_eval = smc_tester._mcmc.model.evaluate(params)
     smc_tester._mcmc.generate_pymc_model(fix_var=True, std_dev0=std_dev)
-    log_like = smc_tester._evaluate_likelihood(params)
+    initializer = ParticleInitializer(smc_tester._mcmc)
+    log_like = initializer._evaluate_likelihood(params)
     calc_log_like = smc_tester.calc_log_like_manually(model_eval, data, std_dev)
     arr_alm_eq(log_like, calc_log_like)
 
