@@ -14,7 +14,6 @@ class ParticleInitializer():
         self._comm = mpi_comm
         self._size = self._comm.Get_size()
         self._rank = self._comm.Get_rank()
-        self.set_proposal_distribution(proposal_center, proposal_scales)
 
     def initialize_particles(self, measurement_std_dev, num_particles):
         self.num_particles = num_particles
