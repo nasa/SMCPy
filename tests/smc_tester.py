@@ -3,8 +3,6 @@ import numpy as np
 from os import remove
 from smcpy.smc.smc_sampler import SMCSampler
 from smcpy.model.base_model import BaseModel
-from smcpy.smc.particle_initializer import ParticleInitializer
-
 
 class Model(BaseModel):
     '''
@@ -35,20 +33,24 @@ class SMCTester(SMCSampler):
 
         super(SMCTester, self).__init__(data, model, param_priors)
 
+
     @staticmethod
     def _set_param_priors():
         return {'a': ['Uniform', -10., 10.], 'b': ['Uniform', -10., 10.]}
+
 
     @staticmethod
     def _instance_model():
         x_space = np.arange(50)
         return Model(x_space)
 
+
     @staticmethod
     def _generate_data(model):
         std_dev = 0.6
         true_params = {'a': 2.5, 'b': 1.3}
         return model.generate_noisy_data_with_model(std_dev, true_params)
+
 
     @staticmethod
     def cleanup_file(filename):
@@ -57,6 +59,7 @@ class SMCTester(SMCSampler):
         except:
             pass
         return None
+
 
     @staticmethod
     def calc_log_like_manually(model_eval, data, std_dev):
@@ -70,22 +73,25 @@ class SMCTester(SMCSampler):
         var = std_dev**2
         diff = data - model_eval
         ssq = np.linalg.norm(diff)**2
-        return np.log(1. / (2 * np.pi * var)**(M / 2.) * np.exp(-1. / (2 * var) * ssq))
+        return np.log(1./(2*np.pi*var)**(M/2.)*np.exp(-1./(2*var)*ssq))
+
 
     @classmethod
-    def assert_step_lists_almost_equal(class_, step_list1, step_list2):
-        assert len(step_list1) == len(step_list2)
-        for i in range(len(step_list1)):
-            class_.assert_steps_almost_equal(step_list1[i], step_list2[i])
+    def assert_particle_chains_almost_equal(class_, pc1, pc2):
+        assert pc1.get_num_steps() == pc2.get_num_steps()
+        for i in range(pc1.get_num_steps()):
+            class_.assert_particle_chain_steps_almost_equal(pc1, pc2, i)
         return None
 
+
     @staticmethod
-    def assert_steps_almost_equal(step_list1, step_list2):
+    def assert_particle_chain_steps_almost_equal(pc1, pc2, step_index):
         aae = np.testing.assert_array_almost_equal
-        aae(step_list1.get_log_likes(), step_list2.get_log_likes())
-        aae(step_list1.get_weights(), step_list2.get_weights())
-        aae(step_list1.get_params('a',), step_list2.get_params('a',))
-        aae(step_list1.get_params('b',), step_list2.get_params('b',))
+        aae(pc1.get_log_likes(step_index), pc2.get_log_likes(step_index))
+        aae(pc1.get_weights(step_index), pc2.get_weights(step_index))
+        aae(pc1.get_params('a', step_index), pc2.get_params('a', step_index))
+        aae(pc1.get_params('b', step_index), pc2.get_params('b', step_index))
+
 
     def when_proposal_dist_set_with_scales(self):
         proposal_center = {'a': 1, 'b': 2}
@@ -95,6 +101,7 @@ class SMCTester(SMCSampler):
         self.expected_scales = proposal_scales
         return None
 
+
     def when_proposal_dist_set_with_no_scales(self):
         proposal_center = {'a': 1, 'b': 2}
         proposal_scales = None
@@ -102,6 +109,7 @@ class SMCTester(SMCSampler):
         self.expected_center = proposal_center
         self.expected_scales = {'a': 1, 'b': 1}
         return None
+
 
     def when_sampling(self, restart_time_step, hdf5_to_load, autosave_file):
         '''
@@ -120,10 +128,12 @@ class SMCTester(SMCSampler):
                     autosave_file)
         return None
 
-    def when_sampling_parameters_set(self, num_time_steps=2,
-                                     num_particles_per_processor=1,
-                                     num_mcmc_steps=1, autosave_file=None,
-                                     restart_time_step=0):
+
+
+    def when_sampling_parameters_set(self, num_time_steps = 2,
+                                     num_particles_per_processor = 1,
+                                     num_mcmc_steps = 1, autosave_file = None,
+                                     restart_time_step = 0): 
         '''
         Testing checkpoint. This returns an instance of the SMCSampler class
         that has initialized the sampler parameters and is preparing to
@@ -131,68 +141,58 @@ class SMCTester(SMCSampler):
         '''
         num_particles = self.comm.Get_size() * num_particles_per_processor
         ess_threshold = 0.8 * num_particles
-        proposal_center = {'a': 2.0, 'b': 3.5}
-        proposal_scales = {'a': 0.5, 'b': 0.5}
-        self._set_proposal_distribution(proposal_center, proposal_scales)
-        initializer = ParticleInitializer(self._mcmc, num_particles,
-                                          num_time_steps, self._size, self._rank,
-                                          self.proposal_center, self.proposal_scales)
+
+        self.num_particles = num_particles
+        self.num_time_steps = num_time_steps
+        self.temp_schedule = np.linspace(0., 1., self.num_time_steps)
         self.num_mcmc_steps = num_mcmc_steps
         self.ess_threshold = ess_threshold
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
-        return initializer
-
-    def when_initial_particles_sampled_from_proposal(self, measurement_std_dev,
-                                                     initializer):
-        proposal_center = {'a': 2.0, 'b': 3.5}
-        proposal_scales = {'a': 0.5, 'b': 0.5}
-        self._set_proposal_distribution(proposal_center, proposal_scales)
-        self._set_start_time_based_on_proposal()
-        initializer.proposal_center = self.proposal_center
-        initializer.proposal_scales = self.proposal_scales
-        initializer._start_time_step = self._start_time_step
-        self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
-    def when_initial_particles_sampled_from_proposal_outside_prior(self,
-                                                                   initializer):
+
+    def when_initial_particles_sampled_from_proposal(self, measurement_std_dev):
+        proposal_center = {'a': 2.0, 'b': 3.5}
+        proposal_scales = {'a': 0.5, 'b': 0.5}
+
+        self._set_proposal_distribution(proposal_center, proposal_scales)
+        self._set_start_time_based_on_proposal()
+        self.particles = self._initialize_particles(measurement_std_dev)
+        return None
+
+
+    def when_initial_particles_sampled_from_proposal_outside_prior(self):
         proposal_center = {'a': 1000.0, 'b': 3.5}
         proposal_scales = {'a': 1000.0, 'b': 0.5}
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer.proposal_center = self.proposal_center
-        initializer.proposal_scales = self.proposal_scales
-        initializer._start_time_step = self._start_time_step
-        self.particles = initializer.initialize_particles(0.1)
+        self.particles = self._initialize_particles(0.1)
         return None
 
-    def when_initial_particles_sampled_from_prior(self, measurement_std_dev,
-                                                  initializer):
+
+    def when_initial_particles_sampled_from_prior(self, measurement_std_dev):
         proposal_center = None
         proposal_scales = None
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer.proposal_center = self.proposal_center
-        initializer.proposal_scales = self.proposal_scales
-        initializer._start_time_step = self._start_time_step
-        self.particles = initializer.initialize_particles(measurement_std_dev)
+        self.particles = self._initialize_particles(measurement_std_dev)
         return None
 
-    def when_step_created(self, initializer):
-        self.when_initial_particles_sampled_from_proposal(0.6, initializer)
+
+    def when_particle_chain_created(self):
+        self.when_initial_particles_sampled_from_proposal(0.6)
         particles = self.particles
-        step = self._initialize_step(particles)
+        particle_chain = self._initialize_particle_chain(particles)
         if self.comm.Get_rank() == 0:
-            step.set_particles(step.copy_step())
-            self.step_list = [step]
-            self.step = step
+            particle_chain.add_step(particle_chain.copy_step())
+            self.particle_chain = particle_chain
         else:
-            self.step_list = None
-            self.step = None
+            self.particle_chain = None
         return None
+
 
     def when_particles_mutated(self):
         temp_step = 0.2
@@ -204,3 +204,4 @@ class SMCTester(SMCSampler):
                                                             cov, std_dev,
                                                             temp_step)
         return None
+

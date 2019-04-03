@@ -1,10 +1,10 @@
 import numpy as np
-from spring_mass_model import SpringMassModel
+from spring_mass_models import SpringMassModel
 from smcpy.smc.smc_sampler import SMCSampler
 
 # Initialize model
-state0 = [0., 0.]  # initial conditions
-measure_t_grid = np.arange(0., 5., 0.2)  # time
+state0 = [0., 0.]                        #initial conditions
+measure_t_grid = np.arange(0., 5., 0.2)  #time 
 model = SpringMassModel(state0, measure_t_grid)
 
 # Load data
@@ -16,22 +16,19 @@ param_priors = {'K': ['Uniform', 0.0, 10.0],
                 'g': ['Uniform', 0.0, 10.0]}
 
 # SMC sampling
-num_particles = 500
+num_particles = 5000
 num_time_steps = 20
 num_mcmc_steps = 1
 smc = SMCSampler(displacement_data, model, param_priors)
-step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
-                       noise_stddev, ess_threshold=num_particles * 0.5)
+pchain = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
+                    ess_threshold=num_particles*0.5)
 
 # Calculate means
-means = [step.get_mean() for step in step_list]
-
-for key, value in means[0].iteritems():
+means = pchain.get_mean()
+print '\n'
+for key, value in means.iteritems():
     print '%s mean = %s' % (key, value)
 
 # Plot
-try:
-    if smc._rank == 0:
-        step_list[0].plot_pairwise_weights(save=True, show=False)
-except:
-    pass
+if smc._rank == 0:
+    pchain.plot_pairwise_weights(save=True, show=False)
