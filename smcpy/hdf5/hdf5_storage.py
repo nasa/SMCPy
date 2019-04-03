@@ -33,7 +33,7 @@ AGREEMENT.
 import h5py
 import os
 from ..particles.particle import Particle
-from ..particles.smc_step import SMCStep
+from ..smc.smc_step import SMCStep
 
 
 class HDF5Storage(object):

@@ -1,6 +1,6 @@
 from checks import Checks
 from ..hdf5.hdf5_storage import HDF5Storage
-from ..particles.smc_step import SMCStep
+from ..smc.smc_step import SMCStep
 
 
 class Properties(Checks):

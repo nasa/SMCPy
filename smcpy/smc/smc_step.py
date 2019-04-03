@@ -1,9 +1,11 @@
 import numpy as np
 import copy
+import warnings
 from smcpy.particles.particle import Particle
+from smcpy.utils.checks import Checks
 
 
-class SMCStep():
+class SMCStep(Checks):
     """ A single step of the sequential monte carlo (SMC) method that contains
     a list of Particle instances
 
@@ -13,9 +15,9 @@ class SMCStep():
         List of Particle instances
     """
 
-    def __init__(self, id):
+    def __init__(self):
         self.particles = []
-        self.id = id
+        self.id = 0
 
     def add_particle(self, particle):
         '''
@@ -28,7 +30,7 @@ class SMCStep():
         '''
         self.particles.append(self._check_particle(particle))
 
-    def fill_step(self, particle_list):
+    def set_particles(self, particle_list):
         '''
         Fill a list of particles in the step.
 
@@ -99,6 +101,11 @@ class SMCStep():
             R = np.dot(diff, diff.transpose())
             cov_list.append(p.weight * R)
         cov_matrix = np.sum(cov_list, axis=0)
+
+        if not self._is_positive_definite(cov_matrix):
+            msg = 'current step cov not pos def, setting to identity matrix'
+            warnings.warn(msg)
+            cov_matrix = np.eye(cov_matrix.shape[0])
 
         return cov_matrix
 
