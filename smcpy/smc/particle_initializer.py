@@ -6,8 +6,11 @@ import numpy as np
 
 class ParticleInitializer():
 
-    def __init__(self, mcmc):
+    def __init__(self, mcmc, num_particles, num_time_steps):
         self._mcmc = mcmc
+        self.num_particles = num_particles
+        self.num_time_steps = num_time_steps
+        self.temp_schedule = np.linspace(0.1, 1., self.num_time_steps)
 
     def initialize_particles(self, measurement_std_dev):
         m_std = measurement_std_dev

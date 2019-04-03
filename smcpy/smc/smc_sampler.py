@@ -116,10 +116,8 @@ class SMCSampler(Properties):
         :Returns: A list of SMCStep class instances that contains all particles
         and their past generations at every time step.
         '''
-        self.num_particles = num_particles
-        self.num_time_steps = num_time_steps
-        self.temp_schedule = np.linspace(0., 1., self.num_time_steps)
-        self.num_mcmc_steps = num_mcmc_steps
+        initializer = ParticleInitializer(self._mcmc, num_particles,
+                                          num_time_steps)
         self.ess_threshold = ess_threshold
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
@@ -127,7 +125,6 @@ class SMCSampler(Properties):
         if self.restart_time_step == 0:
             self._set_proposal_distribution(proposal_center, proposal_scales)
             self._set_start_time_based_on_proposal()
-            initializer = ParticleInitializer()
             particles = initializer.initialize_particles(measurement_std_dev)
             step = self._initialize_step(particles)
             self.step = step

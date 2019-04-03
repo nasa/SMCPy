@@ -147,7 +147,7 @@ class SMCTester(SMCSampler):
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer = ParticleInitializer()
+        initializer = ParticleInitializer(self._mcmc)
         self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
@@ -157,7 +157,7 @@ class SMCTester(SMCSampler):
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer = ParticleInitializer()
+        initializer = ParticleInitializer(self._mcmc)
         self.particles = initializer.initialize_particles(0.1)
         return None
 
@@ -167,14 +167,14 @@ class SMCTester(SMCSampler):
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
-        initializer = ParticleInitializer()
+        initializer = ParticleInitializer(self._mcmc)
         self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
     def when_step_created(self):
         self.when_initial_particles_sampled_from_proposal(0.6)
         particles = self.particles
-        initializer = ParticleInitializer()
+        initializer = ParticleInitializer(self._mcmc)
         step = initializer.initialize_step(particles)
         if self.comm.Get_rank() == 0:
             step.set_particles(step.copy_step())
