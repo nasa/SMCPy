@@ -122,11 +122,10 @@ class SMCSampler(Properties):
         self.restart_time_step = restart_time_step
 
         if self.restart_time_step == 0:
-            self._set_proposal_distribution(proposal_center, proposal_scales)
             initializer = ParticleInitializer(self._mcmc, num_particles,
-                                              num_time_steps, self._size,
-                                              self._rank, self.proposal_center,
-                                              self.proposal_scales)
+                                              num_time_steps,
+                                              self._comm, proposal_center,
+                                              proposal_scales)
             self._set_start_time_based_on_proposal()
             particles = initializer.initialize_particles(measurement_std_dev)
             step = self._initialize_step(particles)
@@ -167,21 +166,6 @@ class SMCSampler(Properties):
 
         self._close_autosaver()
         return self.step_list
-
-    def _set_proposal_distribution(self, proposal_center, proposal_scales):
-        self._check_proposal_dist_inputs(proposal_center, proposal_scales)
-        if proposal_center is not None and proposal_scales is None:
-            msg = 'No scales given; setting scales to identity matrix.'
-            warnings.warn(msg)
-            proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
-        if proposal_center is not None and proposal_scales is not None:
-            self._check_proposal_dist_input_keys(proposal_center,
-                                                 proposal_scales)
-            self._check_proposal_dist_input_vals(proposal_center,
-                                                 proposal_scales)
-        self.proposal_center = proposal_center
-        self.proposal_scales = proposal_scales
-        return None
 
     @staticmethod
     def _check_proposal_dist_inputs(proposal_center, proposal_scales):
@@ -252,10 +236,6 @@ class SMCSampler(Properties):
     def _compute_step_covariance(self):
         if self._rank == 0:
             covariance = self.step.calculate_covariance()
-            if not self._is_positive_definite(covariance):
-                msg = 'current step cov not pos def, setting to identity matrix'
-                warnings.warn(msg)
-                covariance = np.eye(covariance.shape[0])
         else:
             covariance = None
         covariance = self._comm.scatter([covariance] * self._size, root=0)

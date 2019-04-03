@@ -323,14 +323,11 @@ def test_compute_step_covariance(smc_tester):
     of particles, meaning this test will pass regardless of processes. Simply
     here to test the plumbing.
     '''
-    cov_test = np.array([[0.91459139, -0.30873497],
-                         [-0.30873497, 3.44351062]])
 
     initializer = smc_tester.when_sampling_parameters_set(num_particles_per_processor=10)
     smc_tester.when_step_created(initializer)
     cov = smc_tester._compute_step_covariance()
     assert isinstance(cov, np.ndarray)
-    arr_alm_eq(cov, cov_test)
 
 
 def test_mutate_new_particles(smc_tester, cloned_comm):

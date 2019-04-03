@@ -2,20 +2,21 @@ from copy import copy
 from pymc import Normal
 from ..particles.particle import Particle
 import numpy as np
+import warnings
 
 
 class ParticleInitializer():
 
-    def __init__(self, mcmc, num_particles, num_time_steps, size, rank,
+    def __init__(self, mcmc, num_particles, num_time_steps, mpi_comm,
                  proposal_center, proposal_scales):
         self._mcmc = mcmc
         self.num_particles = num_particles
         self.num_time_steps = num_time_steps
         self.temp_schedule = np.linspace(0.1, 1., self.num_time_steps)
-        self._size = size
-        self._rank = rank
-        self.proposal_center = proposal_center
-        self.proposal_scales = proposal_scales
+        self._comm = mpi_comm
+        self._size = self._comm.Get_size()
+        self._rank = self._comm.Get_rank()
+        self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
 
     def initialize_particles(self, measurement_std_dev):
@@ -114,4 +115,19 @@ class ParticleInitializer():
             self._start_time_step = 1
         else:
             self._start_time_step = 0
+        return None
+
+    def _set_proposal_distribution(self, proposal_center, proposal_scales):
+        self._check_proposal_dist_inputs(proposal_center, proposal_scales)
+        if proposal_center is not None and proposal_scales is None:
+            msg = 'No scales given; setting scales to identity matrix.'
+            warnings.warn(msg)
+            proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
+        if proposal_center is not None and proposal_scales is not None:
+            self._check_proposal_dist_input_keys(proposal_center,
+                                                 proposal_scales)
+            self._check_proposal_dist_input_vals(proposal_center,
+                                                 proposal_scales)
+        self.proposal_center = proposal_center
+        self.proposal_scales = proposal_scales
         return None
