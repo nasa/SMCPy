@@ -1,11 +1,11 @@
 '''
 Notices:
-Copyright 2018 United States Government as represented by the Administrator of
-the National Aeronautics and Space Administration. No copyright is claimed in
+Copyright 2018 United States Government as represented by the Administrator of 
+the National Aeronautics and Space Administration. No copyright is claimed in 
 the United States under Title 17, U.S. Code. All Other Rights Reserved.
-
+ 
 Disclaimers
-No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF 
 ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
 TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
 IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
@@ -17,7 +17,7 @@ RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
 RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
 PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS."
-
+ 
 Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
 UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
@@ -33,11 +33,10 @@ AGREEMENT.
 import abc
 import numpy as np
 
-
 class BaseModel(object):
     '''
     Abstract class defining the required functions to be used/modified
-    by a smcpy user.
+    by a smcpy user. 
     '''
     __metaclass__ = abc.ABCMeta
 
@@ -46,24 +45,26 @@ class BaseModel(object):
         User sets model constants in constructor
         '''
 
+
     @abc.abstractmethod
     def evaluate(self, *args, **kwargs):
         '''
-        User MUST redefine this function to return outputs for given inputs.
+        User MUST redefine this function to return outputs for given inputs. 
         The *arg and **kwarg inputs are required for interfacing with the
-        pymc module. At the beginning of the evaluate() method, call the class
+        pymc module. At the beginning of the evaluate() method, call the class 
         method process_args(args, kwargs) to automatically handle this
         requirement; e.g.,
 
             param = self.process_args(args, kwargs)
 
-        :param dictionary input_map: map from (string) input name to (float)
+        :param dictionary input_map: map from (string) input name to (float) 
             input value
         :return: 2D numpy array of outputs for each label at each time/location
             Size: len(self.labels) x len(self.times)*len(self.locations)
             Ordering convention is looping over times first then locations
         '''
         return None
+
 
     def process_args(self, args, kwargs):
         '''
@@ -80,10 +81,12 @@ class BaseModel(object):
             self._raise_error_processing_args()
         return None
 
+
     def _raise_error_processing_args(self):
         msg = '%s.evaluate() accepts a single dictionary or keyword args.' \
-            % self.__class__.__name__
+               % self.__class__.__name__
         raise TypeError(msg)
+
 
     def generate_noisy_data_with_model(self, stdv, true_params):
         synth_data = self.evaluate(true_params)

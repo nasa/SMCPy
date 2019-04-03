@@ -5,4 +5,3 @@ numpy
 pymc==2.3.6
 matplotlib
 statsmodels
-tqdm
