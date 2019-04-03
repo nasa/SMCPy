@@ -147,9 +147,11 @@ class SMCTester(SMCSampler):
                                                      initializer):
         proposal_center = {'a': 2.0, 'b': 3.5}
         proposal_scales = {'a': 0.5, 'b': 0.5}
-
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
+        initializer.proposal_center = self.proposal_center
+        initializer.proposal_scales = self.proposal_scales
+        initializer._start_time_step = self._start_time_step
         self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
@@ -173,6 +175,9 @@ class SMCTester(SMCSampler):
 
         self._set_proposal_distribution(proposal_center, proposal_scales)
         self._set_start_time_based_on_proposal()
+        initializer.proposal_center = self.proposal_center
+        initializer.proposal_scales = self.proposal_scales
+        initializer._start_time_step = self._start_time_step
         self.particles = initializer.initialize_particles(measurement_std_dev)
         return None
 
