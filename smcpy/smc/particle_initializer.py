@@ -16,6 +16,7 @@ class ParticleInitializer():
         self._rank = rank
         self.proposal_center = proposal_center
         self.proposal_scales = proposal_scales
+        self._set_start_time_based_on_proposal()
 
     def initialize_particles(self, measurement_std_dev):
         m_std = measurement_std_dev
@@ -100,3 +101,17 @@ class ParticleInitializer():
         results_rv = mcmc.pymc_mod[results_index]
         log_like = results_rv.logp
         return log_like
+
+    def _set_start_time_based_on_proposal(self,):
+        '''
+        If proposal distribution is equal to prior distribution, can start
+        Sequential Monte Carlo sampling at time = 1, since prior can be
+        sampled directly. If using a different proposal, must first start by
+        estimating the prior (i.e., time = 0). This is a result of the way
+        the temperature schedule is defined.
+        '''
+        if self.proposal_center is None:
+            self._start_time_step = 1
+        else:
+            self._start_time_step = 0
+        return None
