@@ -131,9 +131,10 @@ class SMCTester(SMCSampler):
         '''
         num_particles = self.comm.Get_size() * num_particles_per_processor
         ess_threshold = 0.8 * num_particles
+        self.when_proposal_dist_set_with_scales()
         initializer = ParticleInitializer(self._mcmc, num_particles,
                                           num_time_steps, self._size, self._rank,
-                                          self.proposal_center, self.proposal_scales)
+                                          self.expected_center, self.expected_scales)
         self.num_mcmc_steps = num_mcmc_steps
         self.ess_threshold = ess_threshold
         self.autosaver = autosave_file
@@ -171,7 +172,7 @@ class SMCTester(SMCSampler):
         return None
 
     def when_step_created(self, initializer):
-        self.when_initial_particles_sampled_from_proposal(0.6)
+        self.when_initial_particles_sampled_from_proposal(0.6, initializer)
         particles = self.particles
         step = initializer.initialize_step(particles)
         if self.comm.Get_rank() == 0:
