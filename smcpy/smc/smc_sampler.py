@@ -120,14 +120,13 @@ class SMCSampler(Properties):
         self.ess_threshold = ess_threshold
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
-
+        self.temp_schedule = np.linspace(0., 1., num_time_steps)
         if self.restart_time_step == 0:
-            initializer = ParticleInitializer(self._mcmc, num_particles,
-                                              num_time_steps,
-                                              self._comm, proposal_center,
-                                              proposal_scales)
-            self._set_start_time_based_on_proposal()
+            initializer = ParticleInitializer(self._mcmc, self.temp_schedule,
+                                              self._comm)
+            initializer.set_proposal_distribution(proposal_center, proposal_scales)
             particles = initializer.initialize_particles(measurement_std_dev)
+            self._set_start_time_based_on_proposal()
             step = self._initialize_step(particles)
             self.step = step
             self.step_list = [step]
