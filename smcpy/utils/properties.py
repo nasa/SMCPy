@@ -1,10 +1,9 @@
 from checks import Checks
 from ..hdf5.hdf5_storage import HDF5Storage
-from ..particles.particle_chain import ParticleChain
+from ..smc.smc_step import SMCStep
 
 
 class Properties(Checks):
-
 
     def __init__(self):
         super(Properties, self).__init__()
@@ -15,13 +14,11 @@ class Properties(Checks):
         self._ess_threshold = 0
         self._autosaver = None
         self._restart_time_step = 0
-        self._particle_chain = ParticleChain()
-
+        self._particle_chain = SMCStep()
 
     @property
     def num_particles(self):
         return self._num_particles
-
 
     @num_particles.setter
     def num_particles(self, num_particles):
@@ -35,11 +32,9 @@ class Properties(Checks):
         self._num_particles = num_particles
         return None
 
-
     @property
     def num_time_steps(self):
         return self._num_time_steps
-
 
     @num_time_steps.setter
     def num_time_steps(self, num_time_steps):
@@ -53,21 +48,17 @@ class Properties(Checks):
         self._num_time_steps = num_time_steps
         return None
 
-
     @property
     def temp_schedule(self):
         return self._temp_schedule
-
 
     @temp_schedule.setter
     def temp_schedule(self, temp_schedule):
         self._temp_schedule = temp_schedule
 
-
     @property
     def num_mcmc_steps(self):
         return self._num_mcmc_steps
-
 
     @num_mcmc_steps.setter
     def num_mcmc_steps(self, num_mcmc_steps):
@@ -81,11 +72,9 @@ class Properties(Checks):
         self._num_mcmc_steps = num_mcmc_steps
         return None
 
-
     @property
     def ess_threshold(self):
         return self._ess_threshold
-
 
     @ess_threshold.setter
     def ess_threshold(self, ess_threshold):
@@ -99,11 +88,9 @@ class Properties(Checks):
         self._ess_threshold = ess_threshold
         return None
 
-
     @property
     def autosaver(self):
         return self._autosaver
-
 
     @autosaver.setter
     def autosaver(self, autosave_file):
@@ -115,11 +102,9 @@ class Properties(Checks):
             self._autosaver = None
         return None
 
-
     @property
     def restart_time_step(self):
         return self._restart_time_step
-
 
     @restart_time_step.setter
     def restart_time_step(self, restart_time_step):
@@ -133,17 +118,15 @@ class Properties(Checks):
         self._restart_time_step = restart_time_step
         return None
 
-
     @property
     def particle_chain(self):
         return self._particle_chain
 
-
     @particle_chain.setter
     def particle_chain(self, particle_chain):
         input_ = 'particle_chain'
-        if not isinstance(particle_chain, ParticleChain) and \
+        if not isinstance(particle_chain, SMCStep) and \
            not self._is_none(particle_chain):
-            self._raise_type_error(input_, 'ParticleChain instance or None')
+            self._raise_type_error(input_, 'SMCStep instance or None')
         self._particle_chain = particle_chain
         return None

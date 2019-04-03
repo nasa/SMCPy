@@ -13,7 +13,7 @@ if __name__ == '__main__':
     m = Model(x)
     std_dev = 0.6
     y_noisy = np.genfromtxt('noisy_data.txt')
-    
+
     param_priors = {'a': ['Uniform', -5.0, 5.0],
                     'b': ['Uniform', -5.0, 5.0]}
 
@@ -22,11 +22,11 @@ if __name__ == '__main__':
     num_time_steps = 20
     num_mcmc_steps = 5
     smc = SMCSampler(y_noisy, m, param_priors)
-    particle_chain = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
-                                std_dev, ess_threshold=0.5*num_particles,
-                                #proposal_center=center, proposal_scales=scales,
-                                autosave_file='test.h5')
+    step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
+                           std_dev, ess_threshold=0.5 * num_particles,
+                           # proposal_center=center, proposal_scales=scales,
+                           autosave_file='test.h5')
     try:
-        particle_chain.plot_pairwise_weights()
+        step_list.plot_pairwise_weights()
     except:
         pass
