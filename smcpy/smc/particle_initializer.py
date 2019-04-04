@@ -136,3 +136,10 @@ class ParticleInitializer():
         if not all(isinstance(x, (float, int)) for x in scales_vals):
             raise TypeError('"proposal_scales" values should be int or float')
         return None
+
+    def _check_proposal_dist_input_keys(self, proposal_center, proposal_scales):
+        if sorted(proposal_center.keys()) != sorted(self._mcmc.params.keys()):
+            raise KeyError('"proposal_center" keys != self.parameter_names')
+        if sorted(proposal_scales.keys()) != sorted(self._mcmc.params.keys()):
+            raise KeyError('"proposal_scales" keys != self.parameter_names')
+        return None
