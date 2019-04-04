@@ -12,6 +12,8 @@ class ParticleInitializer():
         self._mcmc = mcmc
         self.temp_schedule = temp_schedule
         self._comm = mpi_comm
+        self.proposal_center = proposal_center
+        self.proposal_scales = proposal_scales
         self._size = self._comm.Get_size()
         self._rank = self._comm.Get_rank()
 
@@ -31,15 +33,15 @@ class ParticleInitializer():
             particles.append(part)
         return particles
 
-    def set_proposal_distribution(self, proposal_center, proposal_scales):
+    def set_proposal_distribution(self, proposal_center, proposal_scales=None):
         self._check_proposal_dist_inputs(proposal_center, proposal_scales)
         if proposal_center is not None and proposal_scales is None:
             msg = 'No scales given; setting scales to identity matrix.'
             warnings.warn(msg)
             proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
         if proposal_center is not None and proposal_scales is not None:
-            self._check_proposal_dist_input_keys(proposal_center,
-                                                 proposal_scales)
+            # self._check_proposal_dist_input_keys(proposal_center,
+            #                                      proposal_scales)
             self._check_proposal_dist_input_vals(proposal_center,
                                                  proposal_scales)
         self.proposal_center = proposal_center
@@ -114,3 +116,23 @@ class ParticleInitializer():
         results_rv = mcmc.pymc_mod[results_index]
         log_like = results_rv.logp
         return log_like
+
+    @staticmethod
+    def _check_proposal_dist_inputs(proposal_center, proposal_scales):
+        if not isinstance(proposal_center, (dict, None.__class__)):
+            raise TypeError('Proposal center must be a dictionary or None.')
+        if not isinstance(proposal_scales, (dict, None.__class__)):
+            raise TypeError('Proposal scales must be a dictionary or None.')
+        if proposal_center is None and proposal_scales is not None:
+            raise ValueError('Proposal scales given but center == None.')
+        return None
+
+    @staticmethod
+    def _check_proposal_dist_input_vals(proposal_center, proposal_scales):
+        center_vals = proposal_center.values()
+        scales_vals = proposal_scales.values()
+        if not all(isinstance(x, (float, int)) for x in center_vals):
+            raise TypeError('"proposal_center" values should be int or float')
+        if not all(isinstance(x, (float, int)) for x in scales_vals):
+            raise TypeError('"proposal_scales" values should be int or float')
+        return None
