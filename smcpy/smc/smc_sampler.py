@@ -40,14 +40,11 @@ from copy import copy
 import numpy as np
 
 from mpi4py import MPI
-from pymc import Normal
-
 from ..mcmc.mcmc_sampler import MCMCSampler
-from ..particles.particle import Particle
 from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
-from particle_initializer import ParticleInitializer
+from particle_initializer import ParticleInitializer, ParticleUpdater
 
 
 class SMCSampler(Properties):
@@ -128,7 +125,6 @@ class SMCSampler(Properties):
             initializer.set_proposal_distribution(proposal_center, proposal_scales)
             particles = initializer.initialize_particles(measurement_std_dev)
             step = self._initialize_step(particles)
-            self.step = step
             self.step_list = [step]
 
         elif 0 < self.restart_time_step <= num_time_steps:
@@ -136,7 +132,7 @@ class SMCSampler(Properties):
             step_list = self.load_step_list(hdf5_to_load)
             step_list = self._trim_step_list(step_list,
                                              self.restart_time_step)
-            self.step = step_list[-1]
+            step = step_list[-1]
             self.step_list = step_list
 
         self._autosave_step()
@@ -146,7 +142,8 @@ class SMCSampler(Properties):
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
-            new_particles = self._create_new_particles(temperature_step)
+            updater = ParticleUpdater(step, self._comm)
+            new_particles = updater.update_particles(temperature_step)
             covariance = self._compute_step_covariance()
             mutated_particles = self._mutate_new_particles(new_particles,
                                                            covariance,
@@ -165,33 +162,6 @@ class SMCSampler(Properties):
 
         self._close_autosaver()
         return self.step_list
-
-    @staticmethod
-    def _check_proposal_dist_inputs(proposal_center, proposal_scales):
-        if not isinstance(proposal_center, (dict, None.__class__)):
-            raise TypeError('Proposal center must be a dictionary or None.')
-        if not isinstance(proposal_scales, (dict, None.__class__)):
-            raise TypeError('Proposal scales must be a dictionary or None.')
-        if proposal_center is None and proposal_scales is not None:
-            raise ValueError('Proposal scales given but center == None.')
-        return None
-
-    def _check_proposal_dist_input_keys(self, proposal_center, proposal_scales):
-        if sorted(proposal_center.keys()) != sorted(self.parameter_names):
-            raise KeyError('"proposal_center" keys != self.parameter_names')
-        if sorted(proposal_scales.keys()) != sorted(self.parameter_names):
-            raise KeyError('"proposal_scales" keys != self.parameter_names')
-        return None
-
-    @staticmethod
-    def _check_proposal_dist_input_vals(proposal_center, proposal_scales):
-        center_vals = proposal_center.values()
-        scales_vals = proposal_scales.values()
-        if not all(isinstance(x, (float, int)) for x in center_vals):
-            raise TypeError('"proposal_center" values should be int or float')
-        if not all(isinstance(x, (float, int)) for x in scales_vals):
-            raise TypeError('"proposal_scales" values should be int or float')
-        return None
 
     def _initialize_step(self, particles):
         particles = self._comm.gather(particles, root=0)
@@ -221,45 +191,6 @@ class SMCSampler(Properties):
             covariance = None
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
-
-    def _create_new_particles(self, temperature_step):
-        if self._rank == 0:
-            # self._initialize_new_particles()
-            self._compute_new_particle_weights(temperature_step)
-            self.step.normalize_step_weights()
-            self._resample_if_needed()
-            new_particles = self._partition_new_particles()
-        else:
-            new_particles = [None]
-        new_particles = self._comm.scatter(new_particles, root=0)
-        return list(new_particles)
-
-    def _initialize_new_particles(self):
-        new_particles = self.step.copy_step()
-        self.step.set_particles(new_particles)
-        return None
-
-    def _compute_new_particle_weights(self, temperature_step):
-        for p in self.step.get_particles():
-            p.weight = np.exp(np.log(p.weight) + p.log_like * temperature_step)
-        return None
-
-    def _resample_if_needed(self):
-        '''
-        Checks if ess below threshold; if yes, resample with replacement.
-        '''
-        self._ess = self.step.compute_ess()
-        if self._ess < self.ess_threshold:
-            self._resample_status = "Resampling..."
-            self.step.resample()
-        else:
-            self._resample_status = "No resampling"
-        return None
-
-    def _partition_new_particles(self):
-        partitions = np.array_split(self.step.get_particles(),
-                                    self._size)
-        return partitions
 
     def _mutate_new_particles(self, particles, covariance, measurement_std_dev,
                               temperature_step):
