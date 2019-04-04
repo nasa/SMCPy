@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from smcpy.smc.particle_initializer import ParticleUpdater
+from smcpy.smc.particle_updater import ParticleUpdater
 from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 
@@ -40,5 +40,11 @@ def part_updater(filled_step):
     return ParticleUpdater(filled_step, mpi_comm=DummyComm())
 
 
-def test_update_particles():
-    assert True
+def test_update_weights(part_updater):
+    temperature_step = 0.1
+    exp_w = np.exp(np.log(0.2) - 0.2 * temperature_step)
+    part_updater.update_weights(temperature_step)
+    assert all([exp_w == p.weight for p in part_updater.step.get_particles()])
+
+# def test_resample_if_needed(part_updater):
+#

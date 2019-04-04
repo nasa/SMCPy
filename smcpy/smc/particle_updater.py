@@ -3,30 +3,30 @@ import numpy as np
 
 class ParticleUpdater():
 
-    def __init__(self, step, mpi_comm):
+    def __init__(self, step, ess_threshold, mpi_comm=None):
         self.step = step
+        self.ess_threshold = ess_threshold
         self._comm = mpi_comm
-        self._size = self._comm.Get_size()
-        self._rank = self._comm.Get_rank()
+        self._set_size_and_rank()
 
     def update_particles(self, temperature_step):
         if self._rank == 0:
-            # self._initialize_new_particles()
-            self.update_weights(temperature_step)
+            self._update_weights(temperature_step)
             self.step.normalize_step_weights()
-            self.resample_if_needed()
+            self._resample_if_needed()
             new_particles = self._partition_new_particles()
         else:
             new_particles = [None]
-        new_particles = self._comm.scatter(new_particles, root=0)
+        if self._size != 1:
+            new_particles = self._comm.scatter(new_particles, root=0)
         return list(new_particles)
 
-    def update_weights(self, temperature_step):
+    def _update_weights(self, temperature_step):
         for p in self.step.get_particles():
             p.weight = np.exp(np.log(p.weight) + p.log_like * temperature_step)
         return None
 
-    def resample_if_needed(self):
+    def _resample_if_needed(self):
         '''
         Checks if ess below threshold; if yes, resample with replacement.
         '''
@@ -43,7 +43,10 @@ class ParticleUpdater():
                                     self._size)
         return partitions
 
-    def _initialize_new_particles(self):
-        new_particles = self.step.copy_step()
-        self.step.set_particles(new_particles)
-        return None
+    def _set_size_and_rank(self):
+        if self._comm is None:
+            self._size = 1
+            self._rank = 0
+        else:
+            self._size = self._comm.Get_size()
+            self._rank = self._comm.Get_rank()

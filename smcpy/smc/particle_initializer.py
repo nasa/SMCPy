@@ -7,15 +7,14 @@ import warnings
 
 class ParticleInitializer():
 
-    def __init__(self, mcmc, temp_schedule, mpi_comm,
+    def __init__(self, mcmc, temp_schedule, mpi_comm=None,
                  proposal_center=None, proposal_scales=None):
         self._mcmc = mcmc
         self.temp_schedule = temp_schedule
         self._comm = mpi_comm
         self.proposal_center = proposal_center
         self.proposal_scales = proposal_scales
-        self._size = self._comm.Get_size()
-        self._rank = self._comm.Get_rank()
+        self._set_size_and_rank()
 
     def initialize_particles(self, measurement_std_dev, num_particles):
         self.num_particles = num_particles
@@ -143,3 +142,11 @@ class ParticleInitializer():
         if sorted(proposal_scales.keys()) != sorted(self._mcmc.params.keys()):
             raise KeyError('"proposal_scales" keys != self.parameter_names')
         return None
+
+    def _set_size_and_rank(self):
+        if self._comm is None:
+            self._size = 1
+            self._rank = 0
+        else:
+            self._size = self._comm.Get_size()
+            self._rank = self._comm.Get_rank()
