@@ -121,18 +121,18 @@ class SMCSampler(Properties):
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)
+        start_time_step = 1
         if self.restart_time_step == 0:
             initializer = ParticleInitializer(self._mcmc, self.temp_schedule,
                                               self._comm)
             initializer.set_proposal_distribution(proposal_center, proposal_scales)
             particles = initializer.initialize_particles(measurement_std_dev)
-            self._set_start_time_based_on_proposal()
             step = self._initialize_step(particles)
             self.step = step
             self.step_list = [step]
 
         elif 0 < self.restart_time_step <= num_time_steps:
-            self._set_start_time_equal_to_restart_time_step()
+            start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
             step_list = self._trim_step_list(step_list,
                                              self.restart_time_step)
@@ -141,7 +141,7 @@ class SMCSampler(Properties):
 
         self._autosave_step()
 
-        p_bar = tqdm(range(num_time_steps)[self._start_time_step + 1:])
+        p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
         last_ess = 0
 
         for t in p_bar:
@@ -193,20 +193,6 @@ class SMCSampler(Properties):
             raise TypeError('"proposal_scales" values should be int or float')
         return None
 
-    def _set_start_time_based_on_proposal(self,):
-        '''
-        If proposal distribution is equal to prior distribution, can start
-        Sequential Monte Carlo sampling at time = 1, since prior can be
-        sampled directly. If using a different proposal, must first start by
-        estimating the prior (i.e., time = 0). This is a result of the way
-        the temperature schedule is defined.
-        '''
-        if self.proposal_center is None:
-            self._start_time_step = 1
-        else:
-            self._start_time_step = 0
-        return None
-
     def _initialize_step(self, particles):
         particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
@@ -216,10 +202,6 @@ class SMCSampler(Properties):
         else:
             step = None
         return step
-
-    def _set_start_time_equal_to_restart_time_step(self):
-        self._start_time_step = self.restart_time_step
-        return None
 
     def _trim_step_list(self, step_list, restart_time_step):
         if self._rank == 0:
