@@ -44,7 +44,8 @@ from ..mcmc.mcmc_sampler import MCMCSampler
 from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
-from particle_initializer import ParticleInitializer, ParticleUpdater
+from particle_initializer import ParticleInitializer
+from particle_updater import ParticleUpdater
 
 
 class SMCSampler(Properties):
@@ -123,8 +124,10 @@ class SMCSampler(Properties):
             initializer = ParticleInitializer(self._mcmc, self.temp_schedule,
                                               self._comm)
             initializer.set_proposal_distribution(proposal_center, proposal_scales)
-            particles = initializer.initialize_particles(measurement_std_dev)
+            particles = initializer.initialize_particles(measurement_std_dev,
+                                                         num_particles)
             step = self._initialize_step(particles)
+            self.step = step
             self.step_list = [step]
 
         elif 0 < self.restart_time_step <= num_time_steps:
@@ -133,6 +136,7 @@ class SMCSampler(Properties):
             step_list = self._trim_step_list(step_list,
                                              self.restart_time_step)
             step = step_list[-1]
+            self.step = step
             self.step_list = step_list
 
         updater = ParticleUpdater(step, self._comm)
