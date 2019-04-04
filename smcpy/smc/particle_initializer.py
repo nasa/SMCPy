@@ -40,8 +40,8 @@ class ParticleInitializer():
             warnings.warn(msg)
             proposal_scales = {k: 1. for k in self._mcmc.params.keys()}
         if proposal_center is not None and proposal_scales is not None:
-            # self._check_proposal_dist_input_keys(proposal_center,
-            #                                      proposal_scales)
+            self._check_proposal_dist_input_keys(proposal_center,
+                                                 proposal_scales)
             self._check_proposal_dist_input_vals(proposal_center,
                                                  proposal_scales)
         self.proposal_center = proposal_center

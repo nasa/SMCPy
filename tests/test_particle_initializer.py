@@ -73,6 +73,9 @@ def test_set_proposal_distribution_with_no_scales(part_initer):
 
 
 def test_initialize_particles_with_proposals(part_initer):
+    proposal_center = {'a': 2, 'b': 2}
+    proposal_scales = {'a': 1, 'b': 1}
+    part_initer.set_proposal_distribution(proposal_center, proposal_scales)
     particles = part_initer.initialize_particles(num_particles=5,
                                                  measurement_std_dev=1.0)
 
