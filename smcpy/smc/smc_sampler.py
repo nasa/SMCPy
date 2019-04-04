@@ -135,6 +135,7 @@ class SMCSampler(Properties):
             step = step_list[-1]
             self.step_list = step_list
 
+        updater = ParticleUpdater(step, self._comm)
         self._autosave_step()
 
         p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
@@ -142,7 +143,6 @@ class SMCSampler(Properties):
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
-            updater = ParticleUpdater(step, self._comm)
             new_particles = updater.update_particles(temperature_step)
             covariance = self._compute_step_covariance()
             mutated_particles = self._mutate_new_particles(new_particles,
