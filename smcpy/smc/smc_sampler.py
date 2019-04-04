@@ -145,10 +145,10 @@ class SMCSampler(Properties):
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
             new_particles = updater.update_particles(temperature_step)
             covariance = self._compute_step_covariance()
-            mutated_particles = self._mutate_new_particles(new_particles,
-                                                           covariance,
-                                                           measurement_std_dev,
-                                                           temperature_step)
+            mutated_particles = self.mutate_new_particles(new_particles,
+                                                          covariance,
+                                                          measurement_std_dev,
+                                                          temperature_step)
             self._update_step_with_new_particles(mutated_particles)
             self.step_list.append(self.step.copy())
             self._autosave_step()
@@ -192,8 +192,8 @@ class SMCSampler(Properties):
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
 
-    def _mutate_new_particles(self, particles, covariance, measurement_std_dev,
-                              temperature_step):
+    def mutate_new_particles(self, particles, covariance, measurement_std_dev,
+                             temperature_step):
         '''
         Predicts next distribution along the temperature schedule path using
         the MCMC kernel.
