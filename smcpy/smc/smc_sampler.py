@@ -158,10 +158,10 @@ class SMCSampler(Properties):
             p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
                                   "Current ess: {:8.2f} | Samples accepted: "
                                   "{:.1%} | {} | "
-                                  .format(t + 1, last_ess, self._ess,
+                                  .format(t + 1, last_ess, updater._ess,
                                           self._acceptance_ratio,
-                                          self._resample_status))
-            last_ess = self._ess
+                                          updater._resample_status))
+            last_ess = updater._ess
 
         self._close_autosaver()
         return self.step_list
@@ -205,6 +205,8 @@ class SMCSampler(Properties):
         step_method = 'smc_metropolis'
         new_particles = []
         acceptance_count = 0
+        if self._size == 1:
+            particles = particles[0]
         for particle in particles:
             mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
                                      q0=particle.params)

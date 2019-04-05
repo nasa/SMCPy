@@ -41,7 +41,6 @@ class ParticleUpdater():
     def _partition_new_particles(self):
         partitions = np.array_split(self.step.get_particles(),
                                     self._size)
-        print partitions[0][0].params
         return partitions
 
     def _set_size_and_rank(self):
