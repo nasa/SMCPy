@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from smcpy.smc.particle_initializer import ParticleInitializer
 from smcpy.mcmc.mcmc_sampler import MCMCSampler
+from smcpy.utils.single_rank_comm import SingleRankComm
 
 
 class DummyModel():
@@ -12,19 +13,6 @@ class DummyModel():
 
     def evaluate(*args, **kwargs):
         return np.array([0., 0., 0.])
-
-
-class DummyComm():
-    '''Dummy mpi communicator'''
-
-    def __init__(self):
-        pass
-
-    def Get_size(self):
-        return 1
-
-    def Get_rank(self):
-        return 0
 
 
 @pytest.fixture
@@ -38,7 +26,7 @@ def mcmc_obj():
 @pytest.fixture
 def part_initer(mcmc_obj):
     return ParticleInitializer(mcmc_obj, temp_schedule=[0., 1.],
-                               mpi_comm=DummyComm())
+                               mpi_comm=SingleRankComm())
 
 
 def test_initialize_particles_from_prior(part_initer):

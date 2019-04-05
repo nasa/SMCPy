@@ -3,19 +3,7 @@ import pytest
 from smcpy.smc.particle_updater import ParticleUpdater
 from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
-
-
-class DummyComm():
-    '''Dummy mpi communicator'''
-
-    def __init__(self):
-        pass
-
-    def Get_size(self):
-        return 1
-
-    def Get_rank(self):
-        return 0
+from smcpy.utils.single_rank_comm import SingleRankComm
 
 
 @pytest.fixture
@@ -37,7 +25,7 @@ def filled_step(step_tester, particle_list):
 
 @pytest.fixture
 def part_updater(filled_step):
-    return ParticleUpdater(filled_step, mpi_comm=DummyComm())
+    return ParticleUpdater(filled_step, mpi_comm=SingleRankComm())
 
 
 def test_update_weights(part_updater):

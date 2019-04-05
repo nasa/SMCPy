@@ -205,8 +205,6 @@ class SMCSampler(Properties):
         step_method = 'smc_metropolis'
         new_particles = []
         acceptance_count = 0
-        if self._size == 1:
-            particles = particles[0]
         for particle in particles:
             mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
                                      q0=particle.params)

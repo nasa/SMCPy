@@ -1,13 +1,15 @@
 import numpy as np
+from ..utils.single_rank_comm import SingleRankComm
 
 
 class ParticleUpdater():
 
-    def __init__(self, step, ess_threshold, mpi_comm=None):
+    def __init__(self, step, ess_threshold, mpi_comm=SingleRankComm()):
         self.step = step
         self.ess_threshold = ess_threshold
         self._comm = mpi_comm
-        self._set_size_and_rank()
+        self._size = self._comm.Get_size()
+        self._rank = self._comm.Get_rank()
 
     def update_particles(self, temperature_step):
         if self._rank == 0:
@@ -17,8 +19,7 @@ class ParticleUpdater():
             new_particles = self._partition_new_particles()
         else:
             new_particles = [None]
-        if self._size != 1:
-            new_particles = self._comm.scatter(new_particles, root=0)
+        new_particles = self._comm.scatter(new_particles, root=0)
         return new_particles
 
     def _update_weights(self, temperature_step):
@@ -42,11 +43,3 @@ class ParticleUpdater():
         partitions = np.array_split(self.step.get_particles(),
                                     self._size)
         return partitions
-
-    def _set_size_and_rank(self):
-        if self._comm is None:
-            self._size = 1
-            self._rank = 0
-        else:
-            self._size = self._comm.Get_size()
-            self._rank = self._comm.Get_rank()
