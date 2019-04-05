@@ -44,13 +44,15 @@ class ParticleMutator():
             new_particles = list(np.concatenate(new_particles))
             # return the other list
 
-        self._update_step_with_new_particles(new_particles)
+        self.step = self._update_step_with_new_particles(new_particles)
         return self.step
 
     def _update_step_with_new_particles(self, particles):
         if self._rank == 0:
             self.step.set_particles(particles)
-        return None
+        else:
+            self.step = None
+        return self.step
 
     def _partition_new_particles(self):
         partitions = np.array_split(self.step.get_particles(),
