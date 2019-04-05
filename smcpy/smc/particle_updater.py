@@ -19,7 +19,7 @@ class ParticleUpdater():
             new_particles = [None]
         if self._size != 1:
             new_particles = self._comm.scatter(new_particles, root=0)
-        return list(new_particles)
+        return new_particles
 
     def _update_weights(self, temperature_step):
         for p in self.step.get_particles():
@@ -41,6 +41,7 @@ class ParticleUpdater():
     def _partition_new_particles(self):
         partitions = np.array_split(self.step.get_particles(),
                                     self._size)
+        print partitions[0][0].params
         return partitions
 
     def _set_size_and_rank(self):
