@@ -141,7 +141,6 @@ class SMCSampler(Properties):
 
         updater = ParticleUpdater(step, self._comm)
         self._autosave_step()
-
         p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
         last_ess = 0
 
