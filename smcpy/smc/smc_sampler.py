@@ -31,7 +31,6 @@ AGREEMENT.
 '''
 
 import os
-import warnings
 from tqdm import tqdm
 
 
@@ -44,8 +43,10 @@ from ..mcmc.mcmc_sampler import MCMCSampler
 from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
+from ..utils.progress_bar import set_bar
 from particle_initializer import ParticleInitializer
 from particle_updater import ParticleUpdater
+from particle_mutator import ParticleMutator
 
 
 class SMCSampler(Properties):
@@ -139,30 +140,25 @@ class SMCSampler(Properties):
             self.step = step
             self.step_list = step_list
 
-        updater = ParticleUpdater(step, self._comm)
+        updater = ParticleUpdater(self.step, ess_threshold, self._comm)
         self._autosave_step()
         p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
         last_ess = 0
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
-            new_particles = updater.update_particles(temperature_step)
+            self.step = updater.update_particles(temperature_step)
             covariance = self._compute_step_covariance()
-            mutated_particles = self.mutate_new_particles(new_particles,
-                                                          covariance,
-                                                          measurement_std_dev,
-                                                          temperature_step)
-            self._update_step_with_new_particles(mutated_particles)
+            mutator = ParticleMutator(self.step, self._mcmc, num_mcmc_steps,
+                                      self._comm)
+            self.step = mutator.mutate_new_particles(covariance,
+                                                     measurement_std_dev,
+                                                     temperature_step)
             self.step_list.append(self.step.copy())
             self._autosave_step()
-            p_bar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
-                                  "Current ess: {:8.2f} | Samples accepted: "
-                                  "{:.1%} | {} | "
-                                  .format(t + 1, last_ess, updater._ess,
-                                          self._acceptance_ratio,
-                                          updater._resample_status))
+            set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
+                    updater._resample_status)
             last_ess = updater._ess
-
         self._close_autosaver()
         return self.step_list
 

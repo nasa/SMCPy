@@ -12,15 +12,10 @@ class ParticleUpdater():
         self._rank = self._comm.Get_rank()
 
     def update_particles(self, temperature_step):
-        if self._rank == 0:
-            self._update_weights(temperature_step)
-            self.step.normalize_step_weights()
-            self._resample_if_needed()
-            new_particles = self._partition_new_particles()
-        else:
-            new_particles = [None]
-        new_particles = self._comm.scatter(new_particles, root=0)
-        return new_particles
+        self._update_weights(temperature_step)
+        self.step.normalize_step_weights()
+        self._resample_if_needed()
+        return self.step
 
     def _update_weights(self, temperature_step):
         for p in self.step.get_particles():
@@ -38,8 +33,3 @@ class ParticleUpdater():
         else:
             self._resample_status = "No resampling"
         return None
-
-    def _partition_new_particles(self):
-        partitions = np.array_split(self.step.get_particles(),
-                                    self._size)
-        return partitions
