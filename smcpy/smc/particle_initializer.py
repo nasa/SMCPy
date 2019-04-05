@@ -14,7 +14,7 @@ class ParticleInitializer():
         self.proposal_center = None
         self.proposal_scales = None
         self._set_size_and_rank()
-
+        
     def initialize_particles(self, measurement_std_dev, num_particles):
         self.num_particles = num_particles
         m_std = measurement_std_dev
