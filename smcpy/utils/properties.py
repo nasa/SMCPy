@@ -113,8 +113,6 @@ class Properties(Checks):
             self._raise_type_error(input_, 'integer')
         if self._is_negative(restart_time_step):
             self._raise_negative_error(input_)
-        if restart_time_step > self.num_time_steps:
-            raise ValueError('restart_time_step cannot be > num_time_steps')
         self._restart_time_step = restart_time_step
         return None
 
