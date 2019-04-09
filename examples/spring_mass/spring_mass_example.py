@@ -8,7 +8,7 @@ measure_t_grid = np.arange(0., 5., 0.2)  #time
 model = SpringMassModel(state0, measure_t_grid)
 
 # Load data
-noise_stddev = 0.94
+noise_stddev = 0.5
 displacement_data = np.genfromtxt('noisy_data.txt')
 
 # Define prior distributions
@@ -22,5 +22,13 @@ num_mcmc_steps = 1
 smc = SMCSampler(displacement_data, model, param_priors)
 pchain = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
                     ess_threshold=num_particles*0.5)
+
+# Calculate means
+means = pchain.get_mean()
+print '\n'
+for key, value in means.iteritems():
+    print '%s mean = %s' % (key, value)
+
+# Plot
 if smc._rank == 0:
-    pchain.plot_pairwise_weights(save=True)
+    pchain.plot_pairwise_weights(save=True, show=False)

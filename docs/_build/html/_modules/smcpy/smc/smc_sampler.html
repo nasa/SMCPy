@@ -1,0 +1,577 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>smcpy.smc.smc_sampler &#8212; SMCPy 1.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for smcpy.smc.smc_sampler</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Notices:</span>
+<span class="sd">Copyright 2018 United States Government as represented by the Administrator of </span>
+<span class="sd">the National Aeronautics and Space Administration. No copyright is claimed in </span>
+<span class="sd">the United States under Title 17, U.S. Code. All Other Rights Reserved.</span>
+<span class="sd"> </span>
+<span class="sd">Disclaimers</span>
+<span class="sd">No Warranty: THE SUBJECT SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY OF </span>
+<span class="sd">ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED</span>
+<span class="sd">TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY</span>
+<span class="sd">IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR</span>
+<span class="sd">FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR</span>
+<span class="sd">FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE</span>
+<span class="sd">SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN</span>
+<span class="sd">ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,</span>
+<span class="sd">RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS</span>
+<span class="sd">RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY</span>
+<span class="sd">DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF</span>
+<span class="sd">PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT &quot;AS IS.&quot;</span>
+<span class="sd"> </span>
+<span class="sd">Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE</span>
+<span class="sd">UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY</span>
+<span class="sd">PRIOR RECIPIENT.  IF RECIPIENT&#39;S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY</span>
+<span class="sd">LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,</span>
+<span class="sd">INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT&#39;S</span>
+<span class="sd">USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE</span>
+<span class="sd">UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY</span>
+<span class="sd">PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT&#39;S SOLE REMEDY FOR</span>
+<span class="sd">ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS</span>
+<span class="sd">AGREEMENT.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">..mcmc.mcmc_sampler</span> <span class="k">import</span> <span class="n">MCMCSampler</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="k">import</span> <span class="n">MPI</span>
+<span class="kn">from</span> <span class="nn">pymc</span> <span class="k">import</span> <span class="n">Normal</span>
+<span class="kn">from</span> <span class="nn">..particles.particle</span> <span class="k">import</span> <span class="n">Particle</span>
+<span class="kn">from</span> <span class="nn">..particles.particle_chain</span> <span class="k">import</span> <span class="n">ParticleChain</span>
+<span class="kn">from</span> <span class="nn">..hdf5.hdf5_storage</span> <span class="k">import</span> <span class="n">HDF5Storage</span>
+
+
+<div class="viewcode-block" id="SMCSampler"><a class="viewcode-back" href="../../../source_code.html#smcpy.SMCSampler">[docs]</a><span class="k">class</span> <span class="nc">SMCSampler</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class for performing parallel Sequential Monte Carlo sampling</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">param_priors</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_communicator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_mcmc_sampler</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">param_priors</span><span class="p">)</span>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_setup_communicator</span><span class="p">():</span>
+        <span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+        <span class="n">my_rank</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">comm</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">my_rank</span>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_setup_mcmc_sampler</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">param_priors</span><span class="p">):</span>
+        <span class="n">mcmc</span> <span class="o">=</span> <span class="n">MCMC</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">param_priors</span><span class="p">,</span>
+                    <span class="n">storage_backend</span><span class="o">=</span><span class="s1">&#39;ram&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mcmc</span>
+
+
+<div class="viewcode-block" id="SMCSampler.sample"><a class="viewcode-back" href="../../../source_code.html#smcpy.SMCSampler.sample">[docs]</a>    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_particles</span><span class="p">,</span> <span class="n">num_time_steps</span><span class="p">,</span> <span class="n">num_mcmc_steps</span><span class="p">,</span>
+               <span class="n">measurement_std_dev</span><span class="p">,</span> <span class="n">ESS_threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proposal_center</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">proposal_scales</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">restart_time_step</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">hdf5_to_load</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">autosave_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        :param num_particles: number of particles to use during sampling</span>
+<span class="sd">        :type num_particles: int</span>
+<span class="sd">        :param num_time_steps: number of time steps in temperature schedule that</span>
+<span class="sd">            is used to transition between prior and posterior distributions.</span>
+<span class="sd">        :type num_time_steps: int</span>
+<span class="sd">        :param num_mcmc_steps: number of mcmc steps to take during mutation</span>
+<span class="sd">        :param num_mcmc_steps: int</span>
+<span class="sd">        :param measurement_std_dev: standard deviation of the measurement error</span>
+<span class="sd">        :type measurement_std_dev: float</span>
+<span class="sd">        :param ESS_threshold: threshold equivalent sample size; triggers</span>
+<span class="sd">            resampling when ESS &gt; ESS_threshold</span>
+<span class="sd">        :type ESS_threshold: float or int</span>
+<span class="sd">        :param proposal_center: initial parameter dictionary, which is used to</span>
+<span class="sd">            define the initial proposal distribution when generating particles;</span>
+<span class="sd">            default is None, and initial proposal distribution = prior.</span>
+<span class="sd">        :type proposal_center: dict</span>
+<span class="sd">        :param proposal_scales: defines the scale of the initial proposal</span>
+<span class="sd">            distribution, which is centered at proposal_center, the initial</span>
+<span class="sd">            parameters; i.e. prop ~ MultivarN(q1, (I*proposal_center*scales)^2).</span>
+<span class="sd">            Proposal scales should be passed as a dictionary with keys and</span>
+<span class="sd">            values corresponding to parameter names and their associated scales,</span>
+<span class="sd">            respectively. The default is None, which sets initial proposal</span>
+<span class="sd">            distribution = prior.</span>
+<span class="sd">        :type proposal_scales: dict</span>
+<span class="sd">        :param restart_time_step: time step at which to restart sampling;</span>
+<span class="sd">            default is zero, meaning the sampling process starts at the prior</span>
+<span class="sd">            distribution; note that restart_time_step &lt; num_time_steps. The</span>
+<span class="sd">            step at restart_time is retained, and the sampling begins at the</span>
+<span class="sd">            next step (t=restart_time_step+1).</span>
+<span class="sd">        :type restart_time_step: int</span>
+<span class="sd">        :param hdf5_to_load: file path of a particle chain saved using the</span>
+<span class="sd">            ParticleChain.save() method.</span>
+<span class="sd">        :type hdf5_to_load: string</span>
+
+
+<span class="sd">        :Returns: A ParticleChain class instance that stores all particles and</span>
+<span class="sd">            their past generations at every time step.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_num_particles</span><span class="p">(</span><span class="n">num_particles</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_temperature_schedule</span><span class="p">(</span><span class="n">num_time_steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_num_mcmc_steps</span><span class="p">(</span><span class="n">num_mcmc_steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_ESS_threshold</span><span class="p">(</span><span class="n">ESS_threshold</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_autosave_behavior</span><span class="p">(</span><span class="n">autosave_file</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">restart_time_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_proposal_distribution</span><span class="p">(</span><span class="n">proposal_center</span><span class="p">,</span> <span class="n">proposal_scales</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_start_time_based_on_proposal</span><span class="p">()</span>
+            <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_particles</span><span class="p">(</span><span class="n">measurement_std_dev</span><span class="p">)</span>
+            <span class="n">particle_chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_particle_chain</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">restart_time_step</span> <span class="o">&lt;=</span> <span class="n">num_time_steps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_start_time_equal_to_restart_time_step</span><span class="p">(</span><span class="n">restart_time_step</span><span class="p">)</span>
+            <span class="n">particle_chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_particle_chain</span><span class="p">(</span><span class="n">hdf5_to_load</span><span class="p">)</span>
+            <span class="n">particle_chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trim_particle_chain</span><span class="p">(</span><span class="n">particle_chain</span><span class="p">,</span>
+                                                       <span class="n">restart_time_step</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;restart time outside range [0, num_time_steps]&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_particle_chain</span><span class="p">(</span><span class="n">particle_chain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_autosave_particle_chain</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_time_steps</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_time_step</span><span class="o">+</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">temperature_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_schedule</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_schedule</span><span class="p">[</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">new_particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_new_particles</span><span class="p">(</span><span class="n">temperature_step</span><span class="p">)</span>
+            <span class="n">covariance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_current_step_covariance</span><span class="p">()</span>
+            <span class="n">mutated_particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mutate_new_particles</span><span class="p">(</span><span class="n">new_particles</span><span class="p">,</span>
+                                                           <span class="n">covariance</span><span class="p">,</span>
+                                                           <span class="n">measurement_std_dev</span><span class="p">,</span>
+                                                           <span class="n">temperature_step</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_particle_chain_with_new_particles</span><span class="p">(</span><span class="n">mutated_particles</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_autosave_particle_step</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_close_autosaver</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_set_num_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_particles</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_particles</span> <span class="o">=</span> <span class="n">num_particles</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_temperature_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_cooling_steps</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_schedule</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_cooling_steps</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_num_mcmc_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_mcmc_steps</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_mcmc_steps</span> <span class="o">=</span> <span class="n">num_mcmc_steps</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_ESS_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ESS_threshold</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ESS_threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ESS_threshold</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">num_particles</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ESS_threshold</span> <span class="o">=</span> <span class="n">ESS_threshold</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_autosave_behavior</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">autosave_file</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_autosave_file</span> <span class="o">=</span> <span class="n">autosave_file</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autosave_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_autosaver</span> <span class="o">=</span> <span class="n">HDF5Storage</span><span class="p">(</span><span class="n">autosave_file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_proposal_distribution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proposal_center</span><span class="p">,</span> <span class="n">proposal_scales</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">proposal_center</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">proposal_scales</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;No scales given; setting scales to identity matrix.&#39;</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">proposal_scales</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="mf">1.</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+        <span class="k">elif</span> <span class="n">proposal_center</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">proposal_scales</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Proposal scales given but center == None.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_proposal_center</span> <span class="o">=</span> <span class="n">proposal_center</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_proposal_scales</span> <span class="o">=</span> <span class="n">proposal_scales</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_start_time_based_on_proposal</span><span class="p">(</span><span class="bp">self</span><span class="p">,):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        If proposal distribution is equal to prior distribution, can start</span>
+<span class="sd">        Sequential Monte Carlo sampling at time = 1, since prior can be</span>
+<span class="sd">        sampled directly. If using a different proposal, must first start by</span>
+<span class="sd">        estimating the prior (i.e., time = 0). This is a result of the way</span>
+<span class="sd">        the temperature schedule is defined.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proposal_center</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_time_step</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_time_step</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_initialize_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measurement_std_dev</span><span class="p">):</span>
+        <span class="n">m_std</span> <span class="o">=</span> <span class="n">measurement_std_dev</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span><span class="o">.</span><span class="n">generate_pymc_model</span><span class="p">(</span><span class="n">fix_var</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">std_dev0</span><span class="o">=</span><span class="n">m_std</span><span class="p">)</span>
+        <span class="n">num_particles_per_partition</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_num_particles_per_partition</span><span class="p">()</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">prior_variables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_prior_random_variables</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proposal_center</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">proposal_variables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_proposal_random_variables</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">proposal_variables</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles_per_partition</span><span class="p">):</span>
+            <span class="n">part</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_particle</span><span class="p">(</span><span class="n">prior_variables</span><span class="p">,</span> <span class="n">proposal_variables</span><span class="p">)</span>
+            <span class="n">particles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">particles</span>
+
+
+    <span class="k">def</span> <span class="nf">_get_num_particles_per_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,):</span>
+        <span class="n">num_particles_per_partition</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_particles</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">_size</span>
+        <span class="n">remainder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_particles</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span>
+        <span class="n">overtime_ranks</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">remainder</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="ow">in</span> <span class="n">overtime_ranks</span><span class="p">:</span>
+            <span class="n">num_particles_per_partition</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">num_particles_per_partition</span>
+
+
+    <span class="k">def</span> <span class="nf">_create_prior_random_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">,):</span>
+        <span class="n">mcmc</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span><span class="p">)</span>
+        <span class="n">random_variables</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">pymc_mod_order</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">random_variables</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">pymc_mod</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">random_variables</span>
+
+
+    <span class="k">def</span> <span class="nf">_create_proposal_random_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">,):</span>
+        <span class="n">centers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proposal_center</span>
+        <span class="n">scales</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proposal_scales</span>
+        <span class="n">random_variables</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">variance</span> <span class="o">=</span> <span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">*</span> <span class="n">scales</span><span class="p">[</span><span class="n">key</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">random_variables</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">centers</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="mi">1</span><span class="o">/</span><span class="n">variance</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">random_variables</span>
+
+
+    <span class="k">def</span> <span class="nf">_create_particle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prior_variables</span><span class="p">,</span> <span class="n">prop_variables</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">param_vals</span><span class="p">,</span> <span class="n">prior_logp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_draw_random_variables</span><span class="p">(</span><span class="n">prior_variables</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">prop_variables</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">prop_logp</span> <span class="o">=</span> <span class="n">prior_logp</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">param_vals</span><span class="p">,</span> <span class="n">prop_logp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_draw_random_variables</span><span class="p">(</span><span class="n">prop_variables</span><span class="p">)</span>
+        <span class="n">log_like</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate_likelihood</span><span class="p">(</span><span class="n">param_vals</span><span class="p">)</span>
+        <span class="n">temp_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_schedule</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_time_step</span><span class="p">]</span>
+        <span class="n">log_weight</span> <span class="o">=</span> <span class="n">log_like</span><span class="o">*</span><span class="n">temp_step</span> <span class="o">+</span> <span class="n">prior_logp</span> <span class="o">-</span> <span class="n">prop_logp</span>
+        <span class="k">return</span> <span class="n">Particle</span><span class="p">(</span><span class="n">param_vals</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_weight</span><span class="p">),</span> <span class="n">log_like</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_draw_random_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">random_variables</span><span class="p">):</span>
+        <span class="n">param_keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">param_vals</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">random_variables</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">param_keys</span><span class="p">}</span>
+        <span class="n">param_log_prob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">rv</span><span class="o">.</span><span class="n">logp</span> <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">random_variables</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+        <span class="k">return</span> <span class="n">param_vals</span><span class="p">,</span> <span class="n">param_log_prob</span>
+
+
+    <span class="k">def</span> <span class="nf">_evaluate_likelihood</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param_vals</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Note: this method performs 1 model evaluation per call.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mcmc</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">param_vals</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">pymc_mod_order</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">mcmc</span><span class="o">.</span><span class="n">pymc_mod</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="n">results_index</span> <span class="o">=</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">pymc_mod_order</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;results&#39;</span><span class="p">)</span>
+        <span class="n">log_like</span> <span class="o">=</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">pymc_mod</span><span class="p">[</span><span class="n">results_index</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span>
+        <span class="k">return</span> <span class="n">log_like</span>
+
+
+    <span class="k">def</span> <span class="nf">_initialize_particle_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">):</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_comm</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">particle_chain</span> <span class="o">=</span> <span class="n">ParticleChain</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_time_step</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">particle_chain</span><span class="o">.</span><span class="n">add_step</span><span class="p">([])</span> <span class="c1"># empty 0th step</span>
+            <span class="n">particle_chain</span><span class="o">.</span><span class="n">add_step</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">particles</span><span class="p">))</span>
+            <span class="n">particle_chain</span><span class="o">.</span><span class="n">normalize_step_weights</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">particle_chain</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">particle_chain</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_particle_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particle_chain</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span> <span class="o">=</span> <span class="n">particle_chain</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_start_time_equal_to_restart_time_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">restart_time_step</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start_time_step</span> <span class="o">=</span> <span class="n">restart_time_step</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_trim_particle_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particle_chain</span><span class="p">,</span> <span class="n">restart_time_step</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">to_keep</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">restart_time_step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">trimmed_steps</span> <span class="o">=</span> <span class="p">[</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">to_keep</span><span class="p">]</span>
+            <span class="n">particle_chain</span><span class="o">.</span><span class="n">_steps</span> <span class="o">=</span> <span class="n">trimmed_steps</span>
+        <span class="k">return</span> <span class="n">particle_chain</span>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_file_exists</span><span class="p">(</span><span class="n">hdf5_file</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">hdf5_file</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_compute_current_step_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">covariance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">calculate_step_covariance</span><span class="p">(</span><span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_positive_definite</span><span class="p">(</span><span class="n">covariance</span><span class="p">):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;current step cov not pos def, setting to identity matrix&#39;</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">covariance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">covariance</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">covariance</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">covariance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_comm</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">covariance</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">covariance</span>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_is_positive_definite</span><span class="p">(</span><span class="n">covariance</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">covariance</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+
+    <span class="k">def</span> <span class="nf">_create_new_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temperature_step</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_new_particles</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute_new_particle_weights</span><span class="p">(</span><span class="n">temperature_step</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_new_particle_weights</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_resample_if_needed</span><span class="p">()</span>
+            <span class="n">new_particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partition_new_particles</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_particles</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+        <span class="n">new_particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_comm</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">new_particles</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_particles</span>
+
+
+    <span class="k">def</span> <span class="nf">_initialize_new_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">new_particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">copy_step</span><span class="p">(</span><span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">add_step</span><span class="p">(</span><span class="n">new_particles</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_compute_new_particle_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temperature_step</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">weight</span><span class="p">)</span><span class="o">+</span><span class="n">p</span><span class="o">.</span><span class="n">log_like</span><span class="o">*</span><span class="n">temperature_step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_normalize_new_particle_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">normalize_step_weights</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_resample_if_needed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Checks if ESS below threshold; if yes, resample with replacement.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">ESS</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">compute_ESS</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ESS</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ESS_threshold</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s1">&#39;ESS = </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">ESS</span>
+            <span class="nb">print</span> <span class="s1">&#39;resampling...&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s1">&#39;ESS = </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">ESS</span>
+            <span class="nb">print</span> <span class="s1">&#39;no resampling required.&#39;</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_partition_new_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">partitions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">partitions</span>
+
+
+    <span class="k">def</span> <span class="nf">_mutate_new_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">covariance</span><span class="p">,</span> <span class="n">measurement_std_dev</span><span class="p">,</span>
+                              <span class="n">temperature_step</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Predicts next distribution along the temperature schedule path using</span>
+<span class="sd">        the MCMC kernel.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mcmc</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mcmc</span><span class="p">)</span>
+        <span class="n">step_method</span> <span class="o">=</span> <span class="s1">&#39;smc_metropolis&#39;</span>
+        <span class="n">new_particles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">particle</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">:</span>
+            <span class="n">mcmc</span><span class="o">.</span><span class="n">generate_pymc_model</span><span class="p">(</span><span class="n">fix_var</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">std_dev0</span><span class="o">=</span><span class="n">measurement_std_dev</span><span class="p">,</span>
+                                     <span class="n">q0</span><span class="o">=</span><span class="n">particle</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+            <span class="n">mcmc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_mcmc_steps</span><span class="p">,</span> <span class="n">burnin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">step_method</span><span class="o">=</span><span class="n">step_method</span><span class="p">,</span>
+                        <span class="n">cov</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">phi</span><span class="o">=</span><span class="n">temperature_step</span><span class="p">)</span>
+            <span class="n">stochastics</span> <span class="o">=</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">MCMC</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">getstate</span><span class="p">()[</span><span class="s1">&#39;stochastics&#39;</span><span class="p">]</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">stochastics</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">particle</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+            <span class="n">particle</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+            <span class="n">particle</span><span class="o">.</span><span class="n">log_like</span> <span class="o">=</span> <span class="n">mcmc</span><span class="o">.</span><span class="n">MCMC</span><span class="o">.</span><span class="n">logp</span>
+            <span class="n">new_particles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">particle</span><span class="p">)</span>
+        <span class="n">new_particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_comm</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">new_particles</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_particles</span>
+
+
+    <span class="k">def</span> <span class="nf">_update_particle_chain_with_new_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_particles</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">particles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">new_particles</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">overwrite_step</span><span class="p">(</span><span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">particle_list</span><span class="o">=</span><span class="n">particles</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_autosave_particle_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autosave_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_autosaver</span><span class="o">.</span><span class="n">write_chain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_autosave_particle_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autosave_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">step_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">get_num_steps</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step_index</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_autosaver</span><span class="o">.</span><span class="n">write_step</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">step_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_close_autosaver</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_autosave_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_autosaver</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="SMCSampler.save_particle_chain"><a class="viewcode-back" href="../../../source_code.html#smcpy.SMCSampler.save_particle_chain">[docs]</a>    <span class="k">def</span> <span class="nf">save_particle_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h5_file</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Saves self.particle_chain to an hdf5 file using the HDF5Storage class.</span>
+
+<span class="sd">        :param hdf5_to_load: file path at which to save particle chain</span>
+<span class="sd">        :type hdf5_to_load: string</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">hdf5</span> <span class="o">=</span> <span class="n">HDF5Storage</span><span class="p">(</span><span class="n">h5_file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">hdf5</span><span class="o">.</span><span class="n">write_chain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particle_chain</span><span class="p">)</span>
+            <span class="n">hdf5</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="SMCSampler.load_particle_chain"><a class="viewcode-back" href="../../../source_code.html#smcpy.SMCSampler.load_particle_chain">[docs]</a>    <span class="k">def</span> <span class="nf">load_particle_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">h5_file</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Loads and returns a particle chain object stored using the HDF5Storage</span>
+<span class="sd">        class.</span>
+
+<span class="sd">        :param hdf5_to_load: file path of a particle chain saved using the</span>
+<span class="sd">            ParticleChain.save() or self.save_particle_chain() methods.</span>
+<span class="sd">        :type hdf5_to_load: string</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">hdf5</span> <span class="o">=</span> <span class="n">HDF5Storage</span><span class="p">(</span><span class="n">h5_file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">particle_chain</span> <span class="o">=</span> <span class="n">hdf5</span><span class="o">.</span><span class="n">read_chain</span><span class="p">()</span>
+            <span class="n">hdf5</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="nb">print</span> <span class="s1">&#39;Particle chain loaded from </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="n">h5_file</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">particle_chain</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">particle_chain</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">SMCPy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../example.html">Example - Spring Mass System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source_code.html">Source Code Documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Patrick Leser.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

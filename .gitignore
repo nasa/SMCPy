@@ -2,7 +2,6 @@
 *.pyc
 *.png
 *.h5
-docs/_*
 *.sh
 *pytest_cache*
 .coverage

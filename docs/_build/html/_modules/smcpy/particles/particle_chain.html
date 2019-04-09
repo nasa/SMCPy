@@ -1,0 +1,517 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>smcpy.particles.particle_chain &#8212; SMCPy 1.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for smcpy.particles.particle_chain</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Notices:</span>
+<span class="sd">Copyright 2018 United States Government as represented by the Administrator of </span>
+<span class="sd">the National Aeronautics and Space Administration. No copyright is claimed in </span>
+<span class="sd">the United States under Title 17, U.S. Code. All Other Rights Reserved.</span>
+<span class="sd"> </span>
+<span class="sd">Disclaimers</span>
+<span class="sd">No Warranty: THE SUBJECT SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY OF </span>
+<span class="sd">ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED</span>
+<span class="sd">TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY</span>
+<span class="sd">IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR</span>
+<span class="sd">FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR</span>
+<span class="sd">FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE</span>
+<span class="sd">SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN</span>
+<span class="sd">ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,</span>
+<span class="sd">RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS</span>
+<span class="sd">RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY</span>
+<span class="sd">DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF</span>
+<span class="sd">PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT &quot;AS IS.&quot;</span>
+<span class="sd"> </span>
+<span class="sd">Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE</span>
+<span class="sd">UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY</span>
+<span class="sd">PRIOR RECIPIENT.  IF RECIPIENT&#39;S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY</span>
+<span class="sd">LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,</span>
+<span class="sd">INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT&#39;S</span>
+<span class="sd">USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE</span>
+<span class="sd">UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY</span>
+<span class="sd">PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT&#39;S SOLE REMEDY FOR</span>
+<span class="sd">ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS</span>
+<span class="sd">AGREEMENT.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<div class="viewcode-block" id="ParticleChain"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain">[docs]</a><span class="k">class</span> <span class="nc">ParticleChain</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class defining data structure of an SMC particle chain. The chain stores all</span>
+<span class="sd">    particle instances at all temperature steps (i.e., the entire particle chain</span>
+<span class="sd">    is M x T where M is the total number of particles and T is the number of</span>
+<span class="sd">    steps in the temperature schedule). </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+    <span class="k">def</span> <span class="nf">add_empty_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="ParticleChain.add_particle"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.add_particle">[docs]</a>    <span class="k">def</span> <span class="nf">add_particle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particle</span><span class="p">,</span> <span class="n">step_number</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Add a single particle to a given step.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_num_steps</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_empty_step</span><span class="p">()</span>
+
+        <span class="c1"># check to see if new step should be added</span>
+        <span class="k">if</span> <span class="n">step_number</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_empty_step</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">step_number</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;cannot skip steps, next step available for &#39;</span><span class="o">+</span>\
+                             <span class="s1">&#39;creation is </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step_number</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">particle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    
+<div class="viewcode-block" id="ParticleChain.add_step"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.add_step">[docs]</a>    <span class="k">def</span> <span class="nf">add_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particle_list</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Add an entire step to the chain, providing a list of particles.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">particle_list</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.get_num_steps"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_num_steps">[docs]</a>    <span class="k">def</span> <span class="nf">get_num_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns number of steps in the particle chain.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.get_likes"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_likes">[docs]</a>    <span class="k">def</span> <span class="nf">get_likes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a list of all particle likelihoods for a given step.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">log_like</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">]]</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.get_log_likes"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_log_likes">[docs]</a>    <span class="k">def</span> <span class="nf">get_log_likes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a list of all particle log likelihoods for a given step.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">log_like</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">]]</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.get_mean"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_mean">[docs]</a>    <span class="k">def</span> <span class="nf">get_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Computes mean for a given step.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">param_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">pn</span> <span class="ow">in</span> <span class="n">param_names</span><span class="p">:</span>
+            <span class="n">mean</span><span class="p">[</span><span class="n">pn</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">]:</span>
+                <span class="n">mean</span><span class="p">[</span><span class="n">pn</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">weight</span><span class="o">*</span><span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">pn</span><span class="p">])</span>
+            <span class="n">mean</span><span class="p">[</span><span class="n">pn</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mean</span><span class="p">[</span><span class="n">pn</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">mean</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.get_params"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns an array of param &lt;key&gt; with length = number of particles.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">])</span></div>
+
+    
+<div class="viewcode-block" id="ParticleChain.get_param_dicts"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_param_dicts">[docs]</a>    <span class="k">def</span> <span class="nf">get_param_dicts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a list of particle parameter dictionaries.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">params</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.get_particles"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_particles">[docs]</a>    <span class="k">def</span> <span class="nf">get_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a list of all particles for a given step.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.get_weights"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.get_weights">[docs]</a>    <span class="k">def</span> <span class="nf">get_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a list of all weights for a given step.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">weight</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">]]</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.calculate_step_covariance"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.calculate_step_covariance">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_step_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Estimates the covariance matrix for a given step in the chain.</span>
+
+<span class="sd">        :param int step: step identifier, default is most recent (i.e., step=-1)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">particle_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">param_names</span> <span class="o">=</span> <span class="n">particle_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+
+        <span class="c1"># get mean vector</span>
+        <span class="n">means</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">step</span><span class="p">)[</span><span class="n">pn</span><span class="p">]</span> <span class="k">for</span> <span class="n">pn</span> <span class="ow">in</span> <span class="n">param_names</span><span class="p">])</span>
+
+        <span class="c1"># get covariance matrix</span>
+        <span class="n">cov_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particle_list</span><span class="p">:</span>
+            <span class="n">param_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">pn</span><span class="p">]</span> <span class="k">for</span> <span class="n">pn</span> <span class="ow">in</span> <span class="n">param_names</span><span class="p">])</span>
+            <span class="n">diff</span> <span class="o">=</span> <span class="n">param_vector</span><span class="o">-</span><span class="n">means</span>
+            <span class="n">diff</span> <span class="o">=</span> <span class="n">diff</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">diff</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+            <span class="n">cov_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">weight</span><span class="o">*</span><span class="n">R</span><span class="p">)</span>
+        <span class="n">cov_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cov_list</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">cov_matrix</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.compute_ESS"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.compute_ESS">[docs]</a>    <span class="k">def</span> <span class="nf">compute_ESS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Computes the effective sample size (ESS) of a given step in the particle</span>
+<span class="sd">        chain.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weights</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="c1"># make sure weights are normalized</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mf">0.9999999999</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.0000000001</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">normalize_step_weights</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">w</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.copy_step"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.copy_step">[docs]</a>    <span class="k">def</span> <span class="nf">copy_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a copy of particle chain at step (most recent step by default).</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span></div>
+
+    
+<div class="viewcode-block" id="ParticleChain.normalize_step_weights"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.normalize_step_weights">[docs]</a>    <span class="k">def</span> <span class="nf">normalize_step_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Normalizes weights for all particles in a given step.</span>
+
+<span class="sd">        :param int step: step identifier, default is most recent (i.e., step=-1)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weights</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">total_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">weight</span><span class="o">/</span><span class="n">total_weight</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.overwrite_step"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.overwrite_step">[docs]</a>    <span class="k">def</span> <span class="nf">overwrite_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">particle_list</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Overwrite an entire step of the chain with the provided list of</span>
+<span class="sd">        particles.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">particle_list</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Number of new particles must equal number of old&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">]</span> <span class="o">=</span> <span class="n">particle_list</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.resample"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.resample">[docs]</a>    <span class="k">def</span> <span class="nf">resample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Resamples a given step in the particle chain based on normalized </span>
+<span class="sd">        weights. Assigns discrete probabilities to each particle (sum to 1),</span>
+<span class="sd">        resample from this discrete distribution using the particle&#39;s copy()</span>
+<span class="sd">        method.</span>
+
+<span class="sd">        :param boolean overwrite: if True (default), overwrites current step</span>
+<span class="sd">            with resampled step, else appends new step</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">num_particles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weights</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">weights_cs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        
+        <span class="c1"># intervals based on weights to use for discrete probability draw</span>
+        <span class="n">intervals</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">weights_cs</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">weights_cs</span><span class="p">)</span>
+
+        <span class="c1"># generate random numbers, iterate to find intervals for resample</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="n">num_particles</span><span class="p">,])</span>
+        <span class="n">new_particles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">uniform_weight</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="n">num_particles</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">R</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">intervals</span><span class="p">):</span>
+
+                <span class="k">if</span> <span class="n">a</span> <span class="o">&lt;=</span> <span class="n">r</span> <span class="o">&lt;</span> <span class="n">b</span><span class="p">:</span>
+                    <span class="c1"># resample</span>
+                    <span class="n">new_particles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+                    <span class="c1"># assign uniform weight</span>
+                    <span class="n">new_particles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">uniform_weight</span>
+                    <span class="k">break</span>
+
+        <span class="c1"># overwrite or append new step</span>
+        <span class="k">if</span> <span class="n">overwrite</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_step</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">new_particles</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_step</span><span class="p">(</span><span class="n">new_particles</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.plot_marginal"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.plot_marginal">[docs]</a>    <span class="k">def</span> <span class="nf">plot_marginal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                      <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;marginal_&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plots a single marginal approximation for param given by &lt;key&gt;.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">plt</span>
+        <span class="k">except</span><span class="p">:</span> 
+            <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step</span><span class="p">]:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">]],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">weight</span><span class="p">])</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">p</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">save</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">prefix</span><span class="o">+</span><span class="n">key</span><span class="o">+</span><span class="s1">&#39;.png&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">show</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.plot_all_marginals"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.plot_all_marginals">[docs]</a>    <span class="k">def</span> <span class="nf">plot_all_marginals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;marginal_&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plots marginal approximation for all parameters in the chain.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">plt</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+        <span class="n">param_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">param_names</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_marginal</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">pn</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="n">save</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="n">show</span><span class="p">,</span>
+                               <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="ParticleChain.plot_pairwise_weights"><a class="viewcode-back" href="../../../source_code.html#smcpy.ParticleChain.plot_pairwise_weights">[docs]</a>    <span class="k">def</span> <span class="nf">plot_pairwise_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">param_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                              <span class="n">save</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">param_lims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                              <span class="n">label_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tick_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                              <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;pairwise&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plots pairwise distributions of all parameter combos. Color codes each</span>
+<span class="sd">        by weight.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">plt</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+        <span class="c1"># get particles</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_particles</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="c1"># set up label dictionary</span>
+        <span class="k">if</span> <span class="n">param_names</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">param_names</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">labels</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">param_names</span>
+        <span class="n">label_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">lab</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">lab</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">param_names</span><span class="p">,</span> <span class="n">labels</span><span class="p">)}</span>
+        <span class="k">if</span> <span class="n">param_lims</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">lim_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">l</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">param_names</span><span class="p">,</span> <span class="n">param_lims</span><span class="p">)}</span>
+        <span class="k">if</span> <span class="n">nbins</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">bin_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">param_names</span><span class="p">,</span> <span class="n">nbins</span><span class="p">)}</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param_names</span><span class="p">)</span>
+
+        <span class="c1"># setup figure</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="o">*</span><span class="p">(</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span><span class="mi">10</span><span class="o">*</span><span class="p">(</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">])</span>
+
+        <span class="c1"># create lower triangle to obtain param combos</span>
+        <span class="n">tril</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">L</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="n">L</span><span class="p">,</span><span class="n">L</span><span class="p">]),</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">ikeys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">tril</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    
+        <span class="c1"># use lower triangle to id subplots</span>
+        <span class="n">tril</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">((</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">iplts</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tril</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+    
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weights</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">means</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">iplts</span><span class="p">,</span> <span class="n">ikeys</span><span class="p">):</span>
+            <span class="n">iplt</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>     <span class="c1"># subplot index</span>
+            <span class="n">ikey1</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># key index for xparam</span>
+            <span class="n">ikey2</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># key index for yparam</span>
+            <span class="n">key1</span> <span class="o">=</span> <span class="n">param_names</span><span class="p">[</span><span class="n">ikey1</span><span class="p">]</span>
+            <span class="n">key2</span> <span class="o">=</span> <span class="n">param_names</span><span class="p">[</span><span class="n">ikey2</span><span class="p">]</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="p">{</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">:</span><span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">L</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">iplt</span><span class="p">)}</span>
+            <span class="c1"># get list of all particle params for key1, key2 combinations</span>
+            <span class="n">pkey1</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">pkey2</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">:</span>
+                <span class="n">pkey1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">key1</span><span class="p">])</span>
+                <span class="n">pkey2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">key2</span><span class="p">])</span>
+            <span class="c1"># plot parameter combos with weight as color</span>
+            <span class="n">rnd_to_sig</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">))))</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">sc</span> <span class="o">=</span> <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">pkey1</span><span class="p">,</span> <span class="n">pkey2</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                    <span class="n">vmax</span><span class="o">=</span><span class="n">rnd_to_sig</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">weights</span><span class="p">)))</span>
+            <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">means</span><span class="p">[</span><span class="n">key1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">means</span><span class="p">[</span><span class="n">key2</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">label_dict</span><span class="p">[</span><span class="n">key1</span><span class="p">])</span>
+            <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">label_dict</span><span class="p">[</span><span class="n">key2</span><span class="p">])</span>
+
+            <span class="c1"># if provided, set x y lims</span>
+            <span class="k">if</span> <span class="n">param_lims</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">lim_dict</span><span class="p">[</span><span class="n">key1</span><span class="p">])</span>
+                <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">lim_dict</span><span class="p">[</span><span class="n">key2</span><span class="p">])</span>
+            <span class="c1"># if provided set font sizes</span>
+            <span class="k">if</span> <span class="n">tick_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">labelsize</span><span class="o">=</span><span class="n">tick_size</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">label_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">label</span><span class="o">.</span><span class="n">set_size</span><span class="p">(</span><span class="n">label_size</span><span class="p">)</span>
+                <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">yaxis</span><span class="o">.</span><span class="n">label</span><span class="o">.</span><span class="n">set_size</span><span class="p">(</span><span class="n">label_size</span><span class="p">)</span>
+            <span class="c1"># if provided, set x ticks</span>
+            <span class="k">if</span> <span class="n">nbins</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">locator_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="n">bin_dict</span><span class="p">[</span><span class="n">key1</span><span class="p">])</span>
+                <span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">]</span><span class="o">.</span><span class="n">locator_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="n">bin_dict</span><span class="p">[</span><span class="n">key2</span><span class="p">])</span>
+
+        <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+        <span class="c1"># colorbar</span>
+        <span class="k">if</span> <span class="n">L</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="n">key1</span><span class="o">+</span><span class="s1">&#39;+&#39;</span><span class="o">+</span><span class="n">key2</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ax1_position</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_position</span><span class="p">()</span>
+            <span class="n">ax3_position</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">get_position</span><span class="p">()</span>
+            <span class="n">y0</span> <span class="o">=</span> <span class="n">ax1_position</span><span class="o">.</span><span class="n">y0</span>
+            <span class="n">x0</span> <span class="o">=</span> <span class="n">ax3_position</span><span class="o">.</span><span class="n">x0</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="mf">0.02</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ax1_position</span><span class="o">.</span><span class="n">y1</span><span class="o">-</span><span class="n">ax1_position</span><span class="o">.</span><span class="n">y0</span><span class="p">)</span>
+            <span class="n">empty_ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">([</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">])</span>
+            <span class="n">cb</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">cax</span><span class="o">=</span><span class="n">empty_ax</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">tick_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">empty_ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">labelsize</span><span class="o">=</span><span class="n">tick_size</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">save</span><span class="o">==</span><span class="kc">True</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">prefix</span><span class="o">+</span><span class="s1">&#39;.png&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">show</span><span class="o">==</span><span class="kc">True</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+    <span class="k">def</span> <span class="nf">print_particle_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_num</span><span class="p">,</span> <span class="n">particle_num</span><span class="p">):</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step_num</span><span class="p">]</span>
+        <span class="n">particle</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="n">particle_num</span><span class="p">]</span>
+        <span class="nb">print</span> <span class="s1">&#39;-----------------------------------------------------&#39;</span>
+        <span class="nb">print</span> <span class="s1">&#39;Step: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">step_num</span>
+        <span class="nb">print</span> <span class="s1">&#39;Particle: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">particle_num</span>
+        <span class="n">particle</span><span class="o">.</span><span class="n">print_particle_info</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">print_step_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_num</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_steps</span><span class="p">[</span><span class="n">step_num</span><span class="p">]</span>
+        <span class="nb">print</span> <span class="s1">&#39;-----------------------------------------------------&#39;</span>
+        <span class="nb">print</span> <span class="s1">&#39;Step: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">step_num</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">particle</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">step</span><span class="p">):</span>
+            <span class="nb">print</span> <span class="s1">&#39;-----------------------------------------------------&#39;</span>
+            <span class="nb">print</span> <span class="s1">&#39;Particle: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span>
+            <span class="n">particle</span><span class="o">.</span><span class="n">print_particle_info</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">SMCPy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../example.html">Example - Spring Mass System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source_code.html">Source Code Documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Patrick Leser.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -11,6 +11,7 @@ Welcome to SMCPy's documentation!
    :caption: Contents:
 
    introduction
+   example
    source_code
 
 Indices and tables
