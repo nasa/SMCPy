@@ -36,14 +36,9 @@ class ParticleMutator():
             particle.params = params
             particle.log_like = mcmc.MCMC.logp
             new_particles.append(particle)
-        new_particles = self._comm.gather(new_particles, root=0)
+
+        new_particles = self._gather_and_concat_particles(new_particles)
         self._acceptance_ratio = float(acceptance_count) / len(particles)
-        # new list of accepted particles
-
-        if self._rank == 0:
-            new_particles = list(np.concatenate(new_particles))
-            # return the other list
-
         self.step = self._update_step_with_new_particles(new_particles)
         return self.step
 
@@ -66,3 +61,11 @@ class ParticleMutator():
             particles = []
         particles = self._comm.scatter(particles, root=0)
         return particles
+
+    def _gather_and_concat_particles(self, new_particles):
+        new_particles = self._comm.gather(new_particles, root=0)
+
+        if self._rank == 0:
+            new_particles = list(np.concatenate(new_particles))
+
+        return new_particles
