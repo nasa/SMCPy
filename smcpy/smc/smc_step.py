@@ -76,15 +76,15 @@ class SMCStep(Checks):
         for pn in param_names:
             mean[pn] = []
             for p in self.particles:
-                mean[pn].append(p.weight * p.params[pn])
+                mean[pn].append(p.log_weight * p.params[pn])
             mean[pn] = np.sum(mean[pn])
         return mean
 
-    def get_weights(self):
+    def get_log_weights(self):
         '''
-        Returns a list of the weights of each particle in the step
+        Returns a list of the log weights of each particle in the step
         '''
-        return [p.weight for p in self.particles]
+        return [p.log_weight for p in self.particles]
 
     def calculate_covariance(self):
         '''
@@ -99,7 +99,7 @@ class SMCStep(Checks):
             param_vector = p.params.values()
             diff = (param_vector - means).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
-            cov_list.append(p.weight * R)
+            cov_list.append(p.log_weight * R)
         cov_matrix = np.sum(cov_list, axis=0)
 
         if not self._is_positive_definite(cov_matrix):
@@ -109,25 +109,25 @@ class SMCStep(Checks):
 
         return cov_matrix
 
-    def normalize_step_weights(self):
+    def normalize_step_log_weights(self):
         '''
-        Normalizes weights for all particles.
+        Normalizes log weights for all particles.
         '''
-        weights = self.get_weights()
+        log_weights = self.get_log_weights()
         particles = self.particles
-        total_weight = np.sum(weights)
+        total_log_weight = np.sum(log_weights)
         for p in particles:
-            p.weight = p.weight / total_weight
+            p.log_weight = np.exp(p.log_weight - max(log_weights)) / total_log_weight
         return None
 
     def compute_ess(self):
         '''
         Computes the effective sample size (ess) of the step
         '''
-        weights = self.get_weights()
-        if not np.isclose(np.sum(weights), 1):
-            self.normalize_step_weights()
-        return 1 / np.sum([w**2 for w in weights])
+        log_weights = self.get_log_weights()
+        if not np.isclose(np.sum(log_weights), 1):
+            self.normalize_step_log_weights()
+        return 1 / np.sum([w**2 for w in log_weights])
 
     def get_params(self, key):
         particles = self.particles
@@ -147,11 +147,11 @@ class SMCStep(Checks):
         '''
         particles = self.particles
         num_particles = len(particles)
-        weights = self.get_weights()
-        weights_cs = np.cumsum(weights)
+        log_weights = self.get_log_weights()
+        log_weights_cs = np.cumsum(log_weights)
 
         # intervals based on weights to use for discrete probability draw
-        intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
+        intervals = zip(np.insert(log_weights_cs, 0, 0)[:-1], log_weights_cs)
 
         # generate random numbers, iterate to find intervals for resample
         R = np.random.uniform(0, 1, [num_particles, ])
@@ -164,7 +164,7 @@ class SMCStep(Checks):
                     # resample
                     new_particles.append(particles[i].copy())
                     # assign uniform weight
-                    new_particles[-1].weight = uniform_weight
+                    new_particles[-1].log_weight = uniform_weight
                     break
         self.particles = new_particles
         return None
@@ -194,7 +194,7 @@ class SMCStep(Checks):
         ax = fig.add_subplot(111)
         for p in self.particles:
             ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
-            ax.plot(p.params[key], p.weight, 'o')
+            ax.plot(p.params[key], p.log_weight, 'o')
         if save:
             plt.savefig(prefix + key + '.png')
         if show:
@@ -240,7 +240,7 @@ class SMCStep(Checks):
         tril = np.tril(np.arange((L - 1)**2).reshape([L - 1, L - 1]) + 1)
         iplts = [i for i in tril.flatten() if i > 0]
 
-        weights = self.get_weights()
+        log_weights = self.get_log_weights()
         means = self.get_mean()
         for i in zip(iplts, ikeys):
             iplt = i[0]     # subplot index
@@ -259,8 +259,8 @@ class SMCStep(Checks):
 
             def rnd_to_sig(x):
                 return round(x, -int(np.floor(np.log10(abs(x)))) + 1)
-            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=weights, vmin=0.0,
-                                               vmax=rnd_to_sig(max(weights)))
+            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=log_weights, vmin=0.0,
+                                               vmax=rnd_to_sig(max(log_weights)))
             ax[key1 + '+' + key2].axvline(means[key1], color='C1', linestyle='--')
             ax[key1 + '+' + key2].axhline(means[key2], color='C1', linestyle='--')
             ax[key1 + '+' + key2].set_xlabel(label_dict[key1])

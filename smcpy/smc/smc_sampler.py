@@ -167,7 +167,7 @@ class SMCSampler(Properties):
         if self._rank == 0:
             step = SMCStep()
             step.set_particles(np.concatenate(particles))
-            step.normalize_step_weights()
+            step.normalize_step_log_weights()
         else:
             step = None
         return step

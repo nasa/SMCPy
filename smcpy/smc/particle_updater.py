@@ -1,4 +1,3 @@
-import numpy as np
 from ..utils.single_rank_comm import SingleRankComm
 
 
@@ -13,14 +12,14 @@ class ParticleUpdater():
 
     def update_particles(self, temperature_step):
         if self._rank == 0:
-            self._update_weights(temperature_step)
-            self.step.normalize_step_weights()
+            self._update_log_weights(temperature_step)
+            self.step.normalize_step_log_weights()
             self._resample_if_needed()
         else:
             self.step = None
         return self.step
 
-    def _update_weights(self, temperature_step):
+    def _update_log_weights(self, temperature_step):
         for p in self.step.get_particles():
             p.log_weight = p.log_weight + p.log_like * temperature_step
         return None
