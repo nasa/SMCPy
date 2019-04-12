@@ -46,3 +46,7 @@ def mcmc_obj():
 def part_mutator(filled_step, mcmc_obj):
     return ParticleMutator(filled_step, mcmc_obj, num_mcmc_steps=10,
                            mpi_comm=SingleRankComm())
+
+
+def test_mutate_new_particles():
+    pass
