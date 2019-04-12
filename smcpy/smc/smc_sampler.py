@@ -191,37 +191,6 @@ class SMCSampler(Properties):
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
 
-    def mutate_new_particles(self, particles, covariance, measurement_std_dev,
-                             temperature_step):
-        '''
-        Predicts next distribution along the temperature schedule path using
-        the MCMC kernel.
-        '''
-        mcmc = copy(self._mcmc)
-        step_method = 'smc_metropolis'
-        new_particles = []
-        acceptance_count = 0
-        for particle in particles:
-            mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
-                                     q0=particle.params)
-            mcmc.sample(self.num_mcmc_steps, burnin=0, step_method=step_method,
-                        cov=covariance, verbose=-1, phi=temperature_step)
-            stochastics = mcmc.MCMC.db.getstate()['stochastics']
-            params = {key: stochastics[key] for key in particle.params.keys()}
-            if particle.params != params:
-                acceptance_count += 1
-            particle.params = params
-            particle.log_like = mcmc.MCMC.logp
-            new_particles.append(particle)
-        new_particles = self._comm.gather(new_particles, root=0)
-        self._acceptance_ratio = float(acceptance_count) / len(particles)
-        # new list of accepted particles
-
-        if self._rank == 0:
-            return list(np.concatenate(new_particles))
-            # return the other list
-        return new_particles
-
     def _update_step_with_new_particles(self, particles):
         if self._rank == 0:
             self.step.set_particles(particles)
