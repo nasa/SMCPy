@@ -85,7 +85,7 @@ class ParticleInitializer():
         log_like = self._evaluate_likelihood(params)
         temp_step = self.temp_schedule[1]
         log_weight = log_like * temp_step + prior_logp - prop_logp
-        return Particle(params, np.exp(log_weight), log_like)
+        return Particle(params, log_weight, log_like)
 
     def _sample_random_variables(self, random_variables):
         param_keys = self._mcmc.params.keys()

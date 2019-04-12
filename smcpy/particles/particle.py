@@ -1,11 +1,11 @@
 '''
 Notices:
-Copyright 2018 United States Government as represented by the Administrator of 
-the National Aeronautics and Space Administration. No copyright is claimed in 
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
 the United States under Title 17, U.S. Code. All Other Rights Reserved.
- 
+
 Disclaimers
-No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF 
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
 ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
 TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
 IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
@@ -17,7 +17,7 @@ RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
 RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
 PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS."
- 
+
 Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
 UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
@@ -32,13 +32,14 @@ AGREEMENT.
 
 from copy import deepcopy
 
+
 class Particle():
     '''
     Class defining data structure of an SMC particle (a member of an SMC
     particle chain).
     '''
 
-    def __init__(self, params, weight, log_like):
+    def __init__(self, params, log_weight, log_like):
         '''
         :param params: parameters associated with particle; keys = parameter
             name and values = parameter value.
@@ -49,18 +50,16 @@ class Particle():
         :type log_like: float or int
         '''
         self.params = self._check_params(params)
-        self.weight = self._check_weight(weight)
+        self.log_weight = self._check_log_weight(log_weight)
         self.log_like = self._check_log_like(log_like)
-
 
     def print_particle_info(self):
         '''
         Prints particle parameters, weight, and log likelihood to screen.
         '''
         info = (self.params, self.weight, self.log_like)
-        print('params = %s\nweight = %s\nlog_like = %s' % info)
+        print('params = %s\nlog_weight = %s\nlog_like = %s' % info)
         return None
-
 
     def copy(self):
         '''
@@ -68,22 +67,19 @@ class Particle():
         '''
         return deepcopy(self)
 
-
     @staticmethod
     def _check_params(params):
         if type(params) is not dict:
             raise TypeError('Input "params" must be a dictionary.')
         return params
 
-
     @staticmethod
-    def _check_weight(weight):
-        if not isinstance(weight, int) and not isinstance(weight, float):
-            raise TypeError('Input "weight" must be an integer or float')
-        if weight < 0:
-            raise ValueError('Input "weight" must be positive.')
-        return weight
-        
+    def _check_log_weight(log_weight):
+        if not isinstance(log_weight, int) and not isinstance(log_weight, float):
+            raise TypeError('Input "log_weight" must be an integer or float')
+        if log_weight < 0:
+            raise ValueError('Input "log_weight" must be positive.')
+        return log_weight
 
     @staticmethod
     def _check_log_like(log_like):

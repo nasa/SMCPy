@@ -22,7 +22,7 @@ class ParticleUpdater():
 
     def _update_weights(self, temperature_step):
         for p in self.step.get_particles():
-            p.weight = np.exp(np.log(p.weight) + p.log_like * temperature_step)
+            p.log_weight = p.log_weight + p.log_like * temperature_step
         return None
 
     def _resample_if_needed(self):
