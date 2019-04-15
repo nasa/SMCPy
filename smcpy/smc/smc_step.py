@@ -124,10 +124,9 @@ class SMCStep(Checks):
         '''
         Computes the effective sample size (ess) of the step
         '''
+        self.normalize_step_log_weights()
         log_weights = self.get_log_weights()
-        if not np.isclose(np.sum(log_weights), 1):
-            self.normalize_step_log_weights()
-        return 1 / np.sum([w**2 for w in log_weights])
+        return 1 / np.sum([np.exp(w)**2 for w in log_weights])
 
     def get_params(self, key):
         particles = self.particles
