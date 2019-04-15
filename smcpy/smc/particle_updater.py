@@ -24,7 +24,7 @@ class ParticleUpdater():
             p.log_weight = p.log_weight + p.log_like * temperature_step
         return None
 
-    def _resample_if_needed(self):
+    def _resample_if_needed(self):  # issue here
         '''
         Checks if ess below threshold; if yes, resample with replacement.
         '''

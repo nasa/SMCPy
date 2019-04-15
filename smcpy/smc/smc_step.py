@@ -114,10 +114,11 @@ class SMCStep(Checks):
         Normalizes log weights for all particles.
         '''
         log_weights = self.get_log_weights()
-        particles = self.particles
-        total_log_weight = np.sum(log_weights)
-        for p in particles:
-            p.log_weight = np.exp(p.log_weight - max(log_weights)) / total_log_weight
+        total_weight = np.sum(np.exp(log_weights))
+        for p in self.particles:
+            normalized = np.exp(p.log_weight - max(log_weights)) / total_weight
+            p.log_weight = np.log(normalized)
+        print self.particles[0].log_weight
         return None
 
     def compute_ess(self):
@@ -139,19 +140,18 @@ class SMCStep(Checks):
     def get_particles(self):
         return self.particles
 
-    def resample(self):
+    def resample(self):  # issue here
         '''
         Resamples the step based on normalized weights. Assigns discrete
         probabilities to each particle (sum to 1), resample from this discrete distribution using the particle's copy() method.
         '''
         particles = self.particles
+        print particles[0].log_weight
         num_particles = len(particles)
-        log_weights = self.get_log_weights()
-        log_weights_cs = np.cumsum(log_weights)
-
+        weights = np.exp(self.get_log_weights())
+        weights_cs = np.cumsum(weights)
         # intervals based on weights to use for discrete probability draw
-        intervals = zip(np.insert(log_weights_cs, 0, 0)[:-1], log_weights_cs)
-
+        intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
         # generate random numbers, iterate to find intervals for resample
         R = np.random.uniform(0, 1, [num_particles, ])
         new_particles = []
