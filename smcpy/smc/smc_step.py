@@ -146,7 +146,6 @@ class SMCStep(Checks):
         probabilities to each particle (sum to 1), resample from this discrete distribution using the particle's copy() method.
         '''
         particles = self.particles
-        print particles[0].log_weight
         num_particles = len(particles)
         weights = np.exp(self.get_log_weights())
         weights_cs = np.cumsum(weights)
