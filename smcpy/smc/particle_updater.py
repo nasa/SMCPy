@@ -12,8 +12,8 @@ class ParticleUpdater():
 
     def update_particles(self, temperature_step):
         if self._rank == 0:
-            self._update_log_weights(temperature_step)
             self.step.normalize_step_log_weights()
+            self._update_log_weights(temperature_step)
             self._resample_if_needed()
         else:
             self.step = None

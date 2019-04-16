@@ -71,12 +71,13 @@ class SMCStep(Checks):
         '''
         Returns the mean of each parameter within the step
         '''
+        self.normalize_step_log_weights()
         param_names = self.particles[0].params.keys()
         mean = {}
         for pn in param_names:
             mean[pn] = []
             for p in self.particles:
-                mean[pn].append(p.log_weight * p.params[pn])
+                mean[pn].append(np.exp(p.log_weight) * p.params[pn])
             mean[pn] = np.sum(mean[pn])
         return mean
 
@@ -99,7 +100,7 @@ class SMCStep(Checks):
             param_vector = p.params.values()
             diff = (param_vector - means).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
-            cov_list.append(p.log_weight * R)
+            cov_list.append(np.exp(p.log_weight) * R)
         cov_matrix = np.sum(cov_list, axis=0)
 
         if not self._is_positive_definite(cov_matrix):
@@ -113,12 +114,12 @@ class SMCStep(Checks):
         '''
         Normalizes log weights for all particles.
         '''
-        log_weights = self.get_log_weights()
-        total_weight = np.sum(np.exp(log_weights))
-        for p in self.particles:
-            normalized = np.exp(p.log_weight - max(log_weights)) / total_weight
-            p.log_weight = np.log(normalized)
-        print self.particles[0].log_weight
+        log_weights = np.array(self.get_log_weights())
+        shifted_weights = np.exp(log_weights - max(log_weights))
+        total_shifted_weights = sum(shifted_weights)
+        normalized_weights = shifted_weights / total_shifted_weights
+        for index, p in enumerate(self.particles):
+            p.log_weight = np.log(normalized_weights[index])
         return None
 
     def compute_ess(self):
