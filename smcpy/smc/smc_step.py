@@ -114,13 +114,17 @@ class SMCStep(Checks):
         '''
         Normalizes log weights for all particles.
         '''
+        normalized_weights = self.normalize_step_weights()
+        for index, p in enumerate(self.particles):
+            p.log_weight = np.log(normalized_weights[index])
+        return None
+
+    def normalize_step_weights(self):
         log_weights = np.array(self.get_log_weights())
         shifted_weights = np.exp(log_weights - max(log_weights))
         total_shifted_weights = sum(shifted_weights)
         normalized_weights = shifted_weights / total_shifted_weights
-        for index, p in enumerate(self.particles):
-            p.log_weight = np.log(normalized_weights[index])
-        return None
+        return normalized_weights
 
     def compute_ess(self):
         '''
