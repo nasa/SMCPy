@@ -71,13 +71,13 @@ class SMCStep(Checks):
         '''
         Returns the mean of each parameter within the step
         '''
-        self.normalize_step_log_weights()
+        self.normalize_step_weights()
         param_names = self.particles[0].params.keys()
         mean = {}
         for pn in param_names:
             mean[pn] = []
             for p in self.particles:
-                mean[pn].append(np.exp(p.log_weight) * p.params[pn])
+                mean[pn].append(p.log_weight * p.params[pn])
             mean[pn] = np.sum(mean[pn])
         return mean
 
@@ -100,7 +100,7 @@ class SMCStep(Checks):
             param_vector = p.params.values()
             diff = (param_vector - means).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
-            cov_list.append(np.exp(p.log_weight) * R)
+            cov_list.append(p.log_weight * R)
         cov_matrix = np.sum(cov_list, axis=0)
 
         if not self._is_positive_definite(cov_matrix):
@@ -124,6 +124,8 @@ class SMCStep(Checks):
         shifted_weights = np.exp(log_weights - max(log_weights))
         total_shifted_weights = sum(shifted_weights)
         normalized_weights = shifted_weights / total_shifted_weights
+        for index, p in enumerate(self.particles):
+            p.log_weight = normalized_weights[index]
         return normalized_weights
 
     def compute_ess(self):
@@ -196,8 +198,8 @@ class SMCStep(Checks):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         for p in self.particles:
-            ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
-            ax.plot(p.params[key], p.log_weight, 'o')
+            ax.plot([p.params[key], p.params[key]], [0.0, np.exp(p.log_weight)])
+            ax.plot(p.params[key], np.exp(p.log_weight), 'o')
         if save:
             plt.savefig(prefix + key + '.png')
         if show:
