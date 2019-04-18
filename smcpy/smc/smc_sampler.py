@@ -116,7 +116,6 @@ class SMCSampler(Properties):
         and their past generations at every time step.
         '''
 
-        self.ess_threshold = ess_threshold
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)

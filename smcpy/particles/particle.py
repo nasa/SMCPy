@@ -57,7 +57,7 @@ class Particle():
         '''
         Prints particle parameters, weight, and log likelihood to screen.
         '''
-        info = (self.params, self.weight, self.log_like)
+        info = (self.params, self.log_weight, self.log_like)
         print('params = %s\nlog_weight = %s\nlog_like = %s' % info)
         return None
 

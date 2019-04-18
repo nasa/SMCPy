@@ -12,9 +12,9 @@ def particle_list():
 
 @pytest.fixture
 def mixed_particle_list():
-    particle_1 = Particle({'a': 1, 'b': 2}, 0.2, -0.2)
-    particle_2 = Particle({'a': 2, 'b': 3}, 0.1, -0.1)
-    return 3 * [particle_1] + 2 * [particle_2]
+    particle_1 = Particle({'a': 1, 'b': 2}, -0.2, -0.2)
+    particle_2 = Particle({'a': 2, 'b': 4}, -0.2, -0.2)
+    return 3 * [particle_1] + 3 * [particle_2]
 
 
 @pytest.fixture
@@ -61,13 +61,18 @@ def test_get_mean(filled_step):
     assert filled_step.get_mean()['a'] == 1.0
 
 
-def test_get_weights(filled_step):
-    assert np.array_equal(filled_step.get_weights(), [0.2] * 5)
+def test_get_log_weights(filled_step):
+    assert np.array_equal(filled_step.get_log_weights(), [0.2] * 5)
 
 
-def test_calcuate_covariance(filled_step):
-    assert np.array_equal(filled_step.calculate_covariance(),
-                          np.array([[0, 0], [0, 0]]))
+def test_calcuate_covariance_not_positive_definite(mixed_step):
+    print mixed_step.calculate_covariance()
+    assert np.array_equal(mixed_step.calculate_covariance(),
+                          np.eye(2))
+
+
+def test_calculate_covariance(fixed_step):
+    pass
 
 
 def test_compute_ess(filled_step):
@@ -91,8 +96,8 @@ def test_resample(mixed_step):
 
 def test_resample_uniform(mixed_step):
     mixed_step.resample()
-    weights = mixed_step.get_weights()
-    np.testing.assert_almost_equal(max(weights) - min(weights), 0)
+    log_weights = mixed_step.get_log_weights()
+    np.testing.assert_almost_equal(max(log_weights) - min(log_weights), 0)
 
 
 def test_print_particle_info(filled_step, capfd):

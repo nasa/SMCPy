@@ -25,14 +25,17 @@ def filled_step(step_tester, particle_list):
 
 @pytest.fixture
 def part_updater(filled_step):
-    return ParticleUpdater(filled_step, mpi_comm=SingleRankComm())
+    return ParticleUpdater(filled_step, None, mpi_comm=SingleRankComm())
 
 
-def test_update_weights(part_updater):
+def test_update_log_weights(part_updater):
     temperature_step = 0.1
-    exp_w = np.exp(np.log(0.2) - 0.2 * temperature_step)
-    part_updater.update_weights(temperature_step)
-    assert all([exp_w == p.weight for p in part_updater.step.get_particles()])
+    exp_w = np.exp(0.2 - 0.2 * temperature_step)
+    part_updater.update_log_weights(temperature_step)
+    assert all([exp_w == p.log_weight for p in part_updater.step.get_particles()])
 
-# def test_resample_if_needed(part_updater):
+
+def test_resample_if_needed(part_updater):
+    print part_updater.step.compute_ess()
+    assert False
 #
