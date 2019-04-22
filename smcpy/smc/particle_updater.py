@@ -21,7 +21,6 @@ class ParticleUpdater():
 
     def _update_log_weights(self, temperature_step):
         for p in self.step.get_particles():
-            print p.log_weight, p.log_like, temperature_step
             temp_weight = p.log_weight
             p.log_weight = temp_weight + p.log_like * temperature_step
         return None
