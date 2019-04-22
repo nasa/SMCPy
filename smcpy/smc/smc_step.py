@@ -32,7 +32,7 @@ class SMCStep(Checks):
 
     def set_particles(self, particle_list):
         '''
-        Fill a list of particles in the step.
+        Fill a list of particles in the step with ID.
 
         Paramters
         ---------
