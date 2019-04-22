@@ -9,7 +9,8 @@ from smcpy.utils.single_rank_comm import SingleRankComm
 @pytest.fixture
 def particle_list():
     particle = Particle({'a': 1, 'b': 2}, 0.2, -0.2)
-    return 5 * [particle]
+    particle_list = [particle.copy() for i in range(5)]
+    return particle_list
 
 
 @pytest.fixture
@@ -36,12 +37,9 @@ def part_updater_high_ess_threshold(filled_step):
 def test_update_log_weights(part_updater):
     temperature_step = 0.1
     exp_w = 0.2 - 0.2 * temperature_step
-    print part_updater.step.get_log_weights()
-    print part_updater.step.get_log_likes()
     part_updater._update_log_weights(temperature_step)
-    print exp_w
-    print part_updater.step.get_log_weights()
-    assert all([exp_w == p.log_weight for p in part_updater.step.get_particles()])
+    assert all([exp_w == p.log_weight for p in
+                part_updater.step.get_particles()])
 
 
 def test_resample_if_needed_resample(part_updater):
