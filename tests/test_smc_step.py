@@ -19,9 +19,10 @@ def mixed_particle_list():
 
 @pytest.fixture
 def linear_particle_list():
-    a = np.arange(0, 11)
-    b = [2 * val + np.random.normal(0, 1) for val in a]
-    particle_list = [Particle({'a': a[i], 'b': b[i]}, 0.2, -0.2) for i in a]
+    a = np.arange(0, 10)
+    b = [2 * val for val in a]
+    w = 0.1
+    particle_list = [Particle({'a': a[i], 'b': b[i]}, w, -0.2) for i in a]
     return particle_list
 
 
