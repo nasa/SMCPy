@@ -30,14 +30,9 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-import os
 from tqdm import tqdm
-
-
-from copy import copy
-
 import numpy as np
-
+import os
 from mpi4py import MPI
 from ..mcmc.mcmc_sampler import MCMCSampler
 from ..smc.smc_step import SMCStep

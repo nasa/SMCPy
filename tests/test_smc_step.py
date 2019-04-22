@@ -18,6 +18,14 @@ def mixed_particle_list():
 
 
 @pytest.fixture
+def linear_particle_list():
+    a = np.arange(0, 11)
+    b = [2 * val + np.random.normal(0, 1) for val in a]
+    particle_list = [Particle({'a': a[i], 'b': b[i]}, 0.2, -0.2) for i in a]
+    return particle_list
+
+
+@pytest.fixture
 def step_tester():
     return SMCStep()
 
@@ -31,6 +39,12 @@ def filled_step(step_tester, particle_list):
 @pytest.fixture
 def mixed_step(step_tester, mixed_particle_list):
     step_tester.set_particles(mixed_particle_list)
+    return step_tester
+
+
+@pytest.fixture
+def linear_step(step_tester, linear_particle_list):
+    step_tester.set_particles(linear_particle_list)
     return step_tester
 
 
@@ -50,7 +64,8 @@ def test_private_variable_creation(step_tester, particle_list):
 
 
 def test_get_likes(filled_step):
-    assert np.array_equal(filled_step.get_likes(), [pytest.approx(0.818730753078)] * 5)
+    assert np.array_equal(filled_step.get_likes(),
+                          [pytest.approx(0.818730753078)] * 5)
 
 
 def test_get_log_likes(filled_step):
@@ -66,13 +81,16 @@ def test_get_log_weights(filled_step):
 
 
 def test_calcuate_covariance_not_positive_definite(mixed_step):
-    print mixed_step.calculate_covariance()
     assert np.array_equal(mixed_step.calculate_covariance(),
                           np.eye(2))
 
 
-def test_calculate_covariance(fixed_step):
-    pass
+def test_calculate_covariance(linear_step):
+    a = linear_step.get_params('a')
+    b = linear_step.get_params('b')
+    print linear_step.calculate_covariance()
+    print np.cov(a, b)
+    assert False
 
 
 def test_compute_ess(filled_step):
