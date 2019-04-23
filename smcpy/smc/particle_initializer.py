@@ -1,3 +1,35 @@
+'''
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS."
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+'''
+
 from copy import copy
 from pymc import Normal
 from ..particles.particle import Particle
@@ -7,6 +39,9 @@ import warnings
 
 
 class ParticleInitializer():
+    '''
+    Class to initialize particles prior to Sequential Monte Carlo sampling.
+    '''
 
     def __init__(self, mcmc, temp_schedule, mpi_comm=SingleRankComm()):
         self._mcmc = mcmc
@@ -17,6 +52,15 @@ class ParticleInitializer():
         self._rank = mpi_comm.Get_rank()
 
     def initialize_particles(self, measurement_std_dev, num_particles):
+        '''
+        Initializes first set of particles based on the prior and proposal
+        distributions.
+
+        :param measurement_std_dev: standard deviation of the measurement error
+        :type measurement_std_dev: float
+        :param num_particles: number of particles to use during sampling
+        :type num_particles: int
+        '''
         self.num_particles = num_particles
         m_std = measurement_std_dev
         self._mcmc.generate_pymc_model(fix_var=True, std_dev0=m_std)
@@ -33,6 +77,23 @@ class ParticleInitializer():
         return particles
 
     def set_proposal_distribution(self, proposal_center, proposal_scales=None):
+        '''
+        Given the proposal center and (optionally) the proposal scales, sets
+        the proposal distribution for the initial batch of particles
+
+        :param proposal_center: initial parameter dictionary, which is used to
+            define the initial proposal distribution when generating particles;
+            default is None, and initial proposal distribution = prior.
+        :type proposal_center: dict
+        :param proposal_scales: defines the scale of the initial proposal
+            distribution, which is centered at proposal_center, the initial
+            parameters; i.e. prop ~ MultivarN(q1, (I*proposal_center*scales)^2).
+            Proposal scales should be passed as a dictionary with keys and
+            values corresponding to parameter names and their associated scales,
+            respectively. The default is None, which sets initial proposal
+            distribution = prior.
+        :type proposal_scales: dict
+        '''
         self._check_proposal_dist_inputs(proposal_center, proposal_scales)
         if proposal_center is not None and proposal_scales is None:
             msg = 'No scales given; setting scales to identity matrix.'

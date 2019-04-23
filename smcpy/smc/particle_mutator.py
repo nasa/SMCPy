@@ -57,7 +57,7 @@ class ParticleMutator():
         Predicts next distribution along the temperature schedule path using
         the MCMC kernel.
         :param covariance: covariance of the parameters between particles,
-        computed with their respective weights.
+            computed with their respective weights.
         :type covariance: numpy Nd array
         :param measurement_std_dev: standard deviation of the measurement error
         :type measurement_std_dev: float

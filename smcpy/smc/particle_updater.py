@@ -52,7 +52,7 @@ class ParticleUpdater():
         self._size = self._comm.Get_size()
         self._rank = self._comm.Get_rank()
 
-    #@_mpi_decorator
+    # @_mpi_decorator
     def update_log_weights(self, temperature_step):
         '''
         Incrementally updates log weights depending on the likelihood and
@@ -66,7 +66,7 @@ class ParticleUpdater():
             p.log_weight = temp_weight + p.log_like * temperature_step
         return self.step
 
-    #@_mpi_decorator
+    # @_mpi_decorator
     def resample_if_needed(self):
         '''
         Checks if ess below threshold; if yes, resample with replacement.
