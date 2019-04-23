@@ -227,7 +227,7 @@ class SMCStep(Checks):
         return None
 
     def plot_marginal(self, key, save=False, show=True,
-                      prefix='marginal_'):
+                      prefix='marginal_'):  # pragma no cover
         '''
         Plots a single marginal approximation for param given by <key>.
         '''
