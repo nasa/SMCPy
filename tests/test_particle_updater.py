@@ -37,11 +37,11 @@ def part_updater_high_ess_threshold(filled_step):
 def test_update_log_weights(part_updater):
     temperature_step = 0.1
     exp_w = 0.2 - 0.2 * temperature_step
-    part_updater._update_log_weights(temperature_step)
+    part_updater.update_log_weights(temperature_step)
     assert all([exp_w == p.log_weight for p in
                 part_updater.step.get_particles()])
 
 
 def test_resample_if_needed_resample(part_updater):
-    part_updater._resample_if_needed()
+    part_updater.resample_if_needed()
     assert part_updater._resample_status == "No resampling"
