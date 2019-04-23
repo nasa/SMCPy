@@ -417,7 +417,7 @@ AGREEMENT.
 
 \begin{fulllineitems}
 \phantomsection\label{\detokenize{source_code:smcpy.smc.smc_sampler.SMCSampler}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.smc.smc\_sampler.}}\sphinxbfcode{\sphinxupquote{SMCSampler}}}{\emph{data}, \emph{model}, \emph{param\_priors}}{}
-Class for performing parallel Sequential Monte Carlo sampling
+Class for performing parallel Sequential Monte Carlo sampling.
 \index{load\_step\_list() (smcpy.smc.smc\_sampler.SMCSampler method)@\spxentry{load\_step\_list()}\spxextra{smcpy.smc.smc\_sampler.SMCSampler method}}
 
 \begin{fulllineitems}
@@ -429,6 +429,10 @@ class.
 \sphinxstyleliteralstrong{\sphinxupquote{hdf5\_to\_load}} (\sphinxstyleliteralemphasis{\sphinxupquote{string}}) \textendash{} file path of a step\_list saved using the
 self.save\_step\_list() methods.
 
+\item[{Returns}] \leavevmode
+A list of SMCStep class instances that contains all particles
+at each time step.
+
 \end{description}\end{quote}
 
 \end{fulllineitems}
@@ -436,7 +440,9 @@ self.save\_step\_list() methods.
 \index{sample() (smcpy.smc.smc\_sampler.SMCSampler method)@\spxentry{sample()}\spxextra{smcpy.smc.smc\_sampler.SMCSampler method}}
 
 \begin{fulllineitems}
-\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_sampler.SMCSampler.sample}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{sample}}}{\emph{num\_particles}, \emph{num\_time\_steps}, \emph{num\_mcmc\_steps}, \emph{measurement\_std\_dev}, \emph{ess\_threshold=None}, \emph{proposal\_center=None}, \emph{proposal\_scales=None}, \emph{restart\_time\_step=0}, \emph{hdf5\_to\_load=None}, \emph{autosave\_file=None}}{}~\begin{quote}\begin{description}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_sampler.SMCSampler.sample}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{sample}}}{\emph{num\_particles}, \emph{num\_time\_steps}, \emph{num\_mcmc\_steps}, \emph{measurement\_std\_dev}, \emph{ess\_threshold=None}, \emph{proposal\_center=None}, \emph{proposal\_scales=None}, \emph{restart\_time\_step=0}, \emph{hdf5\_to\_load=None}, \emph{autosave\_file=None}}{}
+Driver method that performs Sequential Monte Carlo sampling.
+\begin{quote}\begin{description}
 \item[{Parameters}] \leavevmode\begin{itemize}
 \item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{num\_particles}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} number of particles to use during sampling
@@ -486,10 +492,9 @@ next step (t=restart\_time\_step+1).
 
 \item[{Returns}] \leavevmode
 A list of SMCStep class instances that contains all particles
+and their past generations at every time step.
 
 \end{description}\end{quote}
-
-and their past generations at every time step.
 
 \end{fulllineitems}
 
@@ -841,7 +846,7 @@ AGREEMENT.
 \begin{fulllineitems}
 \phantomsection\label{\detokenize{source_code:smcpy.smc.particle_updater.ParticleUpdater}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.smc.particle\_updater.}}\sphinxbfcode{\sphinxupquote{ParticleUpdater}}}{\emph{step}, \emph{ess\_threshold}, \emph{mpi\_comm=\textless{}smcpy.utils.single\_rank\_comm.SingleRankComm instance\textgreater{}}}{}
 Class for updating particles at each step of Sequential Monte Carlo sampling
-with methods for updating log weights and resampling if ess under threshold
+with methods for updating log weights and resampling if ess under threshold.
 
 \end{fulllineitems}
 
@@ -888,13 +893,12 @@ determine the distribution along the temperature schedule path.
 \phantomsection\label{\detokenize{source_code:smcpy.smc.particle_mutator.ParticleMutator.mutate_new_particles}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{mutate\_new\_particles}}}{\emph{covariance}, \emph{measurement\_std\_dev}, \emph{temperature\_step}}{}
 Predicts next distribution along the temperature schedule path using
 the MCMC kernel.
-:param covariance: covariance of the parameters between particles,
-\begin{quote}
-
-computed with their respective weights.
-\end{quote}
 \begin{quote}\begin{description}
 \item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{covariance}} (\sphinxstyleliteralemphasis{\sphinxupquote{numpy Nd array}}) \textendash{} covariance of the parameters between particles,
+computed with their respective weights.
+
 \item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{measurement\_std\_dev}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}) \textendash{} standard deviation of the measurement error
 
@@ -902,6 +906,10 @@ computed with their respective weights.
 \sphinxstyleliteralstrong{\sphinxupquote{temperature\_step}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}) \textendash{} difference in temp schedule between steps
 
 \end{itemize}
+
+\item[{Returns}] \leavevmode
+An SMCStep class instance that contains all particles after
+mutation.
 
 \end{description}\end{quote}
 

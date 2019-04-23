@@ -56,6 +56,7 @@ class ParticleMutator():
         '''
         Predicts next distribution along the temperature schedule path using
         the MCMC kernel.
+
         :param covariance: covariance of the parameters between particles,
             computed with their respective weights.
         :type covariance: numpy Nd array
@@ -63,7 +64,11 @@ class ParticleMutator():
         :type measurement_std_dev: float
         :param temperature_step: difference in temp schedule between steps
         :type temperature_step: float
+
+        :Returns: An SMCStep class instance that contains all particles after
+            mutation.
         '''
+
         particles = self._partition_and_scatter_particles()
         mcmc = copy(self._mcmc)
         step_method = 'smc_metropolis'

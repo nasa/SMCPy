@@ -45,7 +45,7 @@ import numpy as np
 
 class SMCSampler(Properties):
     '''
-    Class for performing parallel Sequential Monte Carlo sampling
+    Class for performing parallel Sequential Monte Carlo sampling.
     '''
 
     def __init__(self, data, model, param_priors):
@@ -72,6 +72,8 @@ class SMCSampler(Properties):
                proposal_scales=None, restart_time_step=0, hdf5_to_load=None,
                autosave_file=None):
         '''
+        Driver method that performs Sequential Monte Carlo sampling.
+
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
         :param num_time_steps: number of time steps in temperature schedule that
@@ -107,7 +109,7 @@ class SMCSampler(Properties):
 
 
         :Returns: A list of SMCStep class instances that contains all particles
-        and their past generations at every time step.
+            and their past generations at every time step.
         '''
 
         self.autosaver = autosave_file
@@ -200,7 +202,11 @@ class SMCSampler(Properties):
         :param hdf5_to_load: file path of a step_list saved using the
             self.save_step_list() methods.
         :type hdf5_to_load: string
+
+        :Returns: A list of SMCStep class instances that contains all particles
+            at each time step.
         '''
+
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='r')
             step_list = hdf5.read_step_list()
@@ -217,6 +223,7 @@ class SMCSampler(Properties):
         :param hdf5_to_load: file path at which to save step list
         :type hdf5_to_load: string
         '''
+
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='w')
             hdf5.write_step_list(self.step_list)
