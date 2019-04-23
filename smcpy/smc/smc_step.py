@@ -97,13 +97,13 @@ class SMCStep(Checks):
         '''
         Returns the mean of each parameter within the step
         '''
-        self.normalize_step_weights()
+        normalized_weights = self.normalize_step_weights()
         param_names = self.particles[0].params.keys()
         mean = {}
         for pn in param_names:
             mean[pn] = []
-            for p in self.particles:
-                mean[pn].append(p.log_weight * p.params[pn])
+            for i, p in enumerate(self.particles):
+                mean[pn].append(normalized_weights[i] * p.params[pn])
             mean[pn] = np.sum(mean[pn])
         return mean
 
@@ -118,15 +118,15 @@ class SMCStep(Checks):
         Estimates the covariance matrix for the step.
         '''
         particle_list = self.particles
-
+        normalized_weights = self.normalize_step_weights()
         means = np.array(self.get_mean().values())
 
         cov_list = []
-        for p in particle_list:
+        for i, p in enumerate(particle_list):
             param_vector = p.params.values()
             diff = (param_vector - means).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
-            cov_list.append(p.log_weight * R)
+            cov_list.append(normalized_weights[i] * R)
         cov_matrix = np.sum(cov_list, axis=0)
         cov_matrix = cov_matrix * (float(len(cov_list)) / (len(cov_list) - 1))
 
@@ -154,8 +154,6 @@ class SMCStep(Checks):
         log_weights = np.array(self.get_log_weights())
         shifted_weights = np.exp(log_weights - max(log_weights))
         normalized_weights = shifted_weights / sum(shifted_weights)
-        for index, p in enumerate(self.particles):
-            p.log_weight = normalized_weights[index]
         return normalized_weights
 
     def compute_ess(self):
