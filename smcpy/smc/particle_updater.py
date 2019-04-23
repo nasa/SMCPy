@@ -42,7 +42,7 @@ def _mpi_decorator(func):
 class ParticleUpdater():
     '''
     Class for updating particles at each step of Sequential Monte Carlo sampling
-    by updating log weights and resampling if needed
+    with methods for updating log weights and resampling if ess under threshold
     '''
 
     def __init__(self, step, ess_threshold, mpi_comm=SingleRankComm()):
@@ -54,6 +54,13 @@ class ParticleUpdater():
 
     @_mpi_decorator
     def update_log_weights(self, temperature_step):
+        '''
+        Incrementally updates log weights depending on the likelihood and
+        temperature step for each particle in a step
+
+        :param temperature_step: change in temperature schedule between steps
+        :type temperature_step: float
+        '''
         for p in self.step.get_particles():
             temp_weight = p.log_weight
             p.log_weight = temp_weight + p.log_like * temperature_step
