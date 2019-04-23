@@ -101,7 +101,6 @@ class SMCStep(Checks):
             diff = (param_vector - means).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
             cov_list.append(p.log_weight * R)
-        print len(cov_list)
         cov_matrix = np.sum(cov_list, axis=0)
         cov_matrix = cov_matrix * (float(len(cov_list)) / (len(cov_list) - 1))
 

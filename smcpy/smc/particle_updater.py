@@ -32,6 +32,13 @@ AGREEMENT.
 from ..utils.single_rank_comm import SingleRankComm
 
 
+def _mpi_decorator(func):
+    def wrapper(self, *args, **kwargs):
+        if self._rank == 0:
+            func(self, *args, **kwargs)
+    return wrapper
+
+
 class ParticleUpdater():
     '''
     Class for updating particles at each step of Sequential Monte Carlo sampling
@@ -45,12 +52,6 @@ class ParticleUpdater():
         self._size = self._comm.Get_size()
         self._rank = self._comm.Get_rank()
 
-    def _mpi_decorator(func):
-        def wrapper(self, *args, **kwargs):
-            if self._rank == 0:
-                func(self, *args, **kwargs)
-        return wrapper
-
     @_mpi_decorator
     def update_log_weights(self, temperature_step):
         for p in self.step.get_particles():
@@ -59,7 +60,7 @@ class ParticleUpdater():
         return self.step
 
     @_mpi_decorator
-    def resample_if_needed(self):  # issue here
+    def resample_if_needed(self):
         '''
         Checks if ess below threshold; if yes, resample with replacement.
         '''
