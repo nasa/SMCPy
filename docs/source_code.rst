@@ -26,8 +26,6 @@ Particle Module Documentation
 .. automodule:: smcpy.particles
 .. autoclass:: Particle
     :members:
-.. autoclass:: ParticleChain
-    :members:
 
 MCMC Module Documentation
 --------------------------
@@ -36,4 +34,10 @@ MCMC Module Documentation
 .. autoclass:: MCMCSampler
     :members:
 
+HDF5 Module Documentation
+--------------------------
+
+.. automodule:: smcpy.hdf5
+.. autoclass:: HDF5Storage
+    :members:
 
