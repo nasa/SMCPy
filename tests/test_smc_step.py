@@ -3,6 +3,8 @@ import numpy as np
 from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 
+arr_alm_eq = np.testing.assert_array_almost_equal
+
 
 @pytest.fixture
 def particle_list():
@@ -19,8 +21,8 @@ def mixed_particle_list():
 
 @pytest.fixture
 def linear_particle_list():
-    a = np.arange(0, 10)
-    b = [2 * val for val in a]
+    a = np.arange(0, 20)
+    b = [2 * val + np.random.normal(0, 1) for val in a]
     w = 0.1
     particle_list = [Particle({'a': a[i], 'b': b[i]}, w, -0.2) for i in a]
     return particle_list
@@ -90,7 +92,7 @@ def test_calculate_covariance(linear_step):
     a = linear_step.get_params('a')
     b = linear_step.get_params('b')
     exp_cov = np.cov(a, b)
-    np.testing.assert_array_equal(linear_step.calculate_covariance(), exp_cov)
+    arr_alm_eq(linear_step.calculate_covariance(), exp_cov)
 
 
 def test_compute_ess(filled_step):
