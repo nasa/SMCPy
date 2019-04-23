@@ -30,19 +30,17 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-from tqdm import tqdm
-import numpy as np
-import os
-from mpi4py import MPI
 from ..mcmc.mcmc_sampler import MCMCSampler
 from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
-from ..smc.smc_step_list import SMCStepList
 from ..utils.properties import Properties
 from ..utils.progress_bar import set_bar
 from particle_initializer import ParticleInitializer
 from particle_updater import ParticleUpdater
 from particle_mutator import ParticleMutator
+from tqdm import tqdm
+from mpi4py import MPI
+import numpy as np
 
 
 class SMCSampler(Properties):
