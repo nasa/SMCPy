@@ -42,6 +42,11 @@ def test_update_log_weights(part_updater):
                 part_updater.step.get_particles()])
 
 
-def test_resample_if_needed_resample(part_updater):
+def test_resample_if_needed_no(part_updater):
     part_updater.resample_if_needed()
     assert part_updater._resample_status == "No resampling"
+
+
+def test_resample_if_needed_yes(part_updater_high_ess_threshold):
+    part_updater_high_ess_threshold.resample_if_needed()
+    assert part_updater_high_ess_threshold._resample_status == "Resampling..."

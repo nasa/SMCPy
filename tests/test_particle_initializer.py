@@ -64,7 +64,6 @@ def test_initialize_particles_with_proposals(part_initer):
     proposal_center = {'a': 1, 'b': 2}
     proposal_scales = {'a': 0.5, 'b': 1}
     part_initer.set_proposal_distribution(proposal_center, proposal_scales)
-    # with pytest.raises(ZeroProbability):
-    particles = part_initer.initialize_particles(num_particles=5,
-                                                 measurement_std_dev=1.0)
-    assert False
+    with pytest.raises(Exception):
+        particles = part_initer.initialize_particles(num_particles=5,
+                                                     measurement_std_dev=1.0)

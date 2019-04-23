@@ -8,7 +8,7 @@ Documentation for the primary SMCPy classes.
 SMC Module Documentation
 ------------------------
 
-.. automodule:: smcpy
+.. automodule:: smcpy.smc
 .. autoclass:: SMCSampler
     :members:
 
