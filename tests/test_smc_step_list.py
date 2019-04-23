@@ -1,5 +1,6 @@
 from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
+from ..hdf5.hdf5_storage import HDF5Storage
 import pytest
 import numpy as np
 
@@ -19,3 +20,8 @@ def step_tester():
 def filled_step(step_tester, particle_list):
     step_tester.set_particles(particle_list)
     return step_tester
+
+
+@pytest.fixture
+def h5file():
+    return HDF5Storage('temp.hdf5', 'w')

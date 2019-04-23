@@ -142,7 +142,8 @@ class SMCSampler(Properties):
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
-            self.step = updater.update_particles(temperature_step)
+            self.step = updater.update_log_weights(temperature_step)
+            self.step = updater.resample_if_needed()
             covariance = self._compute_step_covariance()
             mutator = ParticleMutator(self.step, self._mcmc, num_mcmc_steps,
                                       self._comm)

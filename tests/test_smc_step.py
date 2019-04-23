@@ -89,9 +89,8 @@ def test_calcuate_covariance_not_positive_definite(mixed_step):
 def test_calculate_covariance(linear_step):
     a = linear_step.get_params('a')
     b = linear_step.get_params('b')
-    print linear_step.calculate_covariance()
-    print np.cov(a, b)
-    assert False
+    exp_cov = np.cov(a, b)
+    np.testing.assert_array_equal(linear_step.calculate_covariance(), exp_cov)
 
 
 def test_compute_ess(filled_step):
