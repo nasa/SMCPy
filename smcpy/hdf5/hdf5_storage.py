@@ -96,7 +96,7 @@ class HDF5Storage(object):
         step_grp = self._step_parent_grp[step_name]
         particle_grp = step_grp.create_group(particle_name)
         self._write_particle_params(particle.params, particle_grp)
-        self._write_particle_weight(particle.weight, particle_grp)
+        self._write_particle_log_weight(particle.log_weight, particle_grp)
         self._write_particle_log_like(particle.log_like, particle_grp)
         return None
 
@@ -111,11 +111,11 @@ class HDF5Storage(object):
         :type particle_index: integer
         '''
         particle_grp = self._get_particle_group(step_index, particle_index)
-        weight = particle_grp['weight'][()]
+        log_weight = particle_grp['log_weight'][()]
         log_like = particle_grp['log_like'][()]
         params_grp = particle_grp['parameters']
         params = {key: params_grp[key][()] for key in params_grp.keys()}
-        particle = Particle(params, weight, log_like)
+        particle = Particle(params, log_weight, log_like)
         return particle
 
     def write_step(self, step, step_index):
@@ -182,8 +182,8 @@ class HDF5Storage(object):
             parameters_grp.create_dataset(key, data=value, dtype=float)
         return None
 
-    def _write_particle_weight(self, weight, particle_grp):
-        particle_grp.create_dataset('weight', data=weight)
+    def _write_particle_log_weight(self, log_weight, particle_grp):
+        particle_grp.create_dataset('log_weight', data=log_weight)
         return None
 
     def _write_particle_log_like(self, log_like, particle_grp):

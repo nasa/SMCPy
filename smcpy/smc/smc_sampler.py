@@ -30,15 +30,6 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-import os
-from tqdm import tqdm
-
-
-from copy import copy
-
-import numpy as np
-
-from mpi4py import MPI
 from ..mcmc.mcmc_sampler import MCMCSampler
 from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
@@ -47,11 +38,14 @@ from ..utils.progress_bar import set_bar
 from particle_initializer import ParticleInitializer
 from particle_updater import ParticleUpdater
 from particle_mutator import ParticleMutator
+from tqdm import tqdm
+from mpi4py import MPI
+import numpy as np
 
 
 class SMCSampler(Properties):
     '''
-    Class for performing parallel Sequential Monte Carlo sampling
+    Class for performing parallel Sequential Monte Carlo sampling.
     '''
 
     def __init__(self, data, model, param_priors):
@@ -78,6 +72,8 @@ class SMCSampler(Properties):
                proposal_scales=None, restart_time_step=0, hdf5_to_load=None,
                autosave_file=None):
         '''
+        Driver method that performs Sequential Monte Carlo sampling.
+
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
         :param num_time_steps: number of time steps in temperature schedule that
@@ -113,10 +109,9 @@ class SMCSampler(Properties):
 
 
         :Returns: A list of SMCStep class instances that contains all particles
-        and their past generations at every time step.
+            and their past generations at every time step.
         '''
 
-        self.ess_threshold = ess_threshold
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)
@@ -147,7 +142,8 @@ class SMCSampler(Properties):
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
-            self.step = updater.update_particles(temperature_step)
+            self.step = updater.update_log_weights(temperature_step)
+            self.step = updater.resample_if_needed()
             covariance = self._compute_step_covariance()
             mutator = ParticleMutator(self.step, self._mcmc, num_mcmc_steps,
                                       self._comm)
@@ -167,7 +163,7 @@ class SMCSampler(Properties):
         if self._rank == 0:
             step = SMCStep()
             step.set_particles(np.concatenate(particles))
-            step.normalize_step_weights()
+            step.normalize_step_log_weights()
         else:
             step = None
         return step
@@ -179,10 +175,6 @@ class SMCSampler(Properties):
             step_list = trimmed_steps
         return step_list
 
-    @staticmethod
-    def _file_exists(hdf5_file):
-        return os.path.exists(hdf5_file)
-
     def _compute_step_covariance(self):
         if self._rank == 0:
             covariance = self.step.calculate_covariance()
@@ -190,42 +182,6 @@ class SMCSampler(Properties):
             covariance = None
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
-
-    def mutate_new_particles(self, particles, covariance, measurement_std_dev,
-                             temperature_step):
-        '''
-        Predicts next distribution along the temperature schedule path using
-        the MCMC kernel.
-        '''
-        mcmc = copy(self._mcmc)
-        step_method = 'smc_metropolis'
-        new_particles = []
-        acceptance_count = 0
-        for particle in particles:
-            mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
-                                     q0=particle.params)
-            mcmc.sample(self.num_mcmc_steps, burnin=0, step_method=step_method,
-                        cov=covariance, verbose=-1, phi=temperature_step)
-            stochastics = mcmc.MCMC.db.getstate()['stochastics']
-            params = {key: stochastics[key] for key in particle.params.keys()}
-            if particle.params != params:
-                acceptance_count += 1
-            particle.params = params
-            particle.log_like = mcmc.MCMC.logp
-            new_particles.append(particle)
-        new_particles = self._comm.gather(new_particles, root=0)
-        self._acceptance_ratio = float(acceptance_count) / len(particles)
-        # new list of accepted particles
-
-        if self._rank == 0:
-            return list(np.concatenate(new_particles))
-            # return the other list
-        return new_particles
-
-    def _update_step_with_new_particles(self, particles):
-        if self._rank == 0:
-            self.step.set_particles(particles)
-        return None
 
     def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
@@ -238,19 +194,6 @@ class SMCSampler(Properties):
             self.autosaver.close()
         return None
 
-    def save_step_list(self, h5_file):
-        '''
-        Saves self.step to an hdf5 file using the HDF5Storage class.
-
-        :param hdf5_to_load: file path at which to save step list
-        :type hdf5_to_load: string
-        '''
-        if self._rank == 0:
-            hdf5 = HDF5Storage(h5_file, mode='w')
-            hdf5.write_step_list(self.step_list)
-            hdf5.close()
-        return None
-
     def load_step_list(self, h5_file):
         '''
         Loads and returns a step list stored using the HDF5Storage
@@ -259,7 +202,11 @@ class SMCSampler(Properties):
         :param hdf5_to_load: file path of a step_list saved using the
             self.save_step_list() methods.
         :type hdf5_to_load: string
+
+        :Returns: A list of SMCStep class instances that contains all particles
+            at each time step.
         '''
+
         if self._rank == 0:
             hdf5 = HDF5Storage(h5_file, mode='r')
             step_list = hdf5.read_step_list()
@@ -268,3 +215,17 @@ class SMCSampler(Properties):
         else:
             step_list = None
         return step_list
+
+    def save_step_list(self, h5_file):
+        '''
+        Saves self.step to an hdf5 file using the HDF5Storage class.
+
+        :param hdf5_to_load: file path at which to save step list
+        :type hdf5_to_load: string
+        '''
+
+        if self._rank == 0:
+            hdf5 = HDF5Storage(h5_file, mode='w')
+            hdf5.write_step_list(self.step_list)
+            hdf5.close()
+        return None

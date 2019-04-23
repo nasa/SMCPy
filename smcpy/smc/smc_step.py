@@ -1,3 +1,35 @@
+'''
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT "AS IS."
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+'''
+
 import numpy as np
 import copy
 import warnings
@@ -9,10 +41,8 @@ class SMCStep(Checks):
     """ A single step of the sequential monte carlo (SMC) method that contains
     a list of Particle instances
 
-    Parameters
-    ----------
-    particles : list object
-        List of Particle instances
+    :param particles: list of particle instances
+    :type particles: list
     """
 
     def __init__(self):
@@ -23,31 +53,21 @@ class SMCStep(Checks):
         '''
         Add a single particle to the step.
 
-        Parameters
-        ----------
-        particle: Particle class object
-            Single instance of an SMC particle
+        :param particle: single instance of an SMC particle
+        :type particle: Particle class object
         '''
         self.particles.append(self._check_particle(particle))
 
-    def set_particles(self, particle_list):
+    def set_particles(self, particles):
         '''
-        Fill a list of particles in the step.
+        Fill a list of particles in the step with ID.
 
-        Paramters
-        ---------
-        particle_list: list
-            List of Particle class objects
+        :param particles: list of particle instances
+        :type particles: list
         '''
-        self.particles = self._check_step(particle_list)
+        self.particles = self._check_step(particles)
         self.id += 1
         return None
-
-    def copy_step(self):
-        '''
-        Returns a copy of particle chain's particle list.
-        '''
-        return copy.deepcopy(self.particles)
 
     def copy(self):
         '''
@@ -71,36 +91,38 @@ class SMCStep(Checks):
         '''
         Returns the mean of each parameter within the step
         '''
+        normalized_weights = self.normalize_step_weights()
         param_names = self.particles[0].params.keys()
         mean = {}
         for pn in param_names:
             mean[pn] = []
-            for p in self.particles:
-                mean[pn].append(p.weight * p.params[pn])
+            for i, p in enumerate(self.particles):
+                mean[pn].append(normalized_weights[i] * p.params[pn])
             mean[pn] = np.sum(mean[pn])
         return mean
 
-    def get_weights(self):
+    def get_log_weights(self):
         '''
-        Returns a list of the weights of each particle in the step
+        Returns a list of the log weights of each particle in the step
         '''
-        return [p.weight for p in self.particles]
+        return [p.log_weight for p in self.particles]
 
     def calculate_covariance(self):
         '''
         Estimates the covariance matrix for the step.
         '''
         particle_list = self.particles
-
+        normalized_weights = self.normalize_step_weights()
         means = np.array(self.get_mean().values())
 
         cov_list = []
-        for p in particle_list:
+        for i, p in enumerate(particle_list):
             param_vector = p.params.values()
             diff = (param_vector - means).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
-            cov_list.append(p.weight * R)
+            cov_list.append(normalized_weights[i] * R)
         cov_matrix = np.sum(cov_list, axis=0)
+        cov_matrix = cov_matrix * (float(len(cov_list)) / (len(cov_list) - 1))
 
         if not self._is_positive_definite(cov_matrix):
             msg = 'current step cov not pos def, setting to identity matrix'
@@ -109,50 +131,67 @@ class SMCStep(Checks):
 
         return cov_matrix
 
+    def normalize_step_log_weights(self):
+        '''
+        Normalizes log weights, and then transforms back into to log space for
+        all particles inside the step
+        '''
+        normalized_weights = self.normalize_step_weights()
+        for index, p in enumerate(self.particles):
+            p.log_weight = np.log(normalized_weights[index])
+        return None
+
     def normalize_step_weights(self):
         '''
-        Normalizes weights for all particles.
+        Normalizes log weights of all particles inside the step
         '''
-        weights = self.get_weights()
-        particles = self.particles
-        total_weight = np.sum(weights)
-        for p in particles:
-            p.weight = p.weight / total_weight
-        return None
+        log_weights = np.array(self.get_log_weights())
+        shifted_weights = np.exp(log_weights - max(log_weights))
+        normalized_weights = shifted_weights / sum(shifted_weights)
+        return normalized_weights
 
     def compute_ess(self):
         '''
-        Computes the effective sample size (ess) of the step
+        Computes the effective sample size (ess) of the step based on log weight
         '''
-        weights = self.get_weights()
-        if not np.isclose(np.sum(weights), 1):
-            self.normalize_step_weights()
-        return 1 / np.sum([w**2 for w in weights])
+        self.normalize_step_log_weights()
+        log_weights = self.get_log_weights()
+        return 1 / np.sum([np.exp(w)**2 for w in log_weights])
 
     def get_params(self, key):
+        '''
+        Retrieves parameter values in every particle of a specific parameter
+
+        :param key: parameter name
+        :type key: str
+        '''
         particles = self.particles
         return np.array([p.params[key] for p in particles])
 
     def get_param_dicts(self):
+        '''
+        Retrieves the entire parameter dictionary for every particle
+        '''
         particles = self.particles
         return [p.params for p in particles]
 
     def get_particles(self):
+        '''
+        Retrieves the list of particles within the step object
+        '''
         return self.particles
 
-    def resample(self):
+    def resample(self):  # issue here
         '''
         Resamples the step based on normalized weights. Assigns discrete
         probabilities to each particle (sum to 1), resample from this discrete distribution using the particle's copy() method.
         '''
         particles = self.particles
         num_particles = len(particles)
-        weights = self.get_weights()
+        weights = np.exp(self.get_log_weights())
         weights_cs = np.cumsum(weights)
-
         # intervals based on weights to use for discrete probability draw
         intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
-
         # generate random numbers, iterate to find intervals for resample
         R = np.random.uniform(0, 1, [num_particles, ])
         new_particles = []
@@ -164,7 +203,7 @@ class SMCStep(Checks):
                     # resample
                     new_particles.append(particles[i].copy())
                     # assign uniform weight
-                    new_particles[-1].weight = uniform_weight
+                    new_particles[-1].log_weight = uniform_weight
                     break
         self.particles = new_particles
         return None
@@ -182,7 +221,7 @@ class SMCStep(Checks):
         return None
 
     def plot_marginal(self, key, save=False, show=True,
-                      prefix='marginal_'):
+                      prefix='marginal_'):  # pragma no cover
         '''
         Plots a single marginal approximation for param given by <key>.
         '''
@@ -193,8 +232,8 @@ class SMCStep(Checks):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         for p in self.particles:
-            ax.plot([p.params[key], p.params[key]], [0.0, p.weight])
-            ax.plot(p.params[key], p.weight, 'o')
+            ax.plot([p.params[key], p.params[key]], [0.0, np.exp(p.log_weight)])
+            ax.plot(p.params[key], np.exp(p.log_weight), 'o')
         if save:
             plt.savefig(prefix + key + '.png')
         if show:
@@ -205,7 +244,7 @@ class SMCStep(Checks):
     def plot_pairwise_weights(self, param_names=None, labels=None,
                               save=False, show=True, param_lims=None,
                               label_size=None, tick_size=None, nbins=None,
-                              prefix='pairwise'):
+                              prefix='pairwise'):  # pragma no cover
         '''
         Plots pairwise distributions of all parameter combos. Color codes each
         by weight.
@@ -240,7 +279,7 @@ class SMCStep(Checks):
         tril = np.tril(np.arange((L - 1)**2).reshape([L - 1, L - 1]) + 1)
         iplts = [i for i in tril.flatten() if i > 0]
 
-        weights = self.get_weights()
+        log_weights = self.get_log_weights()
         means = self.get_mean()
         for i in zip(iplts, ikeys):
             iplt = i[0]     # subplot index
@@ -259,8 +298,8 @@ class SMCStep(Checks):
 
             def rnd_to_sig(x):
                 return round(x, -int(np.floor(np.log10(abs(x)))) + 1)
-            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=weights, vmin=0.0,
-                                               vmax=rnd_to_sig(max(weights)))
+            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=log_weights, vmin=0.0,
+                                               vmax=rnd_to_sig(max(log_weights)))
             ax[key1 + '+' + key2].axvline(means[key1], color='C1', linestyle='--')
             ax[key1 + '+' + key2].axhline(means[key2], color='C1', linestyle='--')
             ax[key1 + '+' + key2].set_xlabel(label_dict[key1])

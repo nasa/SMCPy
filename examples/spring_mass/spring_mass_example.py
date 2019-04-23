@@ -19,9 +19,12 @@ param_priors = {'K': ['Uniform', 0.0, 10.0],
 num_particles = 500
 num_time_steps = 20
 num_mcmc_steps = 1
+
+# Autosaver
 smc = SMCSampler(displacement_data, model, param_priors)
 step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
-                       noise_stddev, ess_threshold=num_particles * 0.5)
+                       noise_stddev, ess_threshold=num_particles * 0.5,
+                       autosave_file='autosaver.hdf5')
 
 # Calculate means
 means = [step.get_mean() for step in step_list]
