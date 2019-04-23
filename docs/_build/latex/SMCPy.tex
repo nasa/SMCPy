@@ -378,18 +378,1017 @@ As mentioned, the \sphinxcode{\sphinxupquote{SMCSampler}} class was designed wit
 
 
 \chapter{Source Code Documentation}
-\label{\detokenize{source_code:source-code-documentation}}\label{\detokenize{source_code:sourceode-section}}\label{\detokenize{source_code::doc}}
+\label{\detokenize{source_code:source-code-documentation}}\label{\detokenize{source_code:sourcecode-section}}\label{\detokenize{source_code::doc}}
 Documentation for the primary SMCPy classes.
 
 
 \section{SMC Module Documentation}
-\label{\detokenize{source_code:module-smcpy}}\label{\detokenize{source_code:smc-module-documentation}}\index{smcpy (module)@\spxentry{smcpy}\spxextra{module}}
+\label{\detokenize{source_code:module-smcpy.smc.smc_sampler}}\label{\detokenize{source_code:smc-module-documentation}}\index{smcpy.smc.smc\_sampler (module)@\spxentry{smcpy.smc.smc\_sampler}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{SMCSampler (class in smcpy.smc.smc\_sampler)@\spxentry{SMCSampler}\spxextra{class in smcpy.smc.smc\_sampler}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_sampler.SMCSampler}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.smc.smc\_sampler.}}\sphinxbfcode{\sphinxupquote{SMCSampler}}}{\emph{data}, \emph{model}, \emph{param\_priors}}{}
+Class for performing parallel Sequential Monte Carlo sampling
+\index{load\_step\_list() (smcpy.smc.smc\_sampler.SMCSampler method)@\spxentry{load\_step\_list()}\spxextra{smcpy.smc.smc\_sampler.SMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_sampler.SMCSampler.load_step_list}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{load\_step\_list}}}{\emph{h5\_file}}{}
+Loads and returns a step list stored using the HDF5Storage
+class.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{hdf5\_to\_load}} (\sphinxstyleliteralemphasis{\sphinxupquote{string}}) \textendash{} file path of a step\_list saved using the
+self.save\_step\_list() methods.
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{sample() (smcpy.smc.smc\_sampler.SMCSampler method)@\spxentry{sample()}\spxextra{smcpy.smc.smc\_sampler.SMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_sampler.SMCSampler.sample}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{sample}}}{\emph{num\_particles}, \emph{num\_time\_steps}, \emph{num\_mcmc\_steps}, \emph{measurement\_std\_dev}, \emph{ess\_threshold=None}, \emph{proposal\_center=None}, \emph{proposal\_scales=None}, \emph{restart\_time\_step=0}, \emph{hdf5\_to\_load=None}, \emph{autosave\_file=None}}{}~\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{num\_particles}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} number of particles to use during sampling
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{num\_time\_steps}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} number of time steps in temperature schedule that
+is used to transition between prior and posterior distributions.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{num\_mcmc\_steps}} \textendash{} number of mcmc steps to take during mutation
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{num\_mcmc\_steps}} \textendash{} int
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{measurement\_std\_dev}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}) \textendash{} standard deviation of the measurement error
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{ess\_threshold}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}\sphinxstyleliteralemphasis{\sphinxupquote{ or }}\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} threshold equivalent sample size; triggers
+resampling when ess \textgreater{} ess\_threshold
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{proposal\_center}} (\sphinxstyleliteralemphasis{\sphinxupquote{dict}}) \textendash{} initial parameter dictionary, which is used to
+define the initial proposal distribution when generating particles;
+default is None, and initial proposal distribution = prior.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{proposal\_scales}} (\sphinxstyleliteralemphasis{\sphinxupquote{dict}}) \textendash{} defines the scale of the initial proposal
+distribution, which is centered at proposal\_center, the initial
+parameters; i.e. prop \textasciitilde{} MultivarN(q1, (I*proposal\_center*scales)\textasciicircum{}2).
+Proposal scales should be passed as a dictionary with keys and
+values corresponding to parameter names and their associated scales,
+respectively. The default is None, which sets initial proposal
+distribution = prior.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{restart\_time\_step}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} time step at which to restart sampling;
+default is zero, meaning the sampling process starts at the prior
+distribution; note that restart\_time\_step \textless{} num\_time\_steps. The
+step at restart\_time is retained, and the sampling begins at the
+next step (t=restart\_time\_step+1).
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{hdf5\_to\_load}} (\sphinxstyleliteralemphasis{\sphinxupquote{string}}) \textendash{} file path of a step list
+
+\end{itemize}
+
+\item[{Returns}] \leavevmode
+A list of SMCStep class instances that contains all particles
+
+\end{description}\end{quote}
+
+and their past generations at every time step.
+
+\end{fulllineitems}
+
+\index{save\_step\_list() (smcpy.smc.smc\_sampler.SMCSampler method)@\spxentry{save\_step\_list()}\spxextra{smcpy.smc.smc\_sampler.SMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_sampler.SMCSampler.save_step_list}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{save\_step\_list}}}{\emph{h5\_file}}{}
+Saves self.step to an hdf5 file using the HDF5Storage class.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{hdf5\_to\_load}} (\sphinxstyleliteralemphasis{\sphinxupquote{string}}) \textendash{} file path at which to save step list
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+
+\end{fulllineitems}
+
+\phantomsection\label{\detokenize{source_code:module-smcpy.smc.smc_step}}\index{smcpy.smc.smc\_step (module)@\spxentry{smcpy.smc.smc\_step}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{SMCStep (class in smcpy.smc.smc\_step)@\spxentry{SMCStep}\spxextra{class in smcpy.smc.smc\_step}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep}}\pysigline{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.smc.smc\_step.}}\sphinxbfcode{\sphinxupquote{SMCStep}}}
+A single step of the sequential monte carlo (SMC) method that contains
+a list of Particle instances
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{particles}} (\sphinxstyleliteralemphasis{\sphinxupquote{list}}) \textendash{} list of particle instances
+
+\end{description}\end{quote}
+\index{add\_particle() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{add\_particle()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.add_particle}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{add\_particle}}}{\emph{particle}}{}
+Add a single particle to the step.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{particle}} (\sphinxstyleliteralemphasis{\sphinxupquote{Particle class object}}) \textendash{} single instance of an SMC particle
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{calculate\_covariance() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{calculate\_covariance()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.calculate_covariance}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{calculate\_covariance}}}{}{}
+Estimates the covariance matrix for the step.
+
+\end{fulllineitems}
+
+\index{compute\_ess() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{compute\_ess()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.compute_ess}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{compute\_ess}}}{}{}
+Computes the effective sample size (ess) of the step based on log weight
+
+\end{fulllineitems}
+
+\index{copy() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{copy()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.copy}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{copy}}}{}{}
+Returns a copy of the entire step class.
+
+\end{fulllineitems}
+
+\index{get\_likes() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{get\_likes()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.get_likes}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_likes}}}{}{}
+Returns a list of likelihoods for each particle in the step
+
+\end{fulllineitems}
+
+\index{get\_log\_likes() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{get\_log\_likes()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.get_log_likes}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_log\_likes}}}{}{}
+Returns a list of log(likelihoods) for each particle in the step
+
+\end{fulllineitems}
+
+\index{get\_log\_weights() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{get\_log\_weights()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.get_log_weights}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_log\_weights}}}{}{}
+Returns a list of the log weights of each particle in the step
+
+\end{fulllineitems}
+
+\index{get\_mean() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{get\_mean()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.get_mean}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_mean}}}{}{}
+Returns the mean of each parameter within the step
+
+\end{fulllineitems}
+
+\index{get\_param\_dicts() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{get\_param\_dicts()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.get_param_dicts}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_param\_dicts}}}{}{}
+Retrieves the entire parameter dictionary for every particle
+
+\end{fulllineitems}
+
+\index{get\_params() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{get\_params()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.get_params}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_params}}}{\emph{key}}{}
+Retrieves parameter values in every particle of a specific parameter
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{key}} (\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} parameter name
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{get\_particles() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{get\_particles()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.get_particles}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_particles}}}{}{}
+Retrieves the list of particles within the step object
+
+\end{fulllineitems}
+
+\index{normalize\_step\_log\_weights() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{normalize\_step\_log\_weights()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.normalize_step_log_weights}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{normalize\_step\_log\_weights}}}{}{}
+Normalizes log weights, and then transforms back into to log space for
+all particles inside the step
+
+\end{fulllineitems}
+
+\index{normalize\_step\_weights() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{normalize\_step\_weights()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.normalize_step_weights}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{normalize\_step\_weights}}}{}{}
+Normalizes log weights of all particles inside the step
+
+\end{fulllineitems}
+
+\index{plot\_marginal() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{plot\_marginal()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.plot_marginal}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{plot\_marginal}}}{\emph{key}, \emph{save=False}, \emph{show=True}, \emph{prefix='marginal\_'}}{}
+Plots a single marginal approximation for param given by \textless{}key\textgreater{}.
+
+\end{fulllineitems}
+
+\index{plot\_pairwise\_weights() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{plot\_pairwise\_weights()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.plot_pairwise_weights}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{plot\_pairwise\_weights}}}{\emph{param\_names=None}, \emph{labels=None}, \emph{save=False}, \emph{show=True}, \emph{param\_lims=None}, \emph{label\_size=None}, \emph{tick\_size=None}, \emph{nbins=None}, \emph{prefix='pairwise'}}{}
+Plots pairwise distributions of all parameter combos. Color codes each
+by weight.
+
+\end{fulllineitems}
+
+\index{print\_particle\_info() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{print\_particle\_info()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.print_particle_info}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{print\_particle\_info}}}{\emph{particle\_num}}{}
+Prints the particle number and its information
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{particle\_num}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} index of the desired particle
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{resample() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{resample()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.resample}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{resample}}}{}{}
+Resamples the step based on normalized weights. Assigns discrete
+probabilities to each particle (sum to 1), resample from this discrete distribution using the particle’s copy() method.
+
+\end{fulllineitems}
+
+\index{set\_particles() (smcpy.smc.smc\_step.SMCStep method)@\spxentry{set\_particles()}\spxextra{smcpy.smc.smc\_step.SMCStep method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.smc_step.SMCStep.set_particles}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{set\_particles}}}{\emph{particles}}{}
+Fill a list of particles in the step with ID.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{particles}} (\sphinxstyleliteralemphasis{\sphinxupquote{list}}) \textendash{} list of particle instances
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+
+\end{fulllineitems}
+
+\phantomsection\label{\detokenize{source_code:module-smcpy.smc.particle_initializer}}\index{smcpy.smc.particle\_initializer (module)@\spxentry{smcpy.smc.particle\_initializer}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{ParticleInitializer (class in smcpy.smc.particle\_initializer)@\spxentry{ParticleInitializer}\spxextra{class in smcpy.smc.particle\_initializer}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.particle_initializer.ParticleInitializer}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.smc.particle\_initializer.}}\sphinxbfcode{\sphinxupquote{ParticleInitializer}}}{\emph{mcmc}, \emph{temp\_schedule}, \emph{mpi\_comm=\textless{}smcpy.utils.single\_rank\_comm.SingleRankComm instance\textgreater{}}}{}
+Class to initialize particles prior to Sequential Monte Carlo sampling.
+\index{initialize\_particles() (smcpy.smc.particle\_initializer.ParticleInitializer method)@\spxentry{initialize\_particles()}\spxextra{smcpy.smc.particle\_initializer.ParticleInitializer method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.particle_initializer.ParticleInitializer.initialize_particles}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{initialize\_particles}}}{\emph{measurement\_std\_dev}, \emph{num\_particles}}{}
+Initializes first set of particles based on the prior and proposal
+distributions.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{measurement\_std\_dev}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}) \textendash{} standard deviation of the measurement error
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{num\_particles}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} number of particles to use during sampling
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{set\_proposal\_distribution() (smcpy.smc.particle\_initializer.ParticleInitializer method)@\spxentry{set\_proposal\_distribution()}\spxextra{smcpy.smc.particle\_initializer.ParticleInitializer method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.particle_initializer.ParticleInitializer.set_proposal_distribution}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{set\_proposal\_distribution}}}{\emph{proposal\_center}, \emph{proposal\_scales=None}}{}
+Given the proposal center and (optionally) the proposal scales, sets
+the proposal distribution for the initial batch of particles
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{proposal\_center}} (\sphinxstyleliteralemphasis{\sphinxupquote{dict}}) \textendash{} initial parameter dictionary, which is used to
+define the initial proposal distribution when generating particles;
+default is None, and initial proposal distribution = prior.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{proposal\_scales}} (\sphinxstyleliteralemphasis{\sphinxupquote{dict}}) \textendash{} defines the scale of the initial proposal
+distribution, which is centered at proposal\_center, the initial
+parameters; i.e. prop \textasciitilde{} MultivarN(q1, (I*proposal\_center*scales)\textasciicircum{}2).
+Proposal scales should be passed as a dictionary with keys and
+values corresponding to parameter names and their associated scales,
+respectively. The default is None, which sets initial proposal
+distribution = prior.
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+
+\end{fulllineitems}
+
+\phantomsection\label{\detokenize{source_code:module-smcpy.smc.particle_updater}}\index{smcpy.smc.particle\_updater (module)@\spxentry{smcpy.smc.particle\_updater}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{ParticleUpdater (class in smcpy.smc.particle\_updater)@\spxentry{ParticleUpdater}\spxextra{class in smcpy.smc.particle\_updater}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.particle_updater.ParticleUpdater}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.smc.particle\_updater.}}\sphinxbfcode{\sphinxupquote{ParticleUpdater}}}{\emph{step}, \emph{ess\_threshold}, \emph{mpi\_comm=\textless{}smcpy.utils.single\_rank\_comm.SingleRankComm instance\textgreater{}}}{}
+Class for updating particles at each step of Sequential Monte Carlo sampling
+with methods for updating log weights and resampling if ess under threshold
+
+\end{fulllineitems}
+
+\phantomsection\label{\detokenize{source_code:module-smcpy.smc.particle_mutator}}\index{smcpy.smc.particle\_mutator (module)@\spxentry{smcpy.smc.particle\_mutator}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRessED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNess FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLess THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{ParticleMutator (class in smcpy.smc.particle\_mutator)@\spxentry{ParticleMutator}\spxextra{class in smcpy.smc.particle\_mutator}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.particle_mutator.ParticleMutator}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.smc.particle\_mutator.}}\sphinxbfcode{\sphinxupquote{ParticleMutator}}}{\emph{step}, \emph{mcmc}, \emph{num\_mcmc\_steps}, \emph{mpi\_comm=\textless{}smcpy.utils.single\_rank\_comm.SingleRankComm instance\textgreater{}}}{}
+Class for mutating particles at each step of Sequential Monte Carlo sampling
+with the main \sphinxtitleref{mutate\_new\_particles} method, which uses the MCMC kernal to
+determine the distribution along the temperature schedule path.
+\index{mutate\_new\_particles() (smcpy.smc.particle\_mutator.ParticleMutator method)@\spxentry{mutate\_new\_particles()}\spxextra{smcpy.smc.particle\_mutator.ParticleMutator method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.smc.particle_mutator.ParticleMutator.mutate_new_particles}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{mutate\_new\_particles}}}{\emph{covariance}, \emph{measurement\_std\_dev}, \emph{temperature\_step}}{}
+Predicts next distribution along the temperature schedule path using
+the MCMC kernel.
+:param covariance: covariance of the parameters between particles,
+\begin{quote}
+
+computed with their respective weights.
+\end{quote}
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{measurement\_std\_dev}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}) \textendash{} standard deviation of the measurement error
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{temperature\_step}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}) \textendash{} difference in temp schedule between steps
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+
+\end{fulllineitems}
+
+
 
 \section{Particle Module Documentation}
-\label{\detokenize{source_code:module-smcpy.particles}}\label{\detokenize{source_code:particle-module-documentation}}\index{smcpy.particles (module)@\spxentry{smcpy.particles}\spxextra{module}}
+\label{\detokenize{source_code:module-smcpy.particles.particle}}\label{\detokenize{source_code:particle-module-documentation}}\index{smcpy.particles.particle (module)@\spxentry{smcpy.particles.particle}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{Particle (class in smcpy.particles.particle)@\spxentry{Particle}\spxextra{class in smcpy.particles.particle}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.particles.particle.Particle}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.particles.particle.}}\sphinxbfcode{\sphinxupquote{Particle}}}{\emph{params}, \emph{log\_weight}, \emph{log\_like}}{}
+Class defining data structure of an SMC particle (a member of an SMC
+particle chain).
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{params}} (\sphinxstyleliteralemphasis{\sphinxupquote{dictionary}}) \textendash{} parameters associated with particle; keys = parameter
+name and values = parameter value.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{weight}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}\sphinxstyleliteralemphasis{\sphinxupquote{ or }}\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} the computed weight of the particle
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{log\_like}} (\sphinxstyleliteralemphasis{\sphinxupquote{float}}\sphinxstyleliteralemphasis{\sphinxupquote{ or }}\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} the log likelihood of the particle
+
+\end{itemize}
+
+\end{description}\end{quote}
+\index{copy() (smcpy.particles.particle.Particle method)@\spxentry{copy()}\spxextra{smcpy.particles.particle.Particle method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.particles.particle.Particle.copy}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{copy}}}{}{}
+Returns a deep copy of self.
+
+\end{fulllineitems}
+
+\index{print\_particle\_info() (smcpy.particles.particle.Particle method)@\spxentry{print\_particle\_info()}\spxextra{smcpy.particles.particle.Particle method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.particles.particle.Particle.print_particle_info}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{print\_particle\_info}}}{}{}
+Prints particle parameters, weight, and log likelihood to screen.
+
+\end{fulllineitems}
+
+
+\end{fulllineitems}
+
+
 
 \section{MCMC Module Documentation}
-\label{\detokenize{source_code:module-smcpy.mcmc}}\label{\detokenize{source_code:mcmc-module-documentation}}\index{smcpy.mcmc (module)@\spxentry{smcpy.mcmc}\spxextra{module}}
+\label{\detokenize{source_code:module-smcpy.mcmc.mcmc_sampler}}\label{\detokenize{source_code:mcmc-module-documentation}}\index{smcpy.mcmc.mcmc\_sampler (module)@\spxentry{smcpy.mcmc.mcmc\_sampler}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{MCMCSampler (class in smcpy.mcmc.mcmc\_sampler)@\spxentry{MCMCSampler}\spxextra{class in smcpy.mcmc.mcmc\_sampler}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.mcmc.mcmc_sampler.MCMCSampler}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.mcmc.mcmc\_sampler.}}\sphinxbfcode{\sphinxupquote{MCMCSampler}}}{\emph{data}, \emph{model}, \emph{params}, \emph{working\_dir='./'}, \emph{storage\_backend='pickle'}}{}
+Class for MCMC sampling; based on PyMC (\sphinxurl{https://github.com/pymc-devs/pymc}).
+Uses Bayesian inference, MCMC, and a model to estimate parameters with
+quantified uncertainty based on a set of observations.
+
+Set data and model class member variables, set working directory,
+and choose storage backend.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{data}} (\sphinxstyleliteralemphasis{\sphinxupquote{array\_like}}) \textendash{} data to use to inform MCMC parameter estimation;
+should be same type/shape/size as output of model.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{model}} (\sphinxstyleliteralemphasis{\sphinxupquote{object}}) \textendash{} model for which parameters are being estimated via MCMC;
+should return output in same type/shape/size as data. A baseclass
+exists in the Model module that is recommended to define the model
+object; i.e., model.\_\_bases\_\_ == \textless{}class model.Model.Model\textgreater{},)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{params}} (\sphinxstyleliteralemphasis{\sphinxupquote{dict}}) \textendash{} map where keys are the unknown parameter 
+names (string) and values are lists that define the prior
+distribution of the parameter {[}dist name, dist. arg \#1, dist. arg
+\#2, etc.{]}. The distribution arguments are defined in the PyMC
+documentation: \sphinxurl{https://pymc-devs.github.io/pymc/}.
+
+\end{itemize}
+
+\item[{Storage\_backend}] \leavevmode
+determines which format to store mcmc data,
+see self.avail\_backends for a list of options.
+
+\end{description}\end{quote}
+\index{fit() (smcpy.mcmc.mcmc\_sampler.MCMCSampler method)@\spxentry{fit()}\spxextra{smcpy.mcmc.mcmc\_sampler.MCMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.mcmc.mcmc_sampler.MCMCSampler.fit}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{fit}}}{\emph{q0=None}, \emph{plot\_residuals=False}, \emph{plot\_fit=False}, \emph{opt\_method='L-BFGS-B'}, \emph{repeats=1}, \emph{save\_results=False}, \emph{fname='opt\_results.p'}}{}
+Fits the deterministic model given in self.model to the data in
+self.data using ordinary least squares regression. Returns a parameter
+map containing the optimized model parameters and the associated sum
+of squared error.
+
+The optional input, q0, should be an initial guess for the parameters
+in the form of a parameter map (dict).
+
+The optional input repeats dictates the number of times the optimization
+process is repeated, each time using the previous result as the new q0.
+
+\end{fulllineitems}
+
+\index{generate\_pymc\_() (smcpy.mcmc.mcmc\_sampler.MCMCSampler method)@\spxentry{generate\_pymc\_()}\spxextra{smcpy.mcmc.mcmc\_sampler.MCMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.mcmc.mcmc_sampler.MCMCSampler.generate_pymc_}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{generate\_pymc\_}}}{\emph{params}, \emph{q0=None}}{}
+Creates PyMC objects for each param in  dictionary
+
+NOTE: the second argument for normal distributions is VARIANCE
+\begin{description}
+\item[{Prior option:}] \leavevmode
+An arbitrary prior distribution derived from a set of samples (e.g.,
+a previous mcmc run) can be passed with the following syntax:
+\begin{quote}
+
+= \{\textless{}name\textgreater{} : {[}‘KDE’, \textless{}pymc\_database\textgreater{}, \textless{}param\_names\textgreater{}{]}\}
+\end{quote}
+
+where \textless{}name\textgreater{} is the name of the distribution (e.g., ‘prior’ or
+‘joint\_dist’), \textless{}pymc\_database\textgreater{} is the pymc database containing the
+samples from which the prior distribution will be estimated, and
+\textless{}param\_names\textgreater{} are the children parameter names corresponding to the
+dimension of the desired sample array. This method will use all
+samples of the Markov chain contained in \textless{}pymc\_database\textgreater{} for all
+traces named in \textless{}param\_names\textgreater{}. Gaussian kernel-density estimation
+is used to derive the joint parameter distribution, which is then
+treated as a prior in subsequent mcmc analyses using the current
+class instance. The parameters named in \textless{}param\_names\textgreater{} will be
+traced as will the multivariate distribution named \textless{}name\textgreater{}.
+
+\end{description}
+
+\end{fulllineitems}
+
+\index{generate\_pymc\_model() (smcpy.mcmc.mcmc\_sampler.MCMCSampler method)@\spxentry{generate\_pymc\_model()}\spxextra{smcpy.mcmc.mcmc\_sampler.MCMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.mcmc.mcmc_sampler.MCMCSampler.generate_pymc_model}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{generate\_pymc\_model}}}{\emph{q0=None}, \emph{ssq0=None}, \emph{std\_dev0=None}, \emph{fix\_var=False}, \emph{model\_output\_stored=False}}{}
+PyMC stochastic model generator that uses the parameter dictionary,
+self. and optional inputs:
+\begin{itemize}
+\item {} \begin{description}
+\item[{q0}] \leavevmode{[}a dictionary of initial values corresponding to keys {]}
+in
+
+\end{description}
+
+\item {} 
+std\_dev0  : an estimate of the initial standard deviation
+
+\item {} \begin{description}
+\item[{ssq0}] \leavevmode{[}the sum of squares error using q0 and self.data. Only{]}
+used if initial var, var0, is None.
+
+\end{description}
+
+\item {} \begin{description}
+\item[{fixed\_var}] \leavevmode{[}determines whether or not variance will be sampled{]}
+(i.e., fixed\_var == False) or fixed.
+
+\end{description}
+
+\end{itemize}
+
+\end{fulllineitems}
+
+\index{pymcplot() (smcpy.mcmc.mcmc\_sampler.MCMCSampler method)@\spxentry{pymcplot()}\spxextra{smcpy.mcmc.mcmc\_sampler.MCMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.mcmc.mcmc_sampler.MCMCSampler.pymcplot}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{pymcplot}}}{}{}
+Generates a pymc plot for each parameter in self.. This plot
+includes a trace, histogram, and autocorrelation plot. For more control
+over the plots, see MCMCplots module. This is meant as a diagnostic
+tool only.
+
+\end{fulllineitems}
+
+\index{sample() (smcpy.mcmc.mcmc\_sampler.MCMCSampler method)@\spxentry{sample()}\spxextra{smcpy.mcmc.mcmc\_sampler.MCMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.mcmc.mcmc_sampler.MCMCSampler.sample}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{sample}}}{\emph{num\_samples}, \emph{burnin}, \emph{step\_method='adaptive'}, \emph{interval=1000}, \emph{delay=0}, \emph{tune\_throughout=False}, \emph{scales=None}, \emph{cov=None}, \emph{thin=1}, \emph{phi=None}, \emph{verbose=0}}{}
+Initiates MCMC sampling of posterior distribution using the
+model defined using the generate\_pymc\_model method. Sampling is
+conducted using the PyMC module. Parameters are as follows:
+\begin{itemize}
+\item {} 
+num\_samples : number of samples to draw (int)
+
+\item {} 
+burnin : number of samples for burn-in (int)
+
+\item {} 
+adaptive : toggles adaptive metropolis sampling (bool)
+
+\item {} \begin{description}
+\item[{step\_method}] \leavevmode{[}step method for sampling; options are:{]}
+o adaptive - regular adaptive metropolis
+o DRAM - delayed rejection adaptive metropolis
+o metropolis - standard metropolis aglorithm
+
+\end{description}
+
+\item {} \begin{description}
+\item[{interval}] \leavevmode{[}defines frequency of covariance updates (only{]}
+applicable to adaptive methods)
+
+\end{description}
+
+\item {} \begin{description}
+\item[{delay}] \leavevmode{[}how long before first cov update occurs (only applicable{]}
+to adaptive methods)
+
+\end{description}
+
+\item {} \begin{description}
+\item[{tune\_throughout}] \leavevmode{[}True \textgreater{} tune proposal covariance even after{]}
+burnin, else only tune proposal covariance during burn in
+
+\end{description}
+
+\item {} \begin{description}
+\item[{scales}] \leavevmode{[}scale factors for the diagonal of the multivariate{]}
+normal proposal distribution; must be dictionary with
+keys = .keys() and values = scale for that param.
+
+\end{description}
+
+\item {} 
+phi : cooling step; only used for SMC sampler
+
+\end{itemize}
+
+\end{fulllineitems}
+
+\index{save\_model() (smcpy.mcmc.mcmc\_sampler.MCMCSampler method)@\spxentry{save\_model()}\spxextra{smcpy.mcmc.mcmc\_sampler.MCMCSampler method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.mcmc.mcmc_sampler.MCMCSampler.save_model}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{save\_model}}}{\emph{fname='model.p'}}{}
+Saves model in pickle file with name working\_dir + fname.
+
+\end{fulllineitems}
+
+
+\end{fulllineitems}
+
+
+
+\section{HDF5 Module Documentation}
+\label{\detokenize{source_code:module-smcpy.hdf5.hdf5_storage}}\label{\detokenize{source_code:hdf5-module-documentation}}\index{smcpy.hdf5.hdf5\_storage (module)@\spxentry{smcpy.hdf5.hdf5\_storage}\spxextra{module}}
+Notices:
+Copyright 2018 United States Government as represented by the Administrator of
+the National Aeronautics and Space Administration. No copyright is claimed in
+the United States under Title 17, U.S. Code. All Other Rights Reserved.
+
+Disclaimers
+No Warranty: THE SUBJECT SOFTWARE IS PROVIDED “AS IS” WITHOUT ANY WARRANTY OF
+ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE ERROR
+FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE
+SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
+ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
+RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
+RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
+DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
+PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT “AS IS.”
+
+Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT.  IF RECIPIENT’S USE OF THE SUBJECT SOFTWARE RESULTS IN ANY
+LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
+INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT’S
+USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
+UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
+PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT’S SOLE REMEDY FOR
+ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
+AGREEMENT.
+\index{HDF5Storage (class in smcpy.hdf5.hdf5\_storage)@\spxentry{HDF5Storage}\spxextra{class in smcpy.hdf5.hdf5\_storage}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{class }}\sphinxcode{\sphinxupquote{smcpy.hdf5.hdf5\_storage.}}\sphinxbfcode{\sphinxupquote{HDF5Storage}}}{\emph{h5\_filename}, \emph{mode}}{}~\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{h5\_filename}} (\sphinxstyleliteralemphasis{\sphinxupquote{string}}) \textendash{} name of hdf5 file in which to save or from which
+to load a particle, a collection of particles, referred to as a
+particle step, or collection of steps, referred to as a particle
+chain.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{mode}} (\sphinxstyleliteralemphasis{\sphinxupquote{string}}) \textendash{} mode used when opening hdf5 file specified by h5\_filename;
+can be ‘w’, ‘r’, ‘r+’, or ‘a’. See h5py docs for details.
+
+\end{itemize}
+
+\end{description}\end{quote}
+\index{get\_num\_particles\_in\_step() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{get\_num\_particles\_in\_step()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.get_num_particles_in_step}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_num\_particles\_in\_step}}}{\emph{step\_index}}{}
+Returns the number of particles in a particular step.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{step\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{integer}}) \textendash{} index of step that the particle belongs too
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{get\_num\_steps() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{get\_num\_steps()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.get_num_steps}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{get\_num\_steps}}}{}{}
+Returns number of steps currently stored in the hdf5 file.
+
+\end{fulllineitems}
+
+\index{read\_particle() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{read\_particle()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.read_particle}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{read\_particle}}}{\emph{step\_index}, \emph{particle\_index}}{}
+Loads and returns a particle identified by specific step and particle
+indices.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{step\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{integer}}) \textendash{} index of step that the particle belongs too
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{particle\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{integer}}) \textendash{} index of particle within a given step
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{read\_step() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{read\_step()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.read_step}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{read\_step}}}{\emph{step\_index}}{}
+Loads and returns a step (and all particles in that step) identified by         a specific step index.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{step\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{integer}}) \textendash{} index of step that the particle belongs too
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{read\_step\_list() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{read\_step\_list()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.read_step_list}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{read\_step\_list}}}{}{}
+Loads and returns an entire step list (which consists of all
+available steps and particles within each step).
+
+\end{fulllineitems}
+
+\index{write\_particle() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{write\_particle()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.write_particle}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{write\_particle}}}{\emph{particle}, \emph{step\_index}, \emph{particle\_index}}{}
+Writes a single particle object (params, weight and log likelihood)
+to the hdf5 file.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{particle}} (\sphinxstyleliteralemphasis{\sphinxupquote{Particle class instance}}) \textendash{} particle object storing a single parameter vector and
+associated weight and log likelihood.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{step\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{integer}}) \textendash{} index of step that the particle belongs too
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{particle\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{integer}}) \textendash{} index of particle within a given step
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{write\_step() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{write\_step()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.write_step}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{write\_step}}}{\emph{step}, \emph{step\_index}}{}
+Writes a step, which is a collection of particles, to the hdf5 file.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{step}} (\sphinxstyleliteralemphasis{\sphinxupquote{list of Particle class instances}}) \textendash{} a list of particle objects, each of which stores a single
+parameter vector and associated weight and log likelihood.
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{step\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{integer}}) \textendash{} index of step being written
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{write\_step\_list() (smcpy.hdf5.hdf5\_storage.HDF5Storage method)@\spxentry{write\_step\_list()}\spxextra{smcpy.hdf5.hdf5\_storage.HDF5Storage method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{source_code:smcpy.hdf5.hdf5_storage.HDF5Storage.write_step_list}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{write\_step\_list}}}{\emph{step\_list}}{}
+Write a step list, which is a list of steps, each of which being a
+list of particles, to the hdf5 file.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{particle\_chain}} \textendash{} a list of steps, each of which is a list of
+particle objects.
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+
+\end{fulllineitems}
+
+
 
 \chapter{Indices and tables}
 \label{\detokenize{index:indices-and-tables}}\begin{itemize}
@@ -409,9 +1408,14 @@ Documentation for the primary SMCPy classes.
 \begin{sphinxtheindex}
 \let\bigletter\sphinxstyleindexlettergroup
 \bigletter{s}
-\item\relax\sphinxstyleindexentry{smcpy}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy}}
-\item\relax\sphinxstyleindexentry{smcpy.mcmc}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.mcmc}}
-\item\relax\sphinxstyleindexentry{smcpy.particles}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.particles}}
+\item\relax\sphinxstyleindexentry{smcpy.hdf5.hdf5\_storage}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.hdf5.hdf5_storage}}
+\item\relax\sphinxstyleindexentry{smcpy.mcmc.mcmc\_sampler}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.mcmc.mcmc_sampler}}
+\item\relax\sphinxstyleindexentry{smcpy.particles.particle}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.particles.particle}}
+\item\relax\sphinxstyleindexentry{smcpy.smc.particle\_initializer}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.smc.particle_initializer}}
+\item\relax\sphinxstyleindexentry{smcpy.smc.particle\_mutator}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.smc.particle_mutator}}
+\item\relax\sphinxstyleindexentry{smcpy.smc.particle\_updater}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.smc.particle_updater}}
+\item\relax\sphinxstyleindexentry{smcpy.smc.smc\_sampler}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.smc.smc_sampler}}
+\item\relax\sphinxstyleindexentry{smcpy.smc.smc\_step}\sphinxstyleindexpageref{source_code:\detokenize{module-smcpy.smc.smc_step}}
 \end{sphinxtheindex}
 
 \renewcommand{\indexname}{Index}
