@@ -175,10 +175,6 @@ class SMCSampler(Properties):
             step_list = trimmed_steps
         return step_list
 
-    @staticmethod
-    def _file_exists(hdf5_file):
-        return os.path.exists(hdf5_file)
-
     def _compute_step_covariance(self):
         if self._rank == 0:
             covariance = self.step.calculate_covariance()
@@ -186,11 +182,6 @@ class SMCSampler(Properties):
             covariance = None
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
-
-    def _update_step_with_new_particles(self, particles):
-        if self._rank == 0:
-            self.step.set_particles(particles)
-        return None
 
     def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
