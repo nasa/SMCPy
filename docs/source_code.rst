@@ -11,6 +11,14 @@ SMC Module Documentation
 .. automodule:: smcpy.smc
 .. autoclass:: SMCSampler
     :members:
+.. autoclass:: SMCStep
+    :members:
+.. autoclass:: ParticleInitializer
+    :members:
+.. autoclass:: ParticleUpdater
+    :members:
+.. autoclass:: ParticleMutator
+    :members:
 
 Particle Module Documentation
 ------------------------------
