@@ -69,12 +69,6 @@ class SMCStep(Checks):
         self.id += 1
         return None
 
-    def copy_step(self):
-        '''
-        Returns a copy of particle chain's particle list.
-        '''
-        return copy.deepcopy(self.particles)
-
     def copy(self):
         '''
         Returns a copy of the entire step class.
