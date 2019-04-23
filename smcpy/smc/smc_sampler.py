@@ -209,3 +209,16 @@ class SMCSampler(Properties):
         else:
             step_list = None
         return step_list
+
+    def save_step_list(self, h5_file):
+        '''
+        Saves self.step to an hdf5 file using the HDF5Storage class.
+
+        :param hdf5_to_load: file path at which to save step list
+        :type hdf5_to_load: string
+        '''
+        if self._rank == 0:
+            hdf5 = HDF5Storage(h5_file, mode='w')
+            hdf5.write_step_list(self.step_list)
+            hdf5.close()
+        return None
