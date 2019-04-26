@@ -279,7 +279,7 @@ class SMCStep(Checks):
         tril = np.tril(np.arange((L - 1)**2).reshape([L - 1, L - 1]) + 1)
         iplts = [i for i in tril.flatten() if i > 0]
 
-        log_weights = self.get_log_weights()
+        norm_weights = self.normalize_step_weights()
         means = self.get_mean()
         for i in zip(iplts, ikeys):
             iplt = i[0]     # subplot index
@@ -298,8 +298,8 @@ class SMCStep(Checks):
 
             def rnd_to_sig(x):
                 return round(x, -int(np.floor(np.log10(abs(x)))) + 1)
-            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=log_weights, vmin=0.0,
-                                               vmax=rnd_to_sig(max(log_weights)))
+            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=norm_weights, vmin=0.0,
+                                               vmax=rnd_to_sig(max(norm_weights)))
             ax[key1 + '+' + key2].axvline(means[key1], color='C1', linestyle='--')
             ax[key1 + '+' + key2].axhline(means[key2], color='C1', linestyle='--')
             ax[key1 + '+' + key2].set_xlabel(label_dict[key1])
