@@ -122,9 +122,8 @@ class SMCSampler(Properties):
             initializer.set_proposal_distribution(proposal_center, proposal_scales)
             particles = initializer.initialize_particles(measurement_std_dev,
                                                          num_particles)
-            step = self._initialize_step(particles)
-            self.step = step
-            self.step_list = [step]
+            self.step = self._initialize_step(particles)
+            self.step_list = [self.step.copy()]
 
         elif 0 < self.restart_time_step <= num_time_steps:
             start_time_step = restart_time_step
