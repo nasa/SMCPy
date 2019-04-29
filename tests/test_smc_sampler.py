@@ -34,6 +34,7 @@ def test_autosaver(sampler):
         print("Items in base directory", base_items)
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
+        print group1_items
         assert len(group1_items) == num_time_steps
 
 def test_load_step_list(sampler):
@@ -56,7 +57,8 @@ def test_restart_sampling(sampler):
         print("Items in base directory", base_items)
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
-        assert len(group1_items) == num_time_steps - restart_time_step
+        print group1_items
+        assert len(group1_items) == num_time_steps
     os.remove('autosaver.hdf5')
-
+    os.remove('restart.hdf5')
         
