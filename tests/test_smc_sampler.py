@@ -45,16 +45,18 @@ def test_load_step_list(sampler):
 def test_restart_sampling(sampler):
     num_particles = 100
     num_time_steps = 10
+    restart_time_step = 7
     num_mcmc_steps = 1
     noise_stddev = 0.5
     step_list = sampler.sample(num_particles, num_time_steps, num_mcmc_steps,
-                               noise_stddev, restart_time_step = 5, hdf5_to_load = 'autosaver.hdf5',
+                               noise_stddev, restart_time_step=restart_time_step,
+                               hdf5_to_load = 'autosaver.hdf5',
                                autosave_file = 'restart.hdf5')
     with h5py.File('restart.hdf5', 'r') as hdf:
         base_items = list(hdf.items())
         print("Items in base directory", base_items)
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
-        assert len(group1_items) == num_time_steps
+        assert len(group1_items) == num_time_steps - restart_time_step
 
         

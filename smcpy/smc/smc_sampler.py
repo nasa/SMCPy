@@ -116,7 +116,7 @@ class SMCSampler(Properties):
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)
-        start_time_step = 1
+        start_time_step = 0
         if self.restart_time_step == 0:
             initializer = ParticleInitializer(self._mcmc, self.temp_schedule,
                                               self._comm)
@@ -137,7 +137,7 @@ class SMCSampler(Properties):
 
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
         self._autosave_step()
-        p_bar = tqdm(range(num_time_steps+1)[start_time_step + 1:])
+        p_bar = tqdm(range(num_time_steps)[start_time_step+ 1:])
         last_ess = 0
 
         for t in p_bar:
