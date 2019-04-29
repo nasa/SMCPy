@@ -5,7 +5,6 @@ import pytest
 import h5py
 import os
 import warnings
-warnings.simplefilter("ignore", category=PendingDeprecationWarning)
 
 @pytest.fixture
 def model():
@@ -58,5 +57,6 @@ def test_restart_sampling(sampler):
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
         assert len(group1_items) == num_time_steps - restart_time_step
+    os.remove('autosaver.hdf5')
 
         
