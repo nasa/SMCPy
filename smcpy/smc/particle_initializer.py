@@ -129,7 +129,7 @@ class ParticleInitializer():
         scales = self.proposal_scales
         random_variables = dict()
         for key in self._mcmc.params.keys():
-            variance = (centers[key] * scales[key])**2
+            variance = (scales[key])**2
             random_variables[key] = Normal(key, centers[key], 1 / variance)
         return random_variables
 

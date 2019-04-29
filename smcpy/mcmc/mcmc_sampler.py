@@ -434,35 +434,35 @@ class MCMCSampler:
         # Iterate through , assign prior distributions
         for key, args in self.params.iteritems():
             # Distribution name should be first entry in [key]
-            dist = args[0]
+            dist = args[0].lower()
 
-            if dist == 'Normal':
+            if dist == 'normal':
                 if q0 == None:
                     RV = [pymc.Normal(key, mu=args[1], tau=1./args[2])]
                 else:
                     RV = [pymc.Normal(key, mu=args[1], tau=1./args[2],
                           value=q0[key])]
-            elif dist == 'Uniform':
+            elif dist == 'uniform':
                 if q0 == None:
                     RV = [pymc.Uniform(key, lower=args[1], upper=args[2])]
                 else:
                     RV = [pymc.Uniform(key, lower=args[1], upper=args[2], 
                           value=q0[key])]
-            elif dist == 'DiscreteUniform':
+            elif dist == 'discreteuniform':
                 if q0 == None:
                     RV = [pymc.DiscreteUniform(key, lower=args[1],
                                                upper=args[2])]
                 else:
                     RV = [pymc.DiscreteUniform(key, lower=args[1],
                                                upper=args[2], value=q0[key])]
-            elif dist == 'TruncatedNormal':
+            elif dist == 'truncatednormal':
                 if q0 == None:
                     RV = [pymc.TruncatedNormal(key, mu=args[1], tau=1./args[2],
                           a=args[3], b=args[4])]
                 else:
                     RV = [pymc.TruncatedNormal(key, mu=args[1], tau=1./args[2],
                           a=args[3], b=args[4], value=q0[key])]
-            elif dist == 'KDE':
+            elif dist == 'kde':
                 kde = multivariate_kde_from_samples(args[1], args[2])
                 kde_rv, rvs = self._create_kde_stochastic(kde, key, args[2])
                 if q0 != None:
