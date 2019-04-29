@@ -1,24 +1,25 @@
 from smcpy.smc.smc_sampler import SMCSampler
-from spring_mass_model import SpringMassModel
 import numpy as np
 import pytest
 import h5py
 import os
 import warnings
 
-@pytest.fixture
-def model():
-    state0 = [0., 0.]  # initial conditions
-    measure_t_grid = np.arange(0., 5., 0.2)  # time
-    model = SpringMassModel(state0, measure_t_grid)
-    return model
+class DummyModel():
+    '''Dummy test model'''
+
+    def __init__(self):
+        pass
+
+    def evaluate(*args, **kwargs):
+        return np.array([0., 0., 0.])
 
 @pytest.fixture
-def sampler(model):
-    displacement_data = np.genfromtxt('noisy_data.txt')
-    param_priors = {'K': ['Uniform', 0.0, 10.0],
-                    'g': ['Uniform', 0.0, 10.0]}
-    sampler = SMCSampler(displacement_data, model, param_priors)
+def sampler():
+    model = DummyModel()
+    param_priors = {'a': ['Uniform', 0., 1.], 'b': ['Uniform', 0., 1.]}
+    data = model.evaluate({'a': 0., 'b': 0.})
+    sampler = SMCSampler(data, model, param_priors)
     return sampler
 
 def test_autosaver(sampler):
