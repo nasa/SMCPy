@@ -124,7 +124,7 @@ class SMCSampler(Properties):
             particles = initializer.initialize_particles(measurement_std_dev,
                                                          num_particles)
             self.step = self._initialize_step(particles)
-            self.step_list = [self.step.copy()]
+            self.step_list = []
 
         elif 0 < self.restart_time_step <= num_time_steps:
             start_time_step = restart_time_step
@@ -137,6 +137,7 @@ class SMCSampler(Properties):
             self.step_list = step_list
             self.save_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
+        print len(self.step_list)
         self._autosave_step()
         p_bar = tqdm(range(num_time_steps)[start_time_step+ 1:])
         last_ess = 0
@@ -187,7 +188,7 @@ class SMCSampler(Properties):
     def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
             step_index = len(self.step_list)
-            self.autosaver.write_step(self.step, step_index)
+            self.autosaver.write_step(self.step, step_index + 1)
         return None
 
     def _close_autosaver(self):
