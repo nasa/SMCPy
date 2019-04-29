@@ -4,6 +4,8 @@ import numpy as np
 import pytest
 import h5py
 import os
+import warnings
+warnings.simplefilter("ignore", category=PendingDeprecationWarning)
 
 @pytest.fixture
 def model():
@@ -19,16 +21,6 @@ def sampler(model):
                     'g': ['Uniform', 0.0, 10.0]}
     sampler = SMCSampler(displacement_data, model, param_priors)
     return sampler
-
-@pytest.fixture
-def restart_sampler(model):
-    displacement_data = np.genfromtxt('noisy_data.txt')
-    param_priors = {'K': ['Uniform', 0.0, 10.0],
-                    'g': ['Uniform', 0.0, 10.0]}
-    restart_sampler = SMCSampler(displacement_data, model, param_priors, 
-                                 restart_time_step=9, hdf5_to_load='autosaver.hdf5')
-    return restart_sampler
-
 
 def test_autosaver(sampler):
     num_particles = 100
@@ -51,4 +43,17 @@ def test_load_step_list(sampler):
     assert len(step_list) == num_time_steps
 
 def test_restart_sampling(sampler):
+    num_particles = 100
+    num_time_steps = 10
+    num_mcmc_steps = 1
+    noise_stddev = 0.5
+    step_list = sampler.sample(num_particles, num_time_steps, num_mcmc_steps,
+                               noise_stddev, restart_time_step = 5, hdf5_to_load = 'autosaver.hdf5')
+    with h5py.File('restart.hdf5', 'r') as hdf:
+        base_items = list(hdf.items())
+        print("Items in base directory", base_items)
+        group1 = hdf.get("steps")
+        group1_items = list(group1.items())
+        assert len(group1_items) == num_time_steps
+
         

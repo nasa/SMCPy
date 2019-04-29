@@ -132,7 +132,7 @@ class SMCSampler(Properties):
             step_list = self._trim_step_list(step_list,
                                              self.restart_time_step)
             step = step_list[-1]
-            self.step = step
+            self.step = step.copy()
             self.step_list = step_list
 
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
@@ -171,7 +171,7 @@ class SMCSampler(Properties):
     def _trim_step_list(self, step_list, restart_time_step):
         if self._rank == 0:
             to_keep = range(0, restart_time_step + 1)
-            trimmed_steps = [step_list[i].get_particles() for i in to_keep]
+            trimmed_steps = [step_list[i] for i in to_keep]
             step_list = trimmed_steps
         return step_list
 
