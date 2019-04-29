@@ -31,16 +31,20 @@ def test_autosaver(sampler):
                            autosave_file='autosaver.hdf5')
     with h5py.File('autosaver.hdf5', 'r') as hdf:
         base_items = list(hdf.items())
-        print("Items in base directory", base_items)
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
-        print group1_items
         assert len(group1_items) == num_time_steps
 
 def test_load_step_list(sampler):
     num_time_steps = 10
     step_list = sampler.load_step_list('autosaver.hdf5')
     assert len(step_list) == num_time_steps
+
+def test_trim_step_list(sampler):
+    restart_time_step = 3
+    step_list = sampler.load_step_list('autosaver.hdf5')
+    trimmed_list = sampler.trim_step_list(step_list, restart_time_step)
+    assert len(trimmed_list) == 3  
 
 def test_restart_sampling(sampler):
     num_particles = 100
@@ -54,10 +58,8 @@ def test_restart_sampling(sampler):
                                autosave_file = 'restart.hdf5')
     with h5py.File('restart.hdf5', 'r') as hdf:
         base_items = list(hdf.items())
-        print("Items in base directory", base_items)
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
-        print group1_items
         assert len(group1_items) == num_time_steps
     os.remove('autosaver.hdf5')
     os.remove('restart.hdf5')

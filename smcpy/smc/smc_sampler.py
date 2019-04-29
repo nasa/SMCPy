@@ -129,17 +129,16 @@ class SMCSampler(Properties):
         elif 0 < self.restart_time_step <= num_time_steps:
             start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
-            step_list = self._trim_step_list(step_list,
-                                             self.restart_time_step)
+            step_list = self.trim_step_list(step_list,
+                                            self.restart_time_step)
             step = step_list[-1]
             self.step = step.copy()
-            step_list.pop()
             self.step_list = step_list
             self.save_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
         print len(self.step_list)
         self._autosave_step()
-        p_bar = tqdm(range(num_time_steps)[start_time_step+ 1:])
+        p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
         last_ess = 0
 
         for t in p_bar:
@@ -160,6 +159,13 @@ class SMCSampler(Properties):
         self._close_autosaver()
         return self.step_list
 
+    def trim_step_list(self, step_list, restart_time_step):
+        if self._rank == 0:
+            to_keep = range(0, restart_time_step)
+            trimmed_steps = [step_list[i] for i in to_keep]
+            step_list = trimmed_steps
+        return step_list
+
     def _initialize_step(self, particles):
         particles = self._comm.gather(particles, root=0)
         if self._rank == 0:
@@ -169,13 +175,6 @@ class SMCSampler(Properties):
         else:
             step = None
         return step
-
-    def _trim_step_list(self, step_list, restart_time_step):
-        if self._rank == 0:
-            to_keep = range(0, restart_time_step + 1)
-            trimmed_steps = [step_list[i] for i in to_keep]
-            step_list = trimmed_steps
-        return step_list
 
     def _compute_step_covariance(self):
         if self._rank == 0:
