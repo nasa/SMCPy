@@ -106,7 +106,8 @@ class SMCSampler(Properties):
         :type restart_time_step: int
         :param hdf5_to_load: file path of a step list
         :type hdf5_to_load: string
-
+        :param autosave_file: file name of autosave file
+        :type autosave_file: string
 
         :Returns: A list of SMCStep class instances that contains all particles
             and their past generations at every time step.
