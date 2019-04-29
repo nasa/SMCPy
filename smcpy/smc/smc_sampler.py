@@ -134,7 +134,7 @@ class SMCSampler(Properties):
             step = step_list[-1]
             self.step = step.copy()
             self.step_list = step_list
-            self.save_step_list()
+            self._autosave_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
         print len(self.step_list)
         self._autosave_step()
@@ -165,6 +165,19 @@ class SMCSampler(Properties):
             trimmed_steps = [step_list[i] for i in to_keep]
             step_list = trimmed_steps
         return step_list
+
+    def save_step_list(self, h5_file):
+        '''
+        Saves self.step to an hdf5 file using the HDF5Storage class.
+        :param h5_file: file path at which to save step list
+        :type h5_file: string
+        '''
+
+        if self._rank == 0:
+            hdf5 = HDF5Storage(h5_file, mode='w')
+            hdf5.write_step_list(self.step_list)
+            hdf5.close()
+        return None
 
     def _initialize_step(self, particles):
         particles = self._comm.gather(particles, root=0)
@@ -217,14 +230,7 @@ class SMCSampler(Properties):
             step_list = None
         return step_list
 
-    def save_step_list(self):
-        '''
-        Saves self.step to an hdf5 file using the HDF5Storage class.
-
-        :param hdf5_to_load: file path at which to save step list
-        :type hdf5_to_load: string
-        '''
-
-        if self._rank == 0:
+    def _autosave_step_list(self):
+        if self._rank == 0 and self._autosaver is not None:
             self.autosaver.write_step_list(self.step_list)
         return None
