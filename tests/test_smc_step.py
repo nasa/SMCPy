@@ -115,8 +115,8 @@ def test_get_log_weights(filled_step):
     assert np.array_equal(filled_step.get_log_weights(), [0.2] * 5)
 
 
-def test_calcuate_covariance_not_positive_definite(mixed_step):
-    assert np.array_equal(mixed_step.calculate_covariance(),
+def test_calcuate_covariance_not_positive_definite(filled_step):
+    assert np.array_equal(filled_step.calculate_covariance(),
                           np.eye(2))
 
 
