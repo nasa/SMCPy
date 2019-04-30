@@ -69,7 +69,7 @@ class SMCSampler(Properties):
 
     def sample(self, num_particles, num_time_steps, num_mcmc_steps,
                measurement_std_dev, ess_threshold=None, proposal_center=None,
-               proposal_scales=None, restart_time_step=0, hdf5_to_load=None,
+               proposal_scales=None, restart_time_step=1, hdf5_to_load=None,
                autosave_file=None):
         '''
         Driver method that performs Sequential Monte Carlo sampling.
@@ -116,8 +116,8 @@ class SMCSampler(Properties):
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)
-        start_time_step = 0
-        if self.restart_time_step == 0:
+        start_time_step = 1
+        if self.restart_time_step == 1:
             initializer = ParticleInitializer(self._mcmc, self.temp_schedule,
                                               self._comm)
             initializer.set_proposal_distribution(proposal_center, proposal_scales)
@@ -125,21 +125,21 @@ class SMCSampler(Properties):
                                                          num_particles)
             self.step = self._initialize_step(particles)
             self.step_list = []
+            self._autosave_step()
+            self.step_list.append(self.step.copy())
 
-        elif 0 < self.restart_time_step <= num_time_steps:
+        elif 1 < self.restart_time_step <= num_time_steps:
             start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
             step_list = self.trim_step_list(step_list,
                                             self.restart_time_step)
-            step = step_list[-1]
-            self.step = step.copy()
+            self.step = step_list[-1].copy()
             self.step_list = step_list
             self._autosave_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
-        print len(self.step_list)
-        self._autosave_step()
-        p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
-        last_ess = 0
+        p_bar = tqdm(range(num_time_steps)[start_time_step:])
+        print range(num_time_steps+1)[start_time_step+1:]
+        last_ess = num_particles
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
@@ -151,8 +151,8 @@ class SMCSampler(Properties):
             self.step = mutator.mutate_new_particles(covariance,
                                                      measurement_std_dev,
                                                      temperature_step)
-            self.step_list.append(self.step.copy())
             self._autosave_step()
+            self.step_list.append(self.step.copy())
             set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
                     updater._resample_status)
             last_ess = updater._ess
@@ -199,8 +199,8 @@ class SMCSampler(Properties):
 
     def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
-            step_index = len(self.step_list)
-            self.autosaver.write_step(self.step, step_index + 1)
+            step_index = len(self.step_list) + 1
+            self.autosaver.write_step(self.step, step_index)
         return None
 
     def _close_autosaver(self):

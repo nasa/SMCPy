@@ -23,8 +23,8 @@ def sampler():
     return sampler
 
 def test_autosaver(sampler):
-    num_particles = 100
-    num_time_steps = 10
+    num_particles = 5
+    num_time_steps = 3
     num_mcmc_steps = 1
     noise_stddev = 0.5
     step_list = sampler.sample(num_particles, num_time_steps, num_mcmc_steps,
@@ -37,7 +37,7 @@ def test_autosaver(sampler):
         assert len(group1_items) == num_time_steps
 
 def test_load_step_list(sampler):
-    num_time_steps = 10
+    num_time_steps = 3
     step_list = sampler.load_step_list('autosaver.hdf5')
     assert len(step_list) == num_time_steps
 
@@ -48,9 +48,9 @@ def test_trim_step_list(sampler):
     assert len(trimmed_list) == 3  
 
 def test_restart_sampling(sampler):
-    num_particles = 100
-    num_time_steps = 10
-    restart_time_step = 7
+    num_particles = 5
+    num_time_steps = 3
+    restart_time_step = 2
     num_mcmc_steps = 1
     noise_stddev = 0.5
     step_list = sampler.sample(num_particles, num_time_steps, num_mcmc_steps,
@@ -64,4 +64,3 @@ def test_restart_sampling(sampler):
         assert len(group1_items) == num_time_steps
     os.remove('autosaver.hdf5')
     os.remove('restart.hdf5')
-        
