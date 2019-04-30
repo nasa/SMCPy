@@ -69,7 +69,7 @@ class SMCSampler(Properties):
 
     def sample(self, num_particles, num_time_steps, num_mcmc_steps,
                measurement_std_dev, ess_threshold=None, proposal_center=None,
-               proposal_scales=None, restart_time_step=0, hdf5_to_load=None,
+               proposal_scales=None, restart_time_step=1, hdf5_to_load=None,
                autosave_file=None):
         '''
         Driver method that performs Sequential Monte Carlo sampling.
@@ -116,30 +116,30 @@ class SMCSampler(Properties):
         self.autosaver = autosave_file
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)
-        start_time_step = 0
-        if self.restart_time_step == 0:
+        start_time_step = 1
+        if self.restart_time_step == 1:
             initializer = ParticleInitializer(self._mcmc, self.temp_schedule,
                                               self._comm)
             initializer.set_proposal_distribution(proposal_center, proposal_scales)
             particles = initializer.initialize_particles(measurement_std_dev,
                                                          num_particles)
             self.step = self._initialize_step(particles)
-            self.step_list = [self.step.copy()]
+            self.step_list = []
+            self._autosave_step()
+            self.step_list.append(self.step.copy())
 
-        elif 0 < self.restart_time_step <= num_time_steps:
+        elif 1 < self.restart_time_step <= num_time_steps:
             start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
-            step_list = self._trim_step_list(step_list,
-                                             self.restart_time_step)
-            step = step_list[-1]
-            self.step = step.copy()
-            step_list.pop()
+            step_list = self.trim_step_list(step_list,
+                                            self.restart_time_step)
+            self.step = step_list[-1].copy()
             self.step_list = step_list
-            self.save_step_list()
+            self._autosave_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
-        self._autosave_step()
-        p_bar = tqdm(range(num_time_steps)[start_time_step+ 1:])
-        last_ess = 0
+        p_bar = tqdm(range(num_time_steps)[start_time_step:])
+        print range(num_time_steps+1)[start_time_step+1:]
+        last_ess = num_particles
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
@@ -151,13 +151,33 @@ class SMCSampler(Properties):
             self.step = mutator.mutate_new_particles(covariance,
                                                      measurement_std_dev,
                                                      temperature_step)
-            self.step_list.append(self.step.copy())
             self._autosave_step()
+            self.step_list.append(self.step.copy())
             set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
                     updater._resample_status)
             last_ess = updater._ess
         self._close_autosaver()
         return self.step_list
+
+    def trim_step_list(self, step_list, restart_time_step):
+        if self._rank == 0:
+            to_keep = range(0, restart_time_step)
+            trimmed_steps = [step_list[i] for i in to_keep]
+            step_list = trimmed_steps
+        return step_list
+
+    def save_step_list(self, h5_file):
+        '''
+        Saves self.step to an hdf5 file using the HDF5Storage class.
+        :param h5_file: file path at which to save step list
+        :type h5_file: string
+        '''
+
+        if self._rank == 0:
+            hdf5 = HDF5Storage(h5_file, mode='w')
+            hdf5.write_step_list(self.step_list)
+            hdf5.close()
+        return None
 
     def _initialize_step(self, particles):
         particles = self._comm.gather(particles, root=0)
@@ -169,13 +189,6 @@ class SMCSampler(Properties):
             step = None
         return step
 
-    def _trim_step_list(self, step_list, restart_time_step):
-        if self._rank == 0:
-            to_keep = range(0, restart_time_step + 1)
-            trimmed_steps = [step_list[i] for i in to_keep]
-            step_list = trimmed_steps
-        return step_list
-
     def _compute_step_covariance(self):
         if self._rank == 0:
             covariance = self.step.calculate_covariance()
@@ -186,7 +199,7 @@ class SMCSampler(Properties):
 
     def _autosave_step(self):
         if self._rank == 0 and self._autosaver is not None:
-            step_index = len(self.step_list)
+            step_index = len(self.step_list) + 1
             self.autosaver.write_step(self.step, step_index)
         return None
 
@@ -217,14 +230,7 @@ class SMCSampler(Properties):
             step_list = None
         return step_list
 
-    def save_step_list(self):
-        '''
-        Saves self.step to an hdf5 file using the HDF5Storage class.
-
-        :param hdf5_to_load: file path at which to save step list
-        :type hdf5_to_load: string
-        '''
-
-        if self._rank == 0:
+    def _autosave_step_list(self):
+        if self._rank == 0 and self._autosaver is not None:
             self.autosaver.write_step_list(self.step_list)
         return None
