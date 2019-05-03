@@ -35,6 +35,7 @@ from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
 from ..utils.progress_bar import set_bar
+from ..utils.single_rank_comm import SingleRankComm
 from particle_initializer import ParticleInitializer
 from particle_updater import ParticleUpdater
 from particle_mutator import ParticleMutator
@@ -123,20 +124,19 @@ class SMCSampler(Properties):
             particles = initializer.initialize_particles(measurement_std_dev,
                                                          num_particles)
             self.step = self._initialize_step(particles)
-            self.step_list = []
-            self._autosave_step()
-            self.step_list.append(self.step.copy())
+            self._autosave_step(1)
+            self.step_list = [self.step.copy()]
 
         elif 1 < self.restart_time_step <= num_time_steps:
             start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
             self.step_list = self.trim_step_list(step_list,
-                                                 self.restart_time_step)
+                                                 self.restart_time_step,
+                                                 self._comm)
             self.step = self.step_list[-1].copy()
             self._autosave_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
         p_bar = tqdm(range(num_time_steps)[start_time_step:])
-        print range(num_time_steps + 1)[start_time_step + 1:]
         last_ess = num_particles
 
         for t in p_bar:
@@ -149,7 +149,7 @@ class SMCSampler(Properties):
             self.step = mutator.mutate_new_particles(covariance,
                                                      measurement_std_dev,
                                                      temperature_step)
-            self._autosave_step()
+            self._autosave_step(t)
             self.step_list.append(self.step.copy())
             set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
                     updater._resample_status)
@@ -157,8 +157,10 @@ class SMCSampler(Properties):
         self._close_autosaver()
         return self.step_list
 
-    def trim_step_list(self, step_list, restart_time_step):
-        if self._rank == 0:
+    @staticmethod
+    def trim_step_list(step_list, restart_time_step, mpi_comm=SingleRankComm()):
+        rank = mpi_comm.Get_rank()
+        if rank == 0:
             to_keep = range(0, restart_time_step)
             trimmed_steps = [step_list[i] for i in to_keep]
             step_list = trimmed_steps
@@ -195,9 +197,8 @@ class SMCSampler(Properties):
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
 
-    def _autosave_step(self):
+    def _autosave_step(self, step_index):
         if self._rank == 0 and self._autosaver is not None:
-            step_index = len(self.step_list) + 1
             self.autosaver.write_step(self.step, step_index)
         return None
 
