@@ -40,8 +40,8 @@ from particle_initializer import ParticleInitializer
 from particle_updater import ParticleUpdater
 from particle_mutator import ParticleMutator
 from tqdm import tqdm
-from mpi4py import MPI
 import numpy as np
+import imp
 
 
 class SMCSampler(Properties):
@@ -56,10 +56,27 @@ class SMCSampler(Properties):
 
     @staticmethod
     def setup_communicator():
-        comm = MPI.COMM_WORLD.Clone()
-        size = comm.Get_size()
-        my_rank = comm.Get_rank()
-        return comm, size, my_rank
+        """
+        Detects whether multiple processors are available and sets
+        self.number_CPUs and self.cpu_rank accordingly.
+        """
+        try:
+            imp.find_module('mpi4py')
+
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD.Clone()
+
+            size = comm.size
+            rank = comm.rank
+            comm = comm
+
+        except ImportError:
+
+            size = 1
+            rank = 0
+            comm = SingleRankComm()
+
+        return comm, size, rank
 
     @staticmethod
     def setup_mcmc_sampler(data, model, param_priors):

@@ -37,6 +37,13 @@ from smcpy.particles.particle import Particle
 from smcpy.utils.checks import Checks
 
 
+def _mpi_decorator(func):
+    def wrapper(self, *args, **kwargs):
+        if self._rank == 0:
+            func(self, *args, **kwargs)
+    return wrapper
+
+
 class SMCStep(Checks):
     """ A single step of the sequential monte carlo (SMC) method that contains
     a list of Particle instances
@@ -218,6 +225,7 @@ class SMCStep(Checks):
         particle.print_particle_info()
         return None
 
+    @_mpi_decorator
     def plot_marginal(self, key, save=False, show=True,
                       prefix='marginal_'):  # pragma no cover
         '''
@@ -239,6 +247,7 @@ class SMCStep(Checks):
         plt.close(fig)
         return None
 
+    @_mpi_decorator
     def plot_pairwise_weights(self, param_names=None, labels=None,
                               save=False, show=True, param_lims=None,
                               label_size=None, tick_size=None, nbins=None,
