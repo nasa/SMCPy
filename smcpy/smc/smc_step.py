@@ -47,7 +47,6 @@ class SMCStep(Checks):
 
     def __init__(self):
         self.particles = []
-        self.id = 0
 
     def add_particle(self, particle):
         '''
@@ -66,7 +65,6 @@ class SMCStep(Checks):
         :type particles: list
         '''
         self.particles = self._check_step(particles)
-        self.id += 1
         return None
 
     def copy(self):
