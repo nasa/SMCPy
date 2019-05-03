@@ -160,7 +160,6 @@ class SMCSampler(Properties):
         last_ess = num_particles
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
-            print self.temp_schedule[t]
             self.step = updater.update_log_weights(temperature_step)
             self.step = updater.resample_if_needed()
             covariance = self._compute_step_covariance()
