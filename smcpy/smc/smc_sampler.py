@@ -178,6 +178,30 @@ class SMCSampler(Properties):
         return self.step_list
 
     @staticmethod
+    def load_step_list(h5_file, mpi_comm=SingleRankComm()):
+        '''
+        Loads and returns a step list stored using the HDF5Storage
+        class.
+
+        :param hdf5_to_load: file path of a step_list saved using the
+            self.save_step_list() methods.
+        :type hdf5_to_load: string
+
+        :Returns: A list of SMCStep class instances that contains all particles
+            at each time step.
+        '''
+
+        rank = mpi_comm.Get_rank()
+        if rank == 0:
+            hdf5 = HDF5Storage(h5_file, mode='r')
+            step_list = hdf5.read_step_list()
+            hdf5.close()
+            print 'Step list loaded from %s.' % h5_file
+        else:
+            step_list = None
+        return step_list
+
+    @staticmethod
     def trim_step_list(step_list, restart_time_step, mpi_comm=SingleRankComm()):
         rank = mpi_comm.Get_rank()
         if rank == 0:
@@ -209,6 +233,11 @@ class SMCSampler(Properties):
             step = None
         return step
 
+    def _autosave_step(self, step_index):
+        if self._rank == 0 and self._autosaver is not None:
+            self.autosaver.write_step(self.step, step_index)
+        return None
+
     def _compute_step_covariance(self):
         if self._rank == 0:
             covariance = self.step.calculate_covariance()
@@ -217,37 +246,10 @@ class SMCSampler(Properties):
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
 
-    def _autosave_step(self, step_index):
-        if self._rank == 0 and self._autosaver is not None:
-            self.autosaver.write_step(self.step, step_index)
-        return None
-
     def _close_autosaver(self):
         if self._rank == 0 and self._autosaver is not None:
             self.autosaver.close()
         return None
-
-    def load_step_list(self, h5_file):
-        '''
-        Loads and returns a step list stored using the HDF5Storage
-        class.
-
-        :param hdf5_to_load: file path of a step_list saved using the
-            self.save_step_list() methods.
-        :type hdf5_to_load: string
-
-        :Returns: A list of SMCStep class instances that contains all particles
-            at each time step.
-        '''
-
-        if self._rank == 0:
-            hdf5 = HDF5Storage(h5_file, mode='r')
-            step_list = hdf5.read_step_list()
-            hdf5.close()
-            print 'Step list loaded from %s.' % h5_file
-        else:
-            step_list = None
-        return step_list
 
     def _autosave_step_list(self):
         if self._rank == 0 and self._autosaver is not None:
