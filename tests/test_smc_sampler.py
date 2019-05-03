@@ -1,5 +1,19 @@
+from smcpy.smc.smc_sampler import SMCSampler
+from smcpy.mcmc.mcmc_sampler import MCMCSampler
 import h5py
 import os
+
+
+def test_setup_communicator():
+    comm, size, my_rank = SMCSampler.setup_communicator()
+    assert size == 1 and my_rank == 0
+
+
+def test_setup_mcmc_sampler(model):
+    data = model.evaluate({'a': 0., 'b': 0.})
+    param_priors = {'a': ['Uniform', 0., 1.], 'b': ['Uniform', 0., 1.]}
+    mcmc = SMCSampler.setup_mcmc_sampler(data, model, param_priors)
+    assert isinstance(mcmc, MCMCSampler)
 
 
 def test_autosaver(sampler):

@@ -50,19 +50,19 @@ class SMCSampler(Properties):
     '''
 
     def __init__(self, data, model, param_priors):
-        self._comm, self._size, self._rank = self._setup_communicator()
-        self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
+        self._comm, self._size, self._rank = self.setup_communicator()
+        self._mcmc = self.setup_mcmc_sampler(data, model, param_priors)
         super(SMCSampler, self).__init__()
 
     @staticmethod
-    def _setup_communicator():
+    def setup_communicator():
         comm = MPI.COMM_WORLD.Clone()
         size = comm.Get_size()
         my_rank = comm.Get_rank()
         return comm, size, my_rank
 
     @staticmethod
-    def _setup_mcmc_sampler(data, model, param_priors):
+    def setup_mcmc_sampler(data, model, param_priors):
         mcmc = MCMCSampler(data=data, model=model, params=param_priors,
                            storage_backend='ram')
         return mcmc
