@@ -13,20 +13,20 @@ def test_autosaver(sampler):
     with h5py.File('autosaver.hdf5', 'r') as hdf:
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
-        assert len(group1_items) == num_time_steps
+        assert len(group1_items) == num_time_steps - 1
 
 
 def test_load_step_list(sampler):
     num_time_steps = 3
     step_list = sampler.load_step_list('autosaver.hdf5')
-    assert len(step_list) == num_time_steps
+    assert len(step_list) == num_time_steps - 1
 
 
 def test_trim_step_list(sampler):
     restart_time_step = 3
     step_list = sampler.load_step_list('autosaver.hdf5')
     trimmed_list = sampler.trim_step_list(step_list, restart_time_step)
-    assert len(trimmed_list) == 3
+    assert len(trimmed_list) == restart_time_step - 1
 
 
 def test_restart_sampling(sampler):
@@ -42,6 +42,6 @@ def test_restart_sampling(sampler):
     with h5py.File('restart.hdf5', 'r') as hdf:
         group1 = hdf.get("steps")
         group1_items = list(group1.items())
-        assert len(group1_items) == num_time_steps
+        assert len(group1_items) == restart_time_step - 1
     os.remove('autosaver.hdf5')
     os.remove('restart.hdf5')

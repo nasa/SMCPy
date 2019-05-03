@@ -136,11 +136,12 @@ class SMCSampler(Properties):
             self.step = self.step_list[-1].copy()
             self._autosave_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
-        p_bar = tqdm(range(num_time_steps)[start_time_step:])
+        p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
         last_ess = num_particles
 
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
+            print self.temp_schedule[t]
             self.step = updater.update_log_weights(temperature_step)
             self.step = updater.resample_if_needed()
             covariance = self._compute_step_covariance()
@@ -150,7 +151,9 @@ class SMCSampler(Properties):
                                                      measurement_std_dev,
                                                      temperature_step)
             self._autosave_step(t)
+            print t
             self.step_list.append(self.step.copy())
+            print self.step_list
             set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
                     updater._resample_status)
             last_ess = updater._ess
@@ -161,7 +164,7 @@ class SMCSampler(Properties):
     def trim_step_list(step_list, restart_time_step, mpi_comm=SingleRankComm()):
         rank = mpi_comm.Get_rank()
         if rank == 0:
-            to_keep = range(0, restart_time_step)
+            to_keep = range(0, restart_time_step - 1)
             trimmed_steps = [step_list[i] for i in to_keep]
             step_list = trimmed_steps
         return step_list
