@@ -33,8 +33,4 @@ for key, value in means[0].iteritems():
     print '%s mean = %s' % (key, value)
 
 # Plot
-try:
-    if smc._rank == 0:
-        step_list[0].plot_pairwise_weights(save=True, show=False)
-except:
-    pass
+step_list[0].plot_pairwise_weights(save=True, show=True)

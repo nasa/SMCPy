@@ -148,3 +148,8 @@ def h5file():
 def filled_h5file(h5file, step_list):
     h5file.write_step_list(step_list)
     return h5file
+
+
+@pytest.fixture
+def model():
+    return DummyModel()

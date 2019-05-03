@@ -35,12 +35,13 @@ from ..smc.smc_step import SMCStep
 from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
 from ..utils.progress_bar import set_bar
+from ..utils.single_rank_comm import SingleRankComm
 from particle_initializer import ParticleInitializer
 from particle_updater import ParticleUpdater
 from particle_mutator import ParticleMutator
 from tqdm import tqdm
-from mpi4py import MPI
 import numpy as np
+import imp
 
 
 class SMCSampler(Properties):
@@ -49,20 +50,36 @@ class SMCSampler(Properties):
     '''
 
     def __init__(self, data, model, param_priors):
-        self._comm, self._size, self._rank = self._setup_communicator()
-        self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
-        self.parameter_names = param_priors.keys()
+        self._comm, self._size, self._rank = self.setup_communicator()
+        self._mcmc = self.setup_mcmc_sampler(data, model, param_priors)
         super(SMCSampler, self).__init__()
 
     @staticmethod
-    def _setup_communicator():
-        comm = MPI.COMM_WORLD.Clone()
-        size = comm.Get_size()
-        my_rank = comm.Get_rank()
-        return comm, size, my_rank
+    def setup_communicator():
+        """
+        Detects whether multiple processors are available and sets
+        self.number_CPUs and self.cpu_rank accordingly.
+        """
+        try:
+            imp.find_module('mpi4py')
+
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD.Clone()
+
+            size = comm.size
+            rank = comm.rank
+            comm = comm
+
+        except ImportError:
+
+            size = 1
+            rank = 0
+            comm = SingleRankComm()
+
+        return comm, size, rank
 
     @staticmethod
-    def _setup_mcmc_sampler(data, model, param_priors):
+    def setup_mcmc_sampler(data, model, param_priors):
         mcmc = MCMCSampler(data=data, model=model, params=param_priors,
                            storage_backend='ram')
         return mcmc
@@ -114,6 +131,7 @@ class SMCSampler(Properties):
         '''
 
         self.autosaver = autosave_file
+        self.num_time_steps = num_time_steps
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)
         start_time_step = 1
@@ -124,23 +142,22 @@ class SMCSampler(Properties):
             particles = initializer.initialize_particles(measurement_std_dev,
                                                          num_particles)
             self.step = self._initialize_step(particles)
-            self.step_list = []
-            self._autosave_step()
-            self.step_list.append(self.step.copy())
+            self.step_list = [self.step.copy()]
+            self._autosave_step(1)
 
-        elif 1 < self.restart_time_step <= num_time_steps:
+        else:
             start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
-            step_list = self.trim_step_list(step_list,
-                                            self.restart_time_step)
-            self.step = step_list[-1].copy()
-            self.step_list = step_list
+            self.step_list = self.trim_step_list(step_list,
+                                                 self.restart_time_step,
+                                                 self._comm)
+            self.step = self.step_list[-1].copy()
             self._autosave_step_list()
-        updater = ParticleUpdater(self.step, ess_threshold, self._comm)
-        p_bar = tqdm(range(num_time_steps)[start_time_step:])
-        print range(num_time_steps+1)[start_time_step+1:]
-        last_ess = num_particles
 
+        updater = ParticleUpdater(self.step, ess_threshold, self._comm)
+
+        p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
+        last_ess = num_particles
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
             self.step = updater.update_log_weights(temperature_step)
@@ -151,7 +168,7 @@ class SMCSampler(Properties):
             self.step = mutator.mutate_new_particles(covariance,
                                                      measurement_std_dev,
                                                      temperature_step)
-            self._autosave_step()
+            self._autosave_step(t)
             self.step_list.append(self.step.copy())
             set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
                     updater._resample_status)
@@ -159,9 +176,35 @@ class SMCSampler(Properties):
         self._close_autosaver()
         return self.step_list
 
-    def trim_step_list(self, step_list, restart_time_step):
-        if self._rank == 0:
-            to_keep = range(0, restart_time_step)
+    @staticmethod
+    def load_step_list(h5_file, mpi_comm=SingleRankComm()):
+        '''
+        Loads and returns a step list stored using the HDF5Storage
+        class.
+
+        :param hdf5_to_load: file path of a step_list saved using the
+            self.save_step_list() methods.
+        :type hdf5_to_load: string
+
+        :Returns: A list of SMCStep class instances that contains all particles
+            at each time step.
+        '''
+
+        rank = mpi_comm.Get_rank()
+        if rank == 0:
+            hdf5 = HDF5Storage(h5_file, mode='r')
+            step_list = hdf5.read_step_list()
+            hdf5.close()
+            print 'Step list loaded from %s.' % h5_file
+        else:
+            step_list = None
+        return step_list
+
+    @staticmethod
+    def trim_step_list(step_list, restart_time_step, mpi_comm=SingleRankComm()):
+        rank = mpi_comm.Get_rank()
+        if rank == 0:
+            to_keep = range(0, restart_time_step - 1)
             trimmed_steps = [step_list[i] for i in to_keep]
             step_list = trimmed_steps
         return step_list
@@ -189,6 +232,11 @@ class SMCSampler(Properties):
             step = None
         return step
 
+    def _autosave_step(self, step_index):
+        if self._rank == 0 and self._autosaver is not None:
+            self.autosaver.write_step(self.step, step_index)
+        return None
+
     def _compute_step_covariance(self):
         if self._rank == 0:
             covariance = self.step.calculate_covariance()
@@ -197,38 +245,10 @@ class SMCSampler(Properties):
         covariance = self._comm.scatter([covariance] * self._size, root=0)
         return covariance
 
-    def _autosave_step(self):
-        if self._rank == 0 and self._autosaver is not None:
-            step_index = len(self.step_list) + 1
-            self.autosaver.write_step(self.step, step_index)
-        return None
-
     def _close_autosaver(self):
         if self._rank == 0 and self._autosaver is not None:
             self.autosaver.close()
         return None
-
-    def load_step_list(self, h5_file):
-        '''
-        Loads and returns a step list stored using the HDF5Storage
-        class.
-
-        :param hdf5_to_load: file path of a step_list saved using the
-            self.save_step_list() methods.
-        :type hdf5_to_load: string
-
-        :Returns: A list of SMCStep class instances that contains all particles
-            at each time step.
-        '''
-
-        if self._rank == 0:
-            hdf5 = HDF5Storage(h5_file, mode='r')
-            step_list = hdf5.read_step_list()
-            hdf5.close()
-            print 'Step list loaded from %s.' % h5_file
-        else:
-            step_list = None
-        return step_list
 
     def _autosave_step_list(self):
         if self._rank == 0 and self._autosaver is not None:

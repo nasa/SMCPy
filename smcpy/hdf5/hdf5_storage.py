@@ -157,7 +157,7 @@ class HDF5Storage(object):
         :type step_list: list of SMCStep classes
         '''
         for step_index, step in enumerate(step_list):
-            self.write_step(step, step_index+1)
+            self.write_step(step, step_index + 1)
         return None
 
     def read_step_list(self,):
