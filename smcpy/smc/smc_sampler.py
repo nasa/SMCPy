@@ -51,7 +51,6 @@ class SMCSampler(Properties):
     def __init__(self, data, model, param_priors):
         self._comm, self._size, self._rank = self._setup_communicator()
         self._mcmc = self._setup_mcmc_sampler(data, model, param_priors)
-        self.parameter_names = param_priors.keys()
         super(SMCSampler, self).__init__()
 
     @staticmethod
@@ -131,14 +130,13 @@ class SMCSampler(Properties):
         elif 1 < self.restart_time_step <= num_time_steps:
             start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
-            step_list = self.trim_step_list(step_list,
-                                            self.restart_time_step)
-            self.step = step_list[-1].copy()
-            self.step_list = step_list
+            self.step_list = self.trim_step_list(step_list,
+                                                 self.restart_time_step)
+            self.step = self.step_list[-1].copy()
             self._autosave_step_list()
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
         p_bar = tqdm(range(num_time_steps)[start_time_step:])
-        print range(num_time_steps+1)[start_time_step+1:]
+        print range(num_time_steps + 1)[start_time_step + 1:]
         last_ess = num_particles
 
         for t in p_bar:
