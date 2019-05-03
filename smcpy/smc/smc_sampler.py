@@ -114,6 +114,7 @@ class SMCSampler(Properties):
         '''
 
         self.autosaver = autosave_file
+        self.num_time_steps = num_time_steps
         self.restart_time_step = restart_time_step
         self.temp_schedule = np.linspace(0., 1., num_time_steps)
         start_time_step = 1
@@ -124,10 +125,10 @@ class SMCSampler(Properties):
             particles = initializer.initialize_particles(measurement_std_dev,
                                                          num_particles)
             self.step = self._initialize_step(particles)
-            self._autosave_step(1)
             self.step_list = [self.step.copy()]
+            self._autosave_step(1)
 
-        elif 1 < self.restart_time_step <= num_time_steps:
+        else:
             start_time_step = restart_time_step
             step_list = self.load_step_list(hdf5_to_load)
             self.step_list = self.trim_step_list(step_list,
@@ -135,10 +136,11 @@ class SMCSampler(Properties):
                                                  self._comm)
             self.step = self.step_list[-1].copy()
             self._autosave_step_list()
+
         updater = ParticleUpdater(self.step, ess_threshold, self._comm)
+
         p_bar = tqdm(range(num_time_steps)[start_time_step + 1:])
         last_ess = num_particles
-
         for t in p_bar:
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
             print self.temp_schedule[t]
@@ -151,9 +153,7 @@ class SMCSampler(Properties):
                                                      measurement_std_dev,
                                                      temperature_step)
             self._autosave_step(t)
-            print t
             self.step_list.append(self.step.copy())
-            print self.step_list
             set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
                     updater._resample_status)
             last_ess = updater._ess
