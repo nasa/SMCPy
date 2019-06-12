@@ -4,7 +4,7 @@ from smcpy.mcmc.mcmc_sampler import MCMCSampler
 
 import sys
 sys.path.append('../')
-from spring_mass_models import SpringMassModel
+from spring_mass_model import SpringMassModel
 
 
 # Initialize model
