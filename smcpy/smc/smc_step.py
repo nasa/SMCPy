@@ -30,6 +30,7 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
+import imp
 import numpy as np
 import copy
 import warnings
@@ -39,8 +40,30 @@ from smcpy.utils.checks import Checks
 
 def _mpi_decorator(func):
     def wrapper(self, *args, **kwargs):
-        if self._rank == 0:
+        """
+        Detects whether multiple processors are available and sets
+        self.number_CPUs and self.cpu_rank accordingly. Only calls decorated
+        function using rank 0.
+        """
+        try:
+            imp.find_module('mpi4py')
+
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD.Clone()
+
+            size = comm.size
+            rank = comm.rank
+            comm = comm
+
+        except ImportError:
+
+            size = 1
+            rank = 0
+            comm = SingleRankComm()
+
+        if rank == 0:
             func(self, *args, **kwargs)
+
     return wrapper
 
 
