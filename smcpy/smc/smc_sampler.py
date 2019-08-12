@@ -52,6 +52,7 @@ class SMCSampler(Properties):
     def __init__(self, data, model, param_priors):
         self._comm, self._size, self._rank = self.setup_communicator()
         self._mcmc = self.setup_mcmc_sampler(data, model, param_priors)
+        self._step_list = []
         super(SMCSampler, self).__init__()
 
     @staticmethod
@@ -138,11 +139,12 @@ class SMCSampler(Properties):
         if self.restart_time_step == 1:
             initializer = ParticleInitializer(self._mcmc, self.temp_schedule,
                                               self._comm)
-            initializer.set_proposal_distribution(proposal_center, proposal_scales)
+            initializer.set_proposal_distribution(proposal_center,
+                                                  proposal_scales)
             particles = initializer.initialize_particles(measurement_std_dev,
                                                          num_particles)
             self.step = self._initialize_step(particles)
-            self.step_list = [self.step.copy()]
+            self._add_step_to_step_list(self.step)
             self._autosave_step(1)
 
         else:
@@ -169,12 +171,15 @@ class SMCSampler(Properties):
                                                      measurement_std_dev,
                                                      temperature_step)
             self._autosave_step(t)
-            self.step_list.append(self.step.copy())
-            set_bar(p_bar, t, last_ess, updater._ess, mutator._acceptance_ratio,
-                    updater._resample_status)
-            last_ess = updater._ess
+            self._add_step_to_step_list(self.step)
+            
+            if self._rank == 0:
+                set_bar(p_bar, t, last_ess, updater._ess,
+                        mutator._acceptance_ratio, updater._resample_status)
+                last_ess = updater._ess
+
         self._close_autosaver()
-        return self.step_list
+        return self._step_list
 
     @staticmethod
     def load_step_list(h5_file, mpi_comm=SingleRankComm()):
@@ -231,6 +236,11 @@ class SMCSampler(Properties):
         else:
             step = None
         return step
+
+    def _add_step_to_step_list(self, step):
+        if self._rank == 0:
+            self._step_list.append(step.copy())
+        return None
 
     def _autosave_step(self, step_index):
         if self._rank == 0 and self._autosaver is not None:
