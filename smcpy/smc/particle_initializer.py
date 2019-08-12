@@ -56,15 +56,22 @@ class ParticleInitializer():
         Initializes first set of particles based on the prior and proposal
         distributions.
 
-        :param measurement_std_dev: standard deviation of the measurement error
-        :type measurement_std_dev: float
+        :param measurement_std_dev: standard deviation of the measurement error;
+            if standard deviation is to be estimated, set to None
+        :type measurement_std_dev: float or None
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
         '''
         self.num_particles = num_particles
         m_std = measurement_std_dev
-        self._mcmc.generate_pymc_model(fix_var=True, std_dev0=m_std)
+
+        if m_std is not None:
+            self._mcmc.generate_pymc_model(fix_var=True, std_dev0=m_std)
+        else:
+            self._mcmc.generate_pymc_model(fix_var=False, std_dev0=1.0)
+
         num_particles_per_partition = self._get_num_particles_per_partition()
+
         particles = []
         prior_variables = self._create_prior_random_variables()
         if self.proposal_center is not None:

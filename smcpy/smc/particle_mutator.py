@@ -75,8 +75,11 @@ class ParticleMutator():
         new_particles = []
         acceptance_count = 0
         for particle in particles:
-            mcmc.generate_pymc_model(fix_var=True, std_dev0=measurement_std_dev,
+
+            fix_var, std_dev0 = self._get_std_dev_options(measurement_std_dev)
+            mcmc.generate_pymc_model(fix_var=fix_var, std_dev0=std_dev0,
                                      q0=particle.params)
+
             mcmc.sample(self.num_mcmc_steps, burnin=0, step_method=step_method,
                         cov=covariance, verbose=-1, phi=temperature_step)
             stochastics = mcmc.MCMC.db.getstate()['stochastics']
@@ -119,3 +122,13 @@ class ParticleMutator():
             new_particles = list(np.concatenate(new_particles))
 
         return new_particles
+
+    @staticmethod
+    def _get_std_dev_options(measurement_std_dev):
+        if measurement_std_dev is not None:
+            fix_var = True
+            std_dev0 = measurement_std_dev
+        else:
+            fix_var = False
+            std_dev0 = 1.0
+        return fix_var, std_dev0

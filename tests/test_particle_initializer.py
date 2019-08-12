@@ -2,16 +2,16 @@ import numpy as np
 import pytest
 
 
-def test_initialize_particles_from_prior(part_initer):
-    particles = part_initer.initialize_particles(num_particles=5,
-                                                 measurement_std_dev=1.0)
+@pytest.mark.parametrize('measurement_std_dev',[1.0, None])
+def test_initialize_particles_from_prior(part_initer, measurement_std_dev):
+    expected_loglikes = np.array([-3. / 2 * np.log(2 * np.pi)] * 5)
+    expected_weights = expected_loglikes
 
+    particles = part_initer.initialize_particles(measurement_std_dev,
+                                                 num_particles=5)
     particle_param_vals = np.array([p.params.values() for p in particles])
     particle_loglikes = np.array([p.log_like for p in particles])
     particle_weights = np.array([p.log_weight for p in particles])
-
-    expected_loglikes = np.array([-3. / 2 * np.log(2 * np.pi)] * 5)
-    expected_weights = expected_loglikes
 
     assert all([0. <= val <= 1. for val in particle_param_vals.flatten()])
     np.testing.assert_array_equal(particle_loglikes, expected_loglikes)
