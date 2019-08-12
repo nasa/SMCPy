@@ -354,7 +354,6 @@ class MCMCSampler:
             pymc_mod_addon = []
             pymc_mod_order_addon = []
         else:
-            print 'Standard deviation will be sampled via MCMC'
             std_dev = pymc.Uniform('std_dev', lower=0, upper=1000)
 
             # Since variance will be sampled, need to set initial value
@@ -369,8 +368,6 @@ class MCMCSampler:
             # if ssq0 and std_dev0 not provided, set default value 
             elif std_dev0 == None and ssq0 == None:
                 std_dev0 = 0.1
-            else:
-                print 'Setting initial estimate of std_dev = %s' %std_dev0
             std_dev.value = std_dev0
 
             # assign variance as random variable or fixed value
