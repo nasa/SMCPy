@@ -31,7 +31,7 @@ AGREEMENT.
 '''
 
 from copy import copy
-from pymc import Normal
+from pymc import Normal, Deterministic
 from ..particles.particle import Particle
 from ..utils.single_rank_comm import SingleRankComm
 import numpy as np
@@ -126,18 +126,30 @@ class ParticleInitializer():
     def _create_prior_random_variables(self,):
         mcmc = copy(self._mcmc)
         random_variables = dict()
-        for key in mcmc.params.keys():
+        params = mcmc.params.keys()
+
+        if 'std_dev' in mcmc.pymc_mod_order:
+            params.append('std_dev')
+
+        for key in params:
             index = mcmc.pymc_mod_order.index(key)
             random_variables[key] = mcmc.pymc_mod[index]
+
         return random_variables
 
     def _create_proposal_random_variables(self,):
         centers = self.proposal_center
         scales = self.proposal_scales
         random_variables = dict()
-        for key in self._mcmc.params.keys():
+        params = self._mcmc.params.keys()
+
+        if 'std_dev' in self._mcmc.pymc_mod_order:
+            params.append('std_dev')
+
+        for key in params:
             variance = (scales[key])**2
             random_variables[key] = Normal(key, centers[key], 1 / variance)
+
         return random_variables
 
     def _create_particle(self, prior_variables, prop_variables=None):
@@ -156,7 +168,7 @@ class ParticleInitializer():
         return Particle(params, log_weight, log_like)
 
     def _sample_random_variables(self, random_variables):
-        param_keys = self._mcmc.params.keys()
+        param_keys = random_variables.keys()
         params = {key: random_variables[key].random() for key in param_keys}
         return params
 
