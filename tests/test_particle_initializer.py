@@ -1,32 +1,5 @@
 import numpy as np
 import pytest
-from smcpy.smc.particle_initializer import ParticleInitializer
-from smcpy.mcmc.mcmc_sampler import MCMCSampler
-from smcpy.utils.single_rank_comm import SingleRankComm
-
-
-class DummyModel():
-    '''Dummy test model'''
-
-    def __init__(self):
-        pass
-
-    def evaluate(*args, **kwargs):
-        return np.array([0., 0., 0.])
-
-
-@pytest.fixture
-def mcmc_obj():
-    model = DummyModel()
-    data = model.evaluate({'a': 0., 'b': 0.})
-    param_priors = {'a': ['Uniform', 0., 1.], 'b': ['Uniform', 0., 1.]}
-    return MCMCSampler(data, model, param_priors, storage_backend='ram')
-
-
-@pytest.fixture
-def part_initer(mcmc_obj):
-    return ParticleInitializer(mcmc_obj, temp_schedule=[0., 1.],
-                               mpi_comm=SingleRankComm())
 
 
 def test_initialize_particles_from_prior(part_initer):

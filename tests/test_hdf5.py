@@ -7,35 +7,6 @@ from smcpy.smc.smc_step import SMCStep
 from smcpy.particles.particle import Particle
 
 
-@pytest.fixture
-def particle():
-    particle = Particle({'a': 1, 'b': 2}, 0.2, -0.2)
-    return particle
-
-
-@pytest.fixture
-def filled_step(particle):
-    step_tester = SMCStep()
-    step_tester.set_particles(5 * [particle])
-    return step_tester
-
-
-@pytest.fixture
-def step_list(filled_step):
-    return 3 * [filled_step]
-
-
-@pytest.fixture
-def h5file():
-    return HDF5Storage('temp.hdf5', 'w')
-
-
-@pytest.fixture
-def filled_h5file(h5file, step_list):
-    h5file.write_step_list(step_list)
-    return h5file
-
-
 def test_write_particle(h5file, particle):
     h5file.write_particle(particle, step_index=1, particle_index=1)
     f = h5py.File('temp.hdf5', 'r')

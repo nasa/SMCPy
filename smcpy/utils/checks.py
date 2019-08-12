@@ -58,3 +58,7 @@ class Checks(object):
     @staticmethod
     def _raise_zero_error(input_):
         raise ValueError('%s cannot be zero.' % input_)
+
+    @staticmethod
+    def _raise_out_of_bounds_error(input_):
+        raise ValueError('%s cannot be greater than num_time_steps.' % input)

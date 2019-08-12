@@ -37,6 +37,13 @@ from smcpy.particles.particle import Particle
 from smcpy.utils.checks import Checks
 
 
+def _mpi_decorator(func):
+    def wrapper(self, *args, **kwargs):
+        if self._rank == 0:
+            func(self, *args, **kwargs)
+    return wrapper
+
+
 class SMCStep(Checks):
     """ A single step of the sequential monte carlo (SMC) method that contains
     a list of Particle instances
@@ -47,7 +54,6 @@ class SMCStep(Checks):
 
     def __init__(self):
         self.particles = []
-        self.id = 0
 
     def add_particle(self, particle):
         '''
@@ -66,7 +72,6 @@ class SMCStep(Checks):
         :type particles: list
         '''
         self.particles = self._check_step(particles)
-        self.id += 1
         return None
 
     def copy(self):
@@ -220,6 +225,7 @@ class SMCStep(Checks):
         particle.print_particle_info()
         return None
 
+    @_mpi_decorator
     def plot_marginal(self, key, save=False, show=True,
                       prefix='marginal_'):  # pragma no cover
         '''
@@ -241,6 +247,7 @@ class SMCStep(Checks):
         plt.close(fig)
         return None
 
+    @_mpi_decorator
     def plot_pairwise_weights(self, param_names=None, labels=None,
                               save=False, show=True, param_lims=None,
                               label_size=None, tick_size=None, nbins=None,
@@ -279,7 +286,7 @@ class SMCStep(Checks):
         tril = np.tril(np.arange((L - 1)**2).reshape([L - 1, L - 1]) + 1)
         iplts = [i for i in tril.flatten() if i > 0]
 
-        log_weights = self.get_log_weights()
+        norm_weights = self.normalize_step_weights()
         means = self.get_mean()
         for i in zip(iplts, ikeys):
             iplt = i[0]     # subplot index
@@ -298,8 +305,8 @@ class SMCStep(Checks):
 
             def rnd_to_sig(x):
                 return round(x, -int(np.floor(np.log10(abs(x)))) + 1)
-            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=log_weights, vmin=0.0,
-                                               vmax=rnd_to_sig(max(log_weights)))
+            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=norm_weights, vmin=0.0,
+                                               vmax=rnd_to_sig(max(norm_weights)))
             ax[key1 + '+' + key2].axvline(means[key1], color='C1', linestyle='--')
             ax[key1 + '+' + key2].axhline(means[key2], color='C1', linestyle='--')
             ax[key1 + '+' + key2].set_xlabel(label_dict[key1])

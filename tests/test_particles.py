@@ -1,10 +1,4 @@
 import pytest
-from particle_tester import ParticleTester
-
-
-@pytest.fixture
-def particle_tester():
-    return ParticleTester()
 
 
 def test_particle_instance_variables(particle_tester):

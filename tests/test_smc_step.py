@@ -1,74 +1,7 @@
 import pytest
 import numpy as np
-from smcpy.smc.smc_step import SMCStep
-from smcpy.particles.particle import Particle
 
 arr_alm_eq = np.testing.assert_array_almost_equal
-
-
-@pytest.fixture
-def particle():
-    particle = Particle({'a': 1, 'b': 2}, 0.2, -0.2)
-    return particle
-
-
-@pytest.fixture
-def particle_list():
-    particle = Particle({'a': 1, 'b': 2}, 0.2, -0.2)
-    return [particle.copy() for i in range(5)]
-
-
-@pytest.fixture
-def mixed_particle_list():
-    particle_1 = Particle({'a': 1, 'b': 2}, -0.2, -0.2)
-    particle_2 = Particle({'a': 2, 'b': 4}, -0.2, -0.2)
-    list_1 = [particle_1.copy() for i in range(3)]
-    list_2 = [particle_2.copy() for i in range(2)]
-    return list_1 + list_2
-
-
-@pytest.fixture
-def linear_particle_list():
-    a = np.arange(0, 20)
-    b = [2 * val + np.random.normal(0, 1) for val in a]
-    w = 0.1
-    p_list = [Particle({'a': a[i], 'b': b[i]}, w, -.2) for i in a]
-    return p_list
-
-
-@pytest.fixture
-def mixed_weight_particle_list():
-    p_list = [Particle({'a': 1, 'b': 2}, i, -.2) for i in np.arange(.1, .5, .1)]
-    return p_list
-
-
-@pytest.fixture
-def step_tester():
-    return SMCStep()
-
-
-@pytest.fixture
-def filled_step(step_tester, particle_list):
-    step_tester.set_particles(particle_list)
-    return step_tester
-
-
-@pytest.fixture
-def mixed_step(step_tester, mixed_particle_list):
-    step_tester.set_particles(mixed_particle_list)
-    return step_tester
-
-
-@pytest.fixture
-def linear_step(step_tester, linear_particle_list):
-    step_tester.set_particles(linear_particle_list)
-    return step_tester
-
-
-@pytest.fixture
-def mixed_weight_step(step_tester, mixed_weight_particle_list):
-    step_tester.set_particles(mixed_weight_particle_list)
-    return step_tester
 
 
 def test_add_particle(filled_step, particle):
