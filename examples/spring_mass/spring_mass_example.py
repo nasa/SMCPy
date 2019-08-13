@@ -26,11 +26,15 @@ step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
                        noise_stddev, ess_threshold=num_particles * 0.5,
                        autosave_file='autosaver.hdf5')
 
-# Calculate means
-means = [step.get_mean() for step in step_list]
+try:
+    # Calculate means
+    means = [step.get_mean() for step in step_list]
+    
+    for key, value in means[0].iteritems():
+        print '%s mean = %s' % (key, value)
+    
+    # Plot
+    step_list[-1].plot_pairwise_weights(save=True, show=True)
 
-for key, value in means[0].iteritems():
-    print '%s mean = %s' % (key, value)
-
-# Plot
-step_list[0].plot_pairwise_weights(save=True, show=True)
+except IndexError:
+    pass
