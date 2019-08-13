@@ -60,8 +60,10 @@ class ParticleMutator():
         :param covariance: covariance of the parameters between particles,
             computed with their respective weights.
         :type covariance: numpy Nd array
-        :param measurement_std_dev: standard deviation of the measurement error
-        :type measurement_std_dev: float
+        :param measurement_std_dev: standard deviation of the measurement error;
+            if unknown, set to None and it will be sampled along with other
+            model parameters.
+        :type measurement_std_dev: float or None
         :param temperature_step: difference in temp schedule between steps
         :type temperature_step: float
 
@@ -76,9 +78,13 @@ class ParticleMutator():
         acceptance_count = 0
         for particle in particles:
 
-            fix_var, std_dev0 = self._get_std_dev_options(measurement_std_dev)
-            mcmc.generate_pymc_model(fix_var=fix_var, std_dev0=std_dev0,
-                                     q0=particle.params)
+            if measurement_std_dev is None:
+                std_dev0 = particle.params['std_dev']
+            else:
+                std_dev0 = measurement_std_dev
+
+            mcmc.generate_pymc_model(fix_var=bool(measurement_std_dev),
+                                     std_dev0=std_dev0, q0=particle.params)
 
             mcmc.sample(self.num_mcmc_steps, burnin=0, step_method=step_method,
                         cov=covariance, verbose=-1, phi=temperature_step)
@@ -122,13 +128,3 @@ class ParticleMutator():
             new_particles = list(np.concatenate(new_particles))
 
         return new_particles
-
-    @staticmethod
-    def _get_std_dev_options(measurement_std_dev):
-        if measurement_std_dev is not None:
-            fix_var = True
-            std_dev0 = measurement_std_dev
-        else:
-            fix_var = False
-            std_dev0 = 1.0
-        return fix_var, std_dev0

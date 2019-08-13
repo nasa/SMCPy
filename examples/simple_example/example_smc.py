@@ -10,9 +10,9 @@ if __name__ == '__main__':
     a = 2
     b = 3.5
     x = np.arange(50)
-    m = Model(x)
-    std_dev = 0.6
-    y_noisy = np.genfromtxt('noisy_data.txt')
+    my_model = Model(x)
+    std_dev = None # measurement noise std deviation will be sampled
+    noisy_data = np.genfromtxt('noisy_data.txt')
 
     param_priors = {'a': ['Uniform', -5.0, 5.0],
                     'b': ['Uniform', -5.0, 5.0]}
@@ -20,13 +20,14 @@ if __name__ == '__main__':
     # run smc
     num_particles = 1000
     num_time_steps = 20
-    num_mcmc_steps = 5
-    smc = SMCSampler(y_noisy, m, param_priors)
+    num_mcmc_steps = 2
+    smc = SMCSampler(noisy_data, my_model, param_priors)
     step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
                            std_dev, ess_threshold=0.5 * num_particles,
-                           # proposal_center=center, proposal_scales=scales,
                            autosave_file='test.h5')
+
+    # plot results of last step
     try:
-        step_list.plot_pairwise_weights()
+        step_list[-1].plot_pairwise_weights(show=False, save=True)
     except:
         pass

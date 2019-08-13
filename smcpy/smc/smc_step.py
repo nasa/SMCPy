@@ -270,7 +270,6 @@ class SMCStep(Checks):
         plt.close(fig)
         return None
 
-    @_mpi_decorator
     def plot_pairwise_weights(self, param_names=None, labels=None,
                               save=False, show=True, param_lims=None,
                               label_size=None, tick_size=None, nbins=None,

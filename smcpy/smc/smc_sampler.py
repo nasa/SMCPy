@@ -86,9 +86,9 @@ class SMCSampler(Properties):
         return mcmc
 
     def sample(self, num_particles, num_time_steps, num_mcmc_steps,
-               measurement_std_dev, ess_threshold=None, proposal_center=None,
-               proposal_scales=None, restart_time_step=1, hdf5_to_load=None,
-               autosave_file=None):
+               measurement_std_dev=None, ess_threshold=None,
+               proposal_center=None, proposal_scales=None, restart_time_step=1,
+               hdf5_to_load=None, autosave_file=None):
         '''
         Driver method that performs Sequential Monte Carlo sampling.
 
@@ -99,8 +99,10 @@ class SMCSampler(Properties):
         :type num_time_steps: int
         :param num_mcmc_steps: number of mcmc steps to take during mutation
         :param num_mcmc_steps: int
-        :param measurement_std_dev: standard deviation of the measurement error
-        :type measurement_std_dev: float
+        :param measurement_std_dev: standard deviation of the measurement error;
+            if unknown, set to None and it will be estimated along with other
+            model parameters.
+        :type measurement_std_dev: float or None
         :param ess_threshold: threshold equivalent sample size; triggers
             resampling when ess > ess_threshold
         :type ess_threshold: float or int

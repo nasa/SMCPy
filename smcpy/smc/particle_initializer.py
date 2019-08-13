@@ -57,7 +57,8 @@ class ParticleInitializer():
         distributions.
 
         :param measurement_std_dev: standard deviation of the measurement error;
-            if standard deviation is to be estimated, set to None
+            if unknown, set to None and it will be estimated along with other
+            model parameters.
         :type measurement_std_dev: float or None
         :param num_particles: number of particles to use during sampling
         :type num_particles: int
