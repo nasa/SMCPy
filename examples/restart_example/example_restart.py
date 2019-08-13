@@ -20,22 +20,23 @@ if __name__ == '__main__':
     # run smc
     num_particles = 1000
     num_time_steps = 20
-    num_mcmc_steps = 5
+    num_mcmc_steps = 1
     smc = SMCSampler(y_noisy, m, param_priors)
-    particle_chain = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
+    step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
                                 std_dev, ess_threshold=0.5*num_particles,
                                 autosave_file='smc.h5')
 
     # try a restart
-    restarted_chain = smc.sample(num_particles, num_time_steps, num_mcmc_steps,
-                                 std_dev, ess_threshold=0.5*num_particles,
-                                 restart_time_step=10, hdf5_to_load='smc.h5',
-                                 autosave_file='smc_restart.h5')
+    restart_step_list = smc.sample(num_particles, num_time_steps,
+                                   num_mcmc_steps,
+                                   std_dev, ess_threshold=0.5*num_particles,
+                                   restart_time_step=10, hdf5_to_load='smc.h5',
+                                   autosave_file='smc_restart.h5')
 
     # plot
     try:
-        particle_chain.plot_pairwise_weights(save=True, show=False)
-        restarted_chain.plot_pairwise_weights(save=True, show=False,
-                                              prefix='pairwise_restart')
+        step_list[-1].plot_pairwise_weights(save=True, show=False)
+        restart_step_list[-1].plot_pairwise_weights(save=True, show=False,
+                                                    prefix='pairwise_restart')
     except:
         pass
