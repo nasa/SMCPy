@@ -44,20 +44,27 @@ def test_get_mean(filled_step):
     assert filled_step.get_mean()['a'] == 1.0
 
 
+def test_get_std_dev(mixed_step):
+    assert mixed_step.get_std_dev()['a'] == np.sqrt(0.3)
+
+
+def test_get_variance(mixed_step):
+    assert mixed_step.get_variance()['a'] == 0.3
+
+
 def test_get_log_weights(filled_step):
     assert np.array_equal(filled_step.get_log_weights(), [0.2] * 5)
 
 
-def test_calcuate_covariance_not_positive_definite(filled_step):
-    assert np.array_equal(filled_step.calculate_covariance(),
-                          np.eye(2))
+def test_get_covariance_not_positive_definite(filled_step):
+    assert np.array_equal(filled_step.get_covariance(), np.eye(2))
 
 
-def test_calculate_covariance(linear_step):
+def test_get_covariance(linear_step):
     a = linear_step.get_params('a')
     b = linear_step.get_params('b')
     exp_cov = np.cov(a, b)
-    arr_alm_eq(linear_step.calculate_covariance(), exp_cov)
+    arr_alm_eq(linear_step.get_covariance(), exp_cov)
 
 
 def test_normalize_step_log_weights(mixed_weight_step):

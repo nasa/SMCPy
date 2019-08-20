@@ -117,7 +117,7 @@ class SMCStep(Checks):
 
     def get_mean(self):
         '''
-        Returns the mean of each parameter within the step
+        Returns the estimated mean of each parameter in step.
         '''
         normalized_weights = self.normalize_step_weights()
         param_names = self.particles[0].params.keys()
@@ -129,15 +129,40 @@ class SMCStep(Checks):
             mean[pn] = np.sum(mean[pn])
         return mean
 
+    def get_variance(self):
+        '''
+        Returns the estimated variance of each parameter in step. Uses weighted
+        sample formula https://en.wikipedia.org/wiki/Sample_mean_and_covariance 
+        '''
+        normalized_weights = self.normalize_step_weights()
+        mean = self.get_mean()
+        param_names = self.particles[0].params.keys()
+        var = {}
+        for pn in param_names:
+            var[pn] = []
+            for i, p in enumerate(self.particles):
+                moment = (p.params[pn] - mean[pn])**2
+                var[pn].append(normalized_weights[i] * moment)
+            var[pn] = np.sum(var[pn])
+            var[pn] = 1 / (1 - np.sum(normalized_weights**2)) * var[pn]
+        return var
+
+    def get_std_dev(self):
+        '''
+        Returns the estimated variance of each parameter in step. 
+        '''
+        return {k: np.sqrt(v) for k, v in self.get_variance().iteritems()}
+
     def get_log_weights(self):
         '''
         Returns a list of the log weights of each particle in the step
         '''
         return [p.log_weight for p in self.particles]
 
-    def calculate_covariance(self):
+    def get_covariance(self):
         '''
-        Estimates the covariance matrix for the step.
+        Estimates the covariance matrix for the step. Uses weighted sample
+        formula https://en.wikipedia.org/wiki/Sample_mean_and_covariance
         '''
         particle_list = self.particles
         normalized_weights = self.normalize_step_weights()
@@ -150,7 +175,7 @@ class SMCStep(Checks):
             R = np.dot(diff, diff.transpose())
             cov_list.append(normalized_weights[i] * R)
         cov_matrix = np.sum(cov_list, axis=0)
-        cov_matrix = cov_matrix * (float(len(cov_list)) / (len(cov_list) - 1))
+        cov_matrix = cov_matrix * 1 / (1 - np.sum(normalized_weights**2))
 
         if not self._is_positive_definite(cov_matrix):
             msg = 'current step cov not pos def, setting to identity matrix'
@@ -212,7 +237,8 @@ class SMCStep(Checks):
     def resample(self):  # issue here
         '''
         Resamples the step based on normalized weights. Assigns discrete
-        probabilities to each particle (sum to 1), resample from this discrete distribution using the particle's copy() method.
+        probabilities to each particle (sum to 1), resample from this discrete
+        distribution using the particle's copy() method.
         '''
         particles = self.particles
         num_particles = len(particles)
