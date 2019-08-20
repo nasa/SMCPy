@@ -251,7 +251,7 @@ class SMCSampler(Properties):
 
     def _compute_step_covariance(self):
         if self._rank == 0:
-            covariance = self.step.calculate_covariance()
+            covariance = self.step.get_covariance()
         else:
             covariance = None
         covariance = self._comm.scatter([covariance] * self._size, root=0)
