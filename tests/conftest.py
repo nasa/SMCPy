@@ -4,14 +4,14 @@ Contains all fixtures required in tests
 import pytest
 import numpy as np
 from particle_tester import ParticleTester
-from smcpy.smc.particle_initializer import ParticleInitializer
-from smcpy.smc.particle_mutator import ParticleMutator
-from smcpy.smc.particle_updater import ParticleUpdater
+from smcpy.particles.particle_initializer import ParticleInitializer
+from smcpy.particles.particle_mutator import ParticleMutator
+from smcpy.particles.particle_updater import ParticleUpdater
+from smcpy.particles.particle import Particle
 from smcpy.smc.smc_sampler import SMCSampler
 from smcpy.mcmc.mcmc_sampler import MCMCSampler
 from smcpy.utils.single_rank_comm import SingleRankComm
 from smcpy.smc.smc_step import SMCStep
-from smcpy.particles.particle import Particle
 from smcpy.hdf5.hdf5_storage import HDF5Storage
 
 

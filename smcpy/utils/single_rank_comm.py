@@ -16,7 +16,8 @@ class SingleRankComm():
         if len(scatter_list) == 1:
             return scatter_list[0]
         else:
-            raise ValueError("SingleRankComm cannot accept more than one partition")
+            raise ValueError("SingleRankComm cannot accept more than one " +\
+                             "partition")
 
     @staticmethod
     def gather(scatter_list, *args, **kwargs):

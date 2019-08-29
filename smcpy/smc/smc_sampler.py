@@ -36,9 +36,9 @@ from ..hdf5.hdf5_storage import HDF5Storage
 from ..utils.properties import Properties
 from ..utils.progress_bar import set_bar
 from ..utils.single_rank_comm import SingleRankComm
-from particle_initializer import ParticleInitializer
-from particle_updater import ParticleUpdater
-from particle_mutator import ParticleMutator
+from ..particles.particle_initializer import ParticleInitializer
+from ..particles.particle_updater import ParticleUpdater
+from ..particles.particle_mutator import ParticleMutator
 from tqdm import tqdm
 import numpy as np
 import imp
