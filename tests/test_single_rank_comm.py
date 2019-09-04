@@ -31,4 +31,4 @@ def test_raise_error_when_length_scatter_list_not_one(single_rank_comm):
 
 def test_gather(single_rank_comm):
     scatter_list = np.array([0, 1, 2, 3])
-    array_equal(single_rank_comm.gather(scatter_list), scatter_list)
+    array_equal(single_rank_comm.gather(scatter_list), [scatter_list])

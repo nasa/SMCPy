@@ -21,4 +21,4 @@ class SingleRankComm():
 
     @staticmethod
     def gather(scatter_list, *args, **kwargs):
-        return scatter_list
+        return [scatter_list]
