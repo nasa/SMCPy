@@ -2,12 +2,10 @@ language: python
 python:
   - "2.7"
 
-before_install:
-  - sh ./utilities/get_mpich.sh
-
 install:
   - sudo apt-get install libcr-dev libopenblas-dev liblapack-dev
   - export PYTHONPATH=$PYTHONPATH:$(pwd)/SMCPy
+  - python setup.py install
   - pip install -r requirements.txt 
   - pip install pytest==4.0 pytest-cov
   - pip install coveralls
