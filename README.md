@@ -23,14 +23,14 @@ import numpy as np
 from smcpy.examples.spring_mass.spring_mass_models import SpringMassModel
 from smcpy.smc.smc_sampler import SMCSampler
 
+# Load data
+noise_stddev = 0.2
+displacement_data = np.genfromtxt('noisy_data.txt')
+
 # Initialize model
 state0 = [0., 0.]                        #initial conditions
 measure_t_grid = np.arange(0., 5., 0.2)  #time 
 model = SpringMassModel(state0, measure_t_grid)
-
-# Load data
-noise_stddev = 0.2
-displacement_data = np.genfromtxt('noisy_data.txt')
 
 # Define prior distributions
 param_priors = {'K': ['Uniform', 0.0, 10.0],
@@ -41,10 +41,10 @@ num_particles = 5000
 num_time_steps = 20
 num_mcmc_steps = 1
 smc = SMCSampler(displacement_data, model, param_priors)
-pchain = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
-                    ess_threshold=num_particles*0.5)
+step_list = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
+                       ess_threshold=num_particles*0.5)
 if smc._rank == 0:
-    pchain.plot_pairwise_weights(save=True)
+    step_list[-1].plot_pairwise_weights(save=True)
 ```
 
 The above code produces probabilistic estimates of K, the spring stiffness divided by mass, and g, the gravitational constant on an unknown planet. These estimates are in the form of weighted particles and can be visualized by plotting the pairwise weights as shown below. The mean of each parameter is marked by the dashed red line. The true values for this example were K = 1.67 and g = 4.62. More details can be found in the spring mass example (smcpy/examples/spring_mass/).
