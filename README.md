@@ -51,6 +51,17 @@ The above code produces probabilistic estimates of K, the spring stiffness divid
 
 ![Pairwise](https://github.com/nasa/SMCPy/blob/master/examples/spring_mass/pairwise.png)
 
+Developers
+-----------
+
+UQ Center of Excellence <br />
+NASA Langley Research Center <br /> 
+Hampton, Virginia <br /> 
+
+This software was funded by and developed under the High Performance Computing Incubator (HPCI) at NASA Langley Research Center. <br /> 
+
+Contributors: Patrick Leser (patrick.e.leser@nasa.gov) and Michael Wang
+
 ------------------------------------------------------------------------------
 
 Notices:
