@@ -59,6 +59,11 @@ The above code produces probabilistic estimates of K, the spring stiffness divid
 
 ![Pairwise](https://github.com/nasa/SMCPy/blob/master/examples/spring_mass/pairwise.png)
 
+Tests
+-----
+
+The tests can be performed by running "py.test" from the tests/ directory to ensure a proper installation.
+
 Developers
 -----------
 
