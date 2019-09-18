@@ -12,9 +12,6 @@ be conducted with ease through instantiation of the SMC class and a call to the
 sample() method. The output of this process is an approximation of the parameter
 posterior probability distribution conditional on the data provided.
 
-This software was funded by and developed under the High Performance Computing 
-Incubator (HPCI) at NASA Langley Research Center.
-
 The primary sampling algorithm implemented in this package is from the following
 IEEE article by Nguyen et al.:
 
@@ -22,6 +19,9 @@ IEEE article by Nguyen et al.:
 > inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
 
 [Link to Article](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7339702) | [BibTeX Reference](https://scholar.googleusercontent.com/scholar.bib?q=info:L7AZJvppx1MJ:scholar.google.com/&output=citation&scisdr=CgUT24-FENXorVVAg5Y:AAGBfm0AAAAAXYJFm5YHTu6RRMR0IayFB1lYPK9kbfd0&scisig=AAGBfm0AAAAAXYJFm1kgIc5YtQ4-0QhCNZXMU0wx2DES&scisf=4&ct=citation&cd=-1&hl=en)
+
+This software was funded by and developed under the High Performance Computing 
+Incubator (HPCI) at NASA Langley Research Center.
 
 ------------------------------------------------------------------------------
 ## Example Usage
