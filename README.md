@@ -21,6 +21,8 @@ IEEE article by Nguyen et al.:
 > Nguyen, Thi Le Thu, et al. "Efficient sequential Monte-Carlo samplers for Bayesian
 > inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
 
+[Link to Article](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7339702) | [BibTeX Reference](https://scholar.googleusercontent.com/scholar.bib?q=info:L7AZJvppx1MJ:scholar.google.com/&output=citation&scisdr=CgUT24-FENXorVVAg5Y:AAGBfm0AAAAAXYJFm5YHTu6RRMR0IayFB1lYPK9kbfd0&scisig=AAGBfm0AAAAAXYJFm1kgIc5YtQ4-0QhCNZXMU0wx2DES&scisf=4&ct=citation&cd=-1&hl=en)
+
 ------------------------------------------------------------------------------
 ## Example Usage
 
