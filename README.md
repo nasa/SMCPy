@@ -12,8 +12,8 @@ be conducted with ease through instantiation of the SMC class and a call to the
 sample() method. The output of this process is an approximation of the parameter
 posterior probability distribution conditional on the data provided.
 
-The primary sampling algorithm implemented in this package is from the following
-IEEE article by Nguyen et al.:
+The primary sampling algorithm implemented in this package is an MPI-enabled
+version of that presented in the following IEEE article by Nguyen et al.:
 
 > Nguyen, Thi Le Thu, et al. "Efficient sequential Monte-Carlo samplers for Bayesian
 > inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
