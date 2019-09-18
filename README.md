@@ -15,6 +15,12 @@ posterior probability distribution conditional on the data provided.
 This software was funded by and developed under the High Performance Computing 
 Incubator (HPCI) at NASA Langley Research Center.
 
+The primary sampling algorithm implemented in this package is from the following
+IEEE article by Nguyen et al.:
+
+> Nguyen, Thi Le Thu, et al. "Efficient sequential Monte-Carlo samplers for Bayesian
+> inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
+
 ------------------------------------------------------------------------------
 ## Example Usage
 
