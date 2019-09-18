@@ -72,6 +72,8 @@ Contributors: Patrick Leser (patrick.e.leser@nasa.gov) and Michael Wang
 
 ------------------------------------------------------------------------------
 
+License
+-----------
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration. No copyright is claimed in
