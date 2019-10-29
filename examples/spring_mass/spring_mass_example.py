@@ -30,7 +30,7 @@ try:
     # Calculate means
     means = [step.get_mean() for step in step_list]
     
-    for key, value in means[0].iteritems():
+    for key, value in means[-1].iteritems():
         print '%s mean = %s' % (key, value)
     
     # Plot
