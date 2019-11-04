@@ -177,7 +177,7 @@ class SMCSampler(Properties):
             
             if self._rank == 0:
                 set_bar(p_bar, t, last_ess, updater._ess,
-                        mutator._acceptance_ratio, updater._resample_status)
+                        mutator._mutation_ratio, updater._resample_status)
                 last_ess = updater._ess
 
         self._close_autosaver()

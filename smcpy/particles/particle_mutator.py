@@ -75,7 +75,7 @@ class ParticleMutator():
         mcmc = copy(self._mcmc)
         step_method = 'smc_metropolis'
         new_particles = []
-        acceptance_count = 0
+        mutation_count = 0
         for particle in particles:
 
             if measurement_std_dev is None:
@@ -91,13 +91,13 @@ class ParticleMutator():
             stochastics = mcmc.MCMC.db.getstate()['stochastics']
             params = {key: stochastics[key] for key in particle.params.keys()}
             if particle.params != params:
-                acceptance_count += 1
+                mutation_count += 1
             particle.params = params
             particle.log_like = mcmc.MCMC.logp
             new_particles.append(particle)
 
         new_particles = self._gather_and_concat_particles(new_particles)
-        self._acceptance_ratio = float(acceptance_count) / len(particles)
+        self._mutation_ratio = float(mutation_count) / len(particles)
         self.step = self._update_step_with_new_particles(new_particles)
         return self.step
 
