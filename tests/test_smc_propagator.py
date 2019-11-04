@@ -29,3 +29,18 @@ def test_smc_propagator_returns_multi_dim_output(stub_model, filled_step,
     assert all(key in mean.keys() for key in expected_mean.keys())
     assert_array_almost_equal([mean[key] for key in sorted(mean.keys())],
                               expected_mean.values())
+
+
+def test_smc_propagator_set_output_names(stub_model, filled_step):
+    output_names = ['a', 'b', 'c', 'd']
+    smc_propagator = SMCPropagator(stub_model, output_names)
+    prop_smc_step = smc_propagator.propagate(filled_step)
+    mean = prop_smc_step.get_mean()
+    assert sorted(mean.keys()) == output_names
+
+
+def test_smc_propagator_output_names_too_short(stub_model, filled_step):
+    output_names = ['a', 'b', 'c']
+    smc_propagator = SMCPropagator(stub_model, output_names)
+    with pytest.raises(ValueError):
+        smc_propagator.propagate(filled_step)

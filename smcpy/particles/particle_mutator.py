@@ -51,15 +51,11 @@ class ParticleMutator():
         self._size = self._comm.Get_size()
         self._rank = self._comm.Get_rank()
 
-    def mutate_new_particles(self, covariance, measurement_std_dev,
-                             temperature_step):
+    def mutate_particles(self, measurement_std_dev=None, temperature_step=1):
         '''
         Predicts next distribution along the temperature schedule path using
         the MCMC kernel.
 
-        :param covariance: covariance of the parameters between particles,
-            computed with their respective weights.
-        :type covariance: numpy Nd array
         :param measurement_std_dev: standard deviation of the measurement error;
             if unknown, set to None and it will be sampled along with other
             model parameters.
@@ -70,12 +66,12 @@ class ParticleMutator():
         :Returns: An SMCStep class instance that contains all particles after
             mutation.
         '''
-
+        covariance = self._compute_step_covariance()
         particles = self._partition_and_scatter_particles()
         mcmc = copy(self._mcmc)
         step_method = 'smc_metropolis'
         new_particles = []
-        acceptance_count = 0
+        mutation_count = 0
         for particle in particles:
 
             if measurement_std_dev is None:
@@ -90,16 +86,26 @@ class ParticleMutator():
                         cov=covariance, verbose=-1, phi=temperature_step)
             stochastics = mcmc.MCMC.db.getstate()['stochastics']
             params = {key: stochastics[key] for key in particle.params.keys()}
+
             if particle.params != params:
-                acceptance_count += 1
+                mutation_count += 1
+
             particle.params = params
             particle.log_like = mcmc.MCMC.logp
             new_particles.append(particle)
 
         new_particles = self._gather_and_concat_particles(new_particles)
-        self._acceptance_ratio = float(acceptance_count) / len(particles)
+        self._mutation_ratio = float(mutation_count) / len(particles)
         self.step = self._update_step_with_new_particles(new_particles)
         return self.step
+
+    def _gather_and_concat_particles(self, new_particles):
+        new_particles = self._comm.gather(new_particles, root=0)
+
+        if self._rank == 0:
+            new_particles = list(np.concatenate(new_particles))
+
+        return new_particles
 
     def _update_step_with_new_particles(self, particles):
         if self._rank == 0:
@@ -107,11 +113,6 @@ class ParticleMutator():
         else:
             self.step = None
         return self.step
-
-    def _partition_new_particles(self):
-        partitions = np.array_split(self.step.get_particles(),
-                                    self._size)
-        return partitions
 
     def _partition_and_scatter_particles(self):
         if self._rank == 0:
@@ -121,10 +122,15 @@ class ParticleMutator():
         particles = self._comm.scatter(particles, root=0)
         return particles
 
-    def _gather_and_concat_particles(self, new_particles):
-        new_particles = self._comm.gather(new_particles, root=0)
+    def _partition_new_particles(self):
+        partitions = np.array_split(self.step.get_particles(),
+                                    self._size)
+        return partitions
 
+    def _compute_step_covariance(self):
         if self._rank == 0:
-            new_particles = list(np.concatenate(new_particles))
-
-        return new_particles
+            covariance = self.step.get_covariance()
+        else:
+            covariance = None
+        covariance = self._comm.scatter([covariance] * self._size, root=0)
+        return covariance

@@ -5,3 +5,4 @@
 *.sh
 *pytest_cache*
 .coverage
+tests/.*

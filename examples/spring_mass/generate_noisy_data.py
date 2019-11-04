@@ -1,5 +1,6 @@
+import matplotlib.pyplot as plt
 import numpy as np
-from spring_mass_models import SpringMassModel
+from spring_mass_model import SpringMassModel
 
 # Initialize model
 state0 = [0., 0.]  # initial conditions
@@ -20,7 +21,6 @@ noisy_data = model.generate_noisy_data_with_model(noise_std_dev, true_params)
 np.savetxt('noisy_data.txt', noisy_data)
 
 # Plot
-import matplotlib.pyplot as plt
 plt.plot(measure_t_grid, noisy_data, 'o')
 plt.plot(true_t_grid, true, '-')
 plt.xlabel('time')

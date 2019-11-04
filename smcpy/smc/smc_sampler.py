@@ -166,18 +166,16 @@ class SMCSampler(Properties):
             temperature_step = self.temp_schedule[t] - self.temp_schedule[t - 1]
             self.step = updater.update_log_weights(temperature_step)
             self.step = updater.resample_if_needed()
-            covariance = self._compute_step_covariance()
             mutator = ParticleMutator(self.step, self._mcmc, num_mcmc_steps,
                                       self._comm)
-            self.step = mutator.mutate_new_particles(covariance,
-                                                     measurement_std_dev,
-                                                     temperature_step)
+            self.step = mutator.mutate_particles(measurement_std_dev,
+                                                 self.temp_schedule[t])
             self._autosave_step(t)
             self._add_step_to_step_list(self.step)
             
             if self._rank == 0:
                 set_bar(p_bar, t, last_ess, updater._ess,
-                        mutator._acceptance_ratio, updater._resample_status)
+                        mutator._mutation_ratio, updater._resample_status)
                 last_ess = updater._ess
 
         self._close_autosaver()
@@ -248,14 +246,6 @@ class SMCSampler(Properties):
         if self._rank == 0 and self._autosaver is not None:
             self.autosaver.write_step(self.step, step_index)
         return None
-
-    def _compute_step_covariance(self):
-        if self._rank == 0:
-            covariance = self.step.get_covariance()
-        else:
-            covariance = None
-        covariance = self._comm.scatter([covariance] * self._size, root=0)
-        return covariance
 
     def _close_autosaver(self):
         if self._rank == 0 and self._autosaver is not None:
