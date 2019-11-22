@@ -11,7 +11,7 @@ setuptools.setup(
     description="Sequential Monte Carlo with Python",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/NASA/SMCPy",
+    url="https://github.com/nasa/SMCPy",
     packages=["smcpy",
               "smcpy.smc",
               "smcpy.particles",
@@ -19,7 +19,6 @@ setuptools.setup(
               "smcpy.model",
               "smcpy.utils",
               "smcpy.hdf5"],
-    package_dir={'SMCPy': 'smcpy'},
     install_requires=['numpy', 'scipy', 'matplotlib', 'h5py', 'pymc', 'statsmodels', 'tqdm'],
     classifiers=[
         "Programming Language :: Python :: 2.7",
