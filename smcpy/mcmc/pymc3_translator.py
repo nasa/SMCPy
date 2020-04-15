@@ -1,6 +1,6 @@
 from copy import copy
 
-from .smc_step_methods import SMCStepMethod
+from .pymc3_step_methods import SMCStepMethod
 
 class PyMC3Translator:
 
