@@ -5,6 +5,17 @@ from smcpy.mcmc import PyMC3Translator
 from smcpy.mcmc import SMCStepMethod
 
 
+class RVDummySampler:
+
+    def __init__(self, value):
+        self.value = value
+
+    def random(self, size):
+        if size == 1:
+            return self.value
+        return [self.value] * size
+
+
 @pytest.fixture
 def data():
     return np.array([1., 1.])
@@ -20,10 +31,8 @@ def stub_pymc3_model(data, mocker):
                         return_value=99)
     mocker.patch.object(stub_pymc3_model, 'sample')
 
-    stub_a = mocker.Mock()
-    mocker.patch.object(stub_a, 'random', return_value=1)
-    stub_b = mocker.Mock()
-    mocker.patch.object(stub_b, 'random', return_value=2)
+    stub_a = RVDummySampler(1)
+    stub_b = RVDummySampler(2)
     stub_pymc3_model.named_vars = {'a': stub_a, 'b': stub_b, 'a__': object}
 
     return stub_pymc3_model
@@ -84,5 +93,10 @@ def test_get_final_values_of_last_trace(translator, stub_trace):
 
 
 def test_sample_from_prior(translator):
-    random_sample = translator.sample_from_prior()
+    random_sample = translator.sample_from_prior(size=1)
     assert random_sample == {'a': 1, 'b': 2}
+
+
+def test_multiple_samples_from_prior(translator):
+    random_sample = translator.sample_from_prior(size=10)
+    assert random_sample == {'a': [1] * 10, 'b': [2] * 10}
