@@ -13,8 +13,9 @@ class DummyStepMethod(SMCStepMethod):
 
 class RVDummySampler:
 
-    def __init__(self, value):
+    def __init__(self, value, name):
         self.value = value
+        self.name = name
 
     def random(self, size):
         if size == 1:
@@ -35,11 +36,13 @@ def stub_pymc3_model(data, mocker):
     mocker.patch.object(stub_pymc3_model, 'logp', return_value=66)
     mocker.patch.object(stub_pymc3_model.observed_RVs[0], 'logp',
                         return_value=99)
-    mocker.patch.object(stub_pymc3_model, 'sample')
-
-    stub_a = RVDummySampler(1)
-    stub_b = RVDummySampler(2)
-    stub_pymc3_model.named_vars = {'a': stub_a, 'b': stub_b, 'a__': object}
+    stub_pymc3_model.__enter__ = mocker.Mock()
+    stub_pymc3_model.__exit__ = mocker.Mock()
+    
+    stub_a = RVDummySampler(1, 'a')
+    stub_b = RVDummySampler(2, 'b')
+    stub_a__ = RVDummySampler(1, 'a__')
+    stub_pymc3_model.vars =[stub_a, stub_b, stub_a__]
 
     return stub_pymc3_model
 
@@ -73,16 +76,19 @@ def test_sample_phi_is_set(translator):
     assert translator._last_step_method.phi == phi
 
 
-def test_sample_inputs_are_passed(translator):
+def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
     samples = 100
     phi = 0.1
     init_params = {}
 
+    mocker.patch('pymc3.sampling.sample')
+    import pymc3
+
     translator.sample(samples=samples, phi=phi, init_params=init_params)
-    translator.pymc3_model.sample.assert_called_with(draws=samples,
-                                    step=translator._last_step_method,
-                                    chains=1, cores=1, start=init_params,
-                                    tune=0, discard_tuned_samples=False)
+    pymc3.sampling.sample.assert_called_with(draws=samples,
+                              step=translator._last_step_method,
+                              chains=1, cores=1, start=init_params,
+                              tune=0, discard_tuned_samples=False)
 
 
 def test_sample_checks_step_isinstance_smcstep(translator, stub_pymc3_model):

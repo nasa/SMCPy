@@ -1,4 +1,5 @@
 import inspect
+import pymc3
 
 from copy import copy
 
@@ -19,14 +20,15 @@ class PyMC3Translator:
         return self._pymc3_model.observed_RVs[0].observations
 
     def get_log_likelihood(self, params):
-        return self._pymc3_model.observed_RVs[0].logp(params)
+        return float(self._pymc3_model.observed_RVs[0].logp(params))
 
     def sample(self, samples, init_params, phi):
-        self._last_step_method = self._step_method(phi=phi)
-        self._last_trace = self.pymc3_model.sample(
-                                draws=samples, step=self._last_step_method,
-                                chains=1, cores=1, start=init_params, tune=0,
-                                discard_tuned_samples=False)
+        with self.pymc3_model:
+            self._last_step_method = self._step_method(phi=phi)
+            self._last_trace = pymc3.sampling.sample(draws=samples,
+                                      step=self._last_step_method, chains=1,
+                                      cores=1, start=init_params, tune=0,
+                                      discard_tuned_samples=False)
 
     def get_final_trace_values(self):
         param_names = self._last_trace.varnames
@@ -35,11 +37,11 @@ class PyMC3Translator:
 
 
     def sample_from_prior(self, size=1):
-        params = self.pymc3_model.named_vars
         random_sample = {}
-        for param_name, param in self.pymc3_model.named_vars.items():
+        for param in self.pymc3_model.vars:
+            param_name = param.name
             if not param_name.endswith('__'):
-                random_sample[param_name] = param.random(size)
+                random_sample[param_name] = param.random(size=size)
         return random_sample
 
 
