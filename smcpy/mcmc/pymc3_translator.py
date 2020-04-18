@@ -34,12 +34,12 @@ class PyMC3Translator:
         return {pn: self._last_trace.get_values(pn)[-1] for pn in param_names}
 
 
-    def sample_from_prior(self):
+    def sample_from_prior(self, size=1):
         params = self.pymc3_model.named_vars
         random_sample = {}
         for param_name, param in self.pymc3_model.named_vars.items():
             if not param_name.endswith('__'):
-                random_sample[param_name] = param.random()
+                random_sample[param_name] = param.random(size)
         return random_sample
 
 
