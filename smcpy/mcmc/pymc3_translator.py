@@ -1,11 +1,15 @@
+import inspect
+
 from copy import copy
 
 from .pymc3_step_methods import SMCStepMethod
 
 class PyMC3Translator:
 
-    def __init__(self, pymc3_model):
+    def __init__(self, pymc3_model, step_method):
         self._pymc3_model = pymc3_model
+        self._check_step_method(step_method)
+        self._step_method = step_method
 
     @property
     def pymc3_model(self):
@@ -17,13 +21,11 @@ class PyMC3Translator:
     def get_log_likelihood(self, params):
         return self._pymc3_model.observed_RVs[0].logp(params)
 
-    def sample(self, samples, step_method, init_params, phi):
-        if not isinstance(step_method, SMCStepMethod):
-            raise TypeError
-        step_method.phi = phi
+    def sample(self, samples, init_params, phi):
+        self._last_step_method = self._step_method(phi=phi)
         self._last_trace = self.pymc3_model.sample(
-                                draws=samples, step=step_method, chains=1,
-                                cores=1, start=init_params, tune=0,
+                                draws=samples, step=self._last_step_method,
+                                chains=1, cores=1, start=init_params, tune=0,
                                 discard_tuned_samples=False)
 
     def get_final_trace_values(self):
@@ -39,3 +41,11 @@ class PyMC3Translator:
             if not param_name.endswith('__'):
                 random_sample[param_name] = param.random()
         return random_sample
+
+
+    @staticmethod
+    def _check_step_method(step_method):
+        is_class = inspect.isclass(step_method)
+        is_smc_step = SMCStepMethod in step_method.__bases__
+        if not is_class or not is_smc_step:
+            raise TypeError

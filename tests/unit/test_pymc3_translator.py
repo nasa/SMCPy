@@ -5,6 +5,12 @@ from smcpy.mcmc import PyMC3Translator
 from smcpy.mcmc import SMCStepMethod
 
 
+class DummyStepMethod(SMCStepMethod):
+
+    def __init__(self, phi):
+        self.phi = phi
+
+
 @pytest.fixture
 def data():
     return np.array([1., 1.])
@@ -40,7 +46,7 @@ def stub_trace(mocker):
 
 @pytest.fixture
 def translator(stub_pymc3_model):
-    return PyMC3Translator(stub_pymc3_model)
+    return PyMC3Translator(stub_pymc3_model, DummyStepMethod)
 
 
 def test_get_data(translator, data):
@@ -52,24 +58,28 @@ def test_get_log_likelihood(translator):
     assert loglike == 99
 
 
-def test_sample_inputs_are_passed(translator, mocker):
-    samples = 100
-    phi = 01.
-    init_params = {}
-    step = mocker.Mock(SMCStepMethod)
+def test_sample_phi_is_set(translator):
+    phi = 0.1
+    translator.sample(samples=100, phi=phi, init_params={})
+    assert translator._last_step_method.phi == phi
 
-    translator.sample(samples=samples, phi=phi, init_params=init_params,
-                      step_method=step)
-    translator.pymc3_model.sample.assert_called_with(draws=samples, step=step,
+
+def test_sample_inputs_are_passed(translator):
+    samples = 100
+    phi = 0.1
+    init_params = {}
+
+    translator.sample(samples=samples, phi=phi, init_params=init_params)
+    translator.pymc3_model.sample.assert_called_with(draws=samples,
+                                    step=translator._last_step_method,
                                     chains=1, cores=1, start=init_params,
                                     tune=0, discard_tuned_samples=False)
-    assert step.phi == phi
 
 
-def test_sample_checks_step_isinstance_smcstep(translator):
+def test_sample_checks_step_isinstance_smcstep(translator, stub_pymc3_model):
     step = object
     with pytest.raises(TypeError):
-        translator.sample(step_method=step)
+        PyMC3Translator(stub_pymc3_model, step)
 
 
 def test_model_is_copy(translator, stub_pymc3_model):

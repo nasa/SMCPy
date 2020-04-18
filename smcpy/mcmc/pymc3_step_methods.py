@@ -1,3 +1,4 @@
+import abc
 import numpy as np
 import pymc3 as pm
 
@@ -7,13 +8,10 @@ from pymc3.step_methods.arraystep import ArrayStepShared, metrop_select
 from pymc3.step_methods.arraystep import Competence
 from pymc3.theanof import floatX
 
+from smcpy.mcmc.step_method_base import SMCStepMethod
 
-class SMCStepMethod:
 
-    def __init__(self):
-        pass
-
-class SMCMetropolis(ArrayStepShared):
+class SMCMetropolis(ArrayStepShared, SMCStepMethod):
     """
     Metropolis-Hastings sampling step
 
@@ -50,6 +48,8 @@ class SMCMetropolis(ArrayStepShared):
                  tune=True, tune_interval=100, model=None, mode=None, phi=1,
                  **kwargs):
 
+        self.phi = phi
+
         model = pm.modelcontext(model)
 
         if vars is None:
@@ -84,7 +84,6 @@ class SMCMetropolis(ArrayStepShared):
 
         shared = pm.make_shared_replacements(vars, model)
 
-        self.phi = phi
         posterior_logp = model.logpt - model.observed_RVs[0].logpt + \
                          self.phi * model.observed_RVs[0].logpt
         self.delta_logp = delta_logp(posterior_logp, vars, shared)
