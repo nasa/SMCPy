@@ -30,7 +30,7 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-import imp
+import importlib
 import numpy as np
 import copy
 import warnings
@@ -39,6 +39,7 @@ from smcpy.utils.checks import Checks
 
 
 def _mpi_decorator(func):
+
     def wrapper(self, *args, **kwargs):
         """
         Detects whether multiple processors are available and sets
@@ -46,7 +47,7 @@ def _mpi_decorator(func):
         function using rank 0.
         """
         try:
-            imp.find_module('mpi4py')
+            importlib.find_module('mpi4py')
 
             from mpi4py import MPI
             comm = MPI.COMM_WORLD.Clone()
@@ -68,24 +69,17 @@ def _mpi_decorator(func):
 
 
 class SMCStep(Checks):
-    """ A single step of the sequential monte carlo (SMC) method that contains
+    '''
+    A single step of the sequential monte carlo (SMC) method that contains
     a list of Particle instances
-
-    :param particles: list of particle instances
-    :type particles: list
-    """
+    '''
 
     def __init__(self):
+        '''
+        :param particles: list of particle instances
+        :type particles: list
+        '''
         self.particles = []
-
-    def add_particle(self, particle):
-        '''
-        Add a single particle to the step.
-
-        :param particle: single instance of an SMC particle
-        :type particle: Particle class object
-        '''
-        self.particles.append(self._check_particle(particle))
 
     def set_particles(self, particles):
         '''
@@ -151,7 +145,7 @@ class SMCStep(Checks):
         '''
         Returns the estimated variance of each parameter in step. 
         '''
-        return {k: np.sqrt(v) for k, v in self.get_variance().iteritems()}
+        return {k: np.sqrt(v) for k, v in self.get_variance().items()}
 
     def get_log_weights(self):
         '''
@@ -164,14 +158,15 @@ class SMCStep(Checks):
         Estimates the covariance matrix for the step. Uses weighted sample
         formula https://en.wikipedia.org/wiki/Sample_mean_and_covariance
         '''
-        particle_list = self.particles
+        param_names = self.particles[0].params.keys()
         normalized_weights = self.normalize_step_weights()
-        means = np.array(self.get_mean().values())
+        means = self.get_mean()
 
         cov_list = []
-        for i, p in enumerate(particle_list):
-            param_vector = p.params.values()
-            diff = (param_vector - means).reshape(-1, 1)
+        for i, p in enumerate(self.particles):
+            param_vector = np.array([p.params[pn] for pn in param_names])
+            mean_vector = np.array([means[pn] for pn in param_names])
+            diff = (param_vector - mean_vector).reshape(-1, 1)
             R = np.dot(diff, diff.transpose())
             cov_list.append(normalized_weights[i] * R)
         cov_matrix = np.sum(cov_list, axis=0)
@@ -234,45 +229,41 @@ class SMCStep(Checks):
         '''
         return self.particles
 
-    def resample(self):  # issue here
+    def resample(self):
         '''
         Resamples the step based on normalized weights. Assigns discrete
         probabilities to each particle (sum to 1), resample from this discrete
-        distribution using the particle's copy() method.
+        distribution using copies of particle objects.
         '''
-        particles = self.particles
-        num_particles = len(particles)
+        self.normalize_step_log_weights()
         weights = np.exp(self.get_log_weights())
         weights_cs = np.cumsum(weights)
+
+        num_particles = len(weights)
+        uniform_weight = np.log(1. / num_particles)
+
         # intervals based on weights to use for discrete probability draw
-        intervals = zip(np.insert(weights_cs, 0, 0)[:-1], weights_cs)
+        intervals = np.c_[np.insert(weights_cs, 0, 0)[:-1], weights_cs]
+
         # generate random numbers, iterate to find intervals for resample
-        R = np.random.uniform(0, 1, [num_particles, ])
+        R = np.random.uniform(0, 1, num_particles)
+
         new_particles = []
-        uniform_weight = 1. / num_particles
         for r in R:
+
             for i, (a, b) in enumerate(intervals):
 
+                if r == 1: # should never happen, but just in case
+                    r -= 1e-12
+
                 if a <= r < b:
-                    # resample
-                    new_particles.append(particles[i].copy())
-                    # assign uniform weight
+                    new_particles.append(copy.copy(self.particles[i]))
                     new_particles[-1].log_weight = uniform_weight
                     break
-        self.particles = new_particles
+
+        self.set_particles(new_particles)
         return None
 
-    def print_particle_info(self, particle_num):
-        """
-        Prints the particle number and its information
-
-        :param int particle_num: index of the desired particle
-        """
-        particle = self.particles[particle_num]
-        print '-----------------------------------------------------'
-        print 'Particle: %s' % particle_num
-        particle.print_particle_info()
-        return None
 
     @_mpi_decorator
     def plot_marginal(self, key, save=False, show=True,
@@ -414,5 +405,5 @@ class SMCStep(Checks):
     @staticmethod
     def _check_particle(particle):
         if not isinstance(particle, Particle):
-            raise TypeError('Input must be a of the Particle class')
+            raise TypeError('Input must be instance of the Particle class')
         return particle
