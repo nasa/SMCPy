@@ -75,7 +75,8 @@ class Particle():
 
     @staticmethod
     def _check_log_weight(log_weight):
-        if not isinstance(log_weight, int) and not isinstance(log_weight, float):
+        if not isinstance(log_weight, int) and \
+           not isinstance(log_weight, float):
             raise TypeError('Input "log_weight" must be an integer or float')
         return log_weight
 
