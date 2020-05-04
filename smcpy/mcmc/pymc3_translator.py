@@ -3,9 +3,10 @@ import pymc3
 
 from copy import copy
 
+from .translator_base import Translator
 from .pymc3_step_methods import SMCStepMethod
 
-class PyMC3Translator:
+class PyMC3Translator(Translator):
 
     def __init__(self, pymc3_model, step_method):
         self._pymc3_model = pymc3_model
