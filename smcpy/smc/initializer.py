@@ -41,7 +41,7 @@ import warnings
 
 class Initializer():
     '''
-    Generates particle lists based on either samples from a prior distribution
+    Generates SMCStep objects based on either samples from a prior distribution
     or given input samples from a sampling distribution.
     '''
     def __init__(self, mcmc_kernel, phi_init, mpi_comm=SingleRankComm()):
