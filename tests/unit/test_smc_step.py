@@ -18,18 +18,18 @@ def smc_step():
 
 
 def test_set_particles(particle, smc_step):
-    smc_step.set_particles([particle] * 4)
+    smc_step.particles = [particle] * 4
     np.testing.assert_array_equal(smc_step.particles, [particle] * 4)
 
 
 def test_type_error_when_particle_not_list(smc_step):
     with pytest.raises(TypeError):
-        smc_step.set_particles("Not a list of particles")
+        smc_step.particles = "Not a list of particles"
 
 
 def test_type_error_not_list_of_particles(particle, smc_step):
     with pytest.raises(TypeError):
-        smc_step.set_particles([particle, "Not a particle"] * 2)
+        smc_step.particles = [particle, "Not a particle"] * 2
 
 
 def test_copy_step(smc_step):
@@ -40,19 +40,19 @@ def test_copy_step(smc_step):
 
 def test_get_likes(smc_step, particle):
     particle.log_like = 0
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     np.testing.assert_array_equal(smc_step.get_likes(), [1] * 3)
 
 
 def test_get_log_likes(smc_step, particle):
     particle.log_like = 0
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     np.testing.assert_array_equal(smc_step.get_log_likes(), [0] * 3)
 
 
 def test_get_mean(smc_step, particle, mocker):
     particle.params = {'a': 1, 'b': 2}
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     mocker.patch.object(smc_step, 'normalize_step_weights',
                         return_value=[1] * 3)
     assert smc_step.get_mean() == {'a': 3., 'b': 6.}
@@ -60,7 +60,7 @@ def test_get_mean(smc_step, particle, mocker):
 
 def test_get_variance(smc_step, particle, mocker):
     particle.params = {'a': 1, 'b': 2}
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     mocker.patch.object(smc_step, 'normalize_step_weights',
                         return_value = np.array([-2] *3))
     mocker.patch.object(smc_step, 'get_mean', return_value = {'a': 3., 'b': 6.})
@@ -69,7 +69,7 @@ def test_get_variance(smc_step, particle, mocker):
 
 def test_get_std_dev(smc_step, particle, mocker):
     particle.params = {'a': 1, 'b': 2}
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     mocker.patch.object(smc_step, 'normalize_step_weights',
                         return_value = np.array([-2] *3))
     mocker.patch.object(smc_step, 'get_mean', return_value = {'a': 3., 'b': 6.})
@@ -79,7 +79,7 @@ def test_get_std_dev(smc_step, particle, mocker):
 
 def test_get_log_weights(smc_step, particle):
     particle.log_weight = 1
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     assert np.array_equal(smc_step.get_log_weights(), [1] * 3)
 
 
@@ -91,7 +91,7 @@ def test_get_covariance(smc_step, particle, mocker):
     p3 = copy(particle)
     p3.params = {'a': 0.8, 'b': 1.9}
 
-    smc_step.set_particles([p1, p2, p3])
+    smc_step.particles = [p1, p2, p3]
     mocker.patch.object(smc_step, 'normalize_step_weights',
                         return_value=np.array([0.1, 0.7, 0.2]))
     mocker.patch.object(smc_step, 'get_mean',
@@ -106,7 +106,7 @@ def test_get_covariance(smc_step, particle, mocker):
 @pytest.mark.filterwarnings('ignore: current step')
 def test_covariance_not_positive_definite_is_eye(smc_step, particle, mocker):
     particle.params = {'a': 1.1, 'b': 2.2}
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     mocker.patch.object(smc_step, 'normalize_step_weights',
                         return_value=np.array([0.1, 0.7, 0.2]))
     mocker.patch.object(smc_step, 'get_mean', return_value={'a': 1, 'b': 2})
@@ -116,7 +116,7 @@ def test_covariance_not_positive_definite_is_eye(smc_step, particle, mocker):
 
 def test_normalize_step_log_weights(smc_step, particle, mocker):
     particle.log_weight = 20
-    smc_step.set_particles([particle])
+    smc_step.particles = [particle]
     mocker.patch.object(smc_step, 'normalize_step_weights',
                         return_value=np.array([1.]))
     smc_step.normalize_step_log_weights()
@@ -143,13 +143,13 @@ def test_compute_ess(smc_step, mocker):
 
 def test_get_params(smc_step, particle):
     particle.params = {'a': 1}
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     np.testing.assert_array_equal(smc_step.get_params('a'), np.array([1] * 3))
 
 
 def test_get_param_dicts(smc_step, particle):
     particle.params = {'a': 1, 'b': 2}
-    smc_step.set_particles([particle] * 3)
+    smc_step.particles = [particle] * 3
     assert smc_step.get_param_dicts() == [{'a': 1, 'b': 2}] * 3
 
 
@@ -163,7 +163,7 @@ def test_resample(smc_step, particle, mocker):
     p3 = copy(particle)
     p3.params = {'a': 3}
 
-    smc_step.set_particles([p1, p2, p3])
+    smc_step.particles = [p1, p2, p3]
     mocker.patch.object(smc_step, 'normalize_step_log_weights')
     mocker.patch.object(smc_step, 'get_log_weights',
                         return_value=np.log([.1, .5, .4]))

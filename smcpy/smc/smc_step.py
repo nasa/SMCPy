@@ -81,14 +81,19 @@ class SMCStep(Checks):
         '''
         self.particles = []
 
-    def set_particles(self, particles):
+    @property
+    def particles(self):
+        return self._particles
+
+    @particles.setter
+    def particles(self, particles):
         '''
-        Fill a list of particles in the step with ID.
+        Sets particles in step.
 
         :param particles: list of particle instances
         :type particles: list
         '''
-        self.particles = self._check_step(particles)
+        self._particles = self._check_step(particles)
         return None
 
     def copy(self):
@@ -261,7 +266,7 @@ class SMCStep(Checks):
                     new_particles[-1].log_weight = uniform_weight
                     break
 
-        self.set_particles(new_particles)
+        self.particles = new_particles
         return None
 
 
