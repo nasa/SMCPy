@@ -88,7 +88,9 @@ class Initializer():
             non_norm_log_weight = log_like * self.phi_init
             particles.append(Particle(params, non_norm_log_weight, log_like))
 
-        return particles
+        smc_step = SMCStep()
+        smc_step.set_particles(particles)
+        return smc_step
 
     def initialize_particles_from_samples(self, samples, proposal_pdensity):
         '''
@@ -127,7 +129,9 @@ class Initializer():
                                   log_proposal_pdensity[i]
             particles.append(Particle(params, non_norm_log_weight, log_like))
 
-        return particles
+        smc_step = SMCStep()
+        smc_step.set_particles(particles)
+        return smc_step
 
     @property
     def mcmc_kernel(self):

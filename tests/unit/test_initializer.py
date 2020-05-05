@@ -2,8 +2,19 @@ import numpy as np
 import pandas
 import pytest
 
+from collections import namedtuple
+
 from smcpy.smc.initializer import Initializer
 from smcpy.mcmc.translator_base import Translator
+
+
+class StubSMCStep:
+
+    def __init__(self):
+        pass
+
+    def set_particles(self, particles):
+        self.particles = particles
 
 
 @pytest.fixture
@@ -26,6 +37,9 @@ def stub_mcmc_kernel(mocker):
 
 @pytest.fixture
 def initializer(stub_mcmc_kernel, stub_comm, mocker):
+    particle_stub = namedtuple('Particle', ['params', 'log_weight', 'log_like'])
+    mocker.patch('smcpy.smc.initializer.Particle', new=particle_stub)
+    mocker.patch('smcpy.smc.initializer.SMCStep', new=StubSMCStep)
     initializer = Initializer(stub_mcmc_kernel, phi_init=2, mpi_comm=stub_comm)
     return initializer
 
@@ -47,7 +61,8 @@ def test_mcmc_kernel_not_translator_instance():
 def test_initialize_particles_from_prior(initializer, mocker):
     mocker.patch.object(initializer, 'get_num_particles_in_partition',
                         new=lambda x, y: x)
-    particles = initializer.initialize_particles_from_prior(5)
+    smc_step = initializer.initialize_particles_from_prior(5)
+    particles = smc_step.particles
 
     expected_a_vals = [1, 1, 1, 2, 2]
     expected_log_like = [0.1, 0.1, 0.1, 0.2, 0.2]
@@ -79,8 +94,9 @@ def test_initialize_particles_from_samples(rank, expected_params, initializer,
     initializer._size = 3
     initializer._rank = rank
 
-    particles = initializer.initialize_particles_from_samples(samples,
-                                                              proposal_pdensity)
+    smc_step = initializer.initialize_particles_from_samples(samples,
+                                                             proposal_pdensity)
+    particles = smc_step.particles
 
     expected_length = len(expected_params['a'])
     expected_log_like = [0.1, 0.1, 0.1, 0.2, 0.2][:expected_length]
