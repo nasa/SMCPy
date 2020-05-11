@@ -96,6 +96,12 @@ class SMCStep(Checks):
         self._particles = self._check_step(particles)
         return None
 
+    def resample_if_needed(self, ess_threshold):
+        ess = self.compute_ess()
+        if ess < ess_threshold:
+            self.resample()
+        return None
+
     def copy(self):
         '''
         Returns a copy of the entire step class.
@@ -183,6 +189,12 @@ class SMCStep(Checks):
             cov_matrix = np.eye(cov_matrix.shape[0])
 
         return cov_matrix
+
+    def update_weights(self, delta_phi):
+        self.normalize_step_log_weights()
+        for p in self.particles:
+            p.log_weight = p.log_weight + delta_phi * p.log_like
+        return None
 
     def normalize_step_log_weights(self):
         '''

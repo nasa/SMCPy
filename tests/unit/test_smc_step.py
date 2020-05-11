@@ -155,7 +155,6 @@ def test_get_param_dicts(smc_step, particle):
 
 def test_resample(smc_step, particle, mocker):
 
-
     p1 = copy(particle)
     p1.params = {'a': 1}
     p2 = copy(particle)
@@ -176,3 +175,32 @@ def test_resample(smc_step, particle, mocker):
                 particles[1].params == p3.params,
                 particles[2].params == p2.params])
     assert sum([np.exp(p.log_weight) for p in particles]) == pytest.approx(1)
+
+
+@pytest.mark.parametrize('ess_threshold,call_expected',[(0.1, False),
+                         (0.49, False), (0.51, True), (0.9, True)])
+def test_resample_if_needed(smc_step, ess_threshold, call_expected, mocker):
+    mocker.patch.object(smc_step, 'compute_ess', return_value=0.5)
+    mocker.patch.object(smc_step, 'resample')
+    smc_step.resample_if_needed(ess_threshold)
+    assert smc_step.resample.called is call_expected
+
+
+def test_update_weights(smc_step, particle, mocker):
+    p1 = copy(particle)
+    p1.params = {'a': 1}
+    p1.log_weight = 1
+    p1.log_like = 0.1
+    p2 = copy(particle)
+    p2.params = {'a': 2}
+    p2.log_weight = 1
+    p2.log_like = 0.2
+    smc_step.particles = [p1, p2]
+
+    mocker.patch.object(smc_step, 'normalize_step_log_weights')
+
+    smc_step.update_weights(delta_phi=0.1)
+
+    smc_step.normalize_step_log_weights.assert_called()
+    assert smc_step.particles[0].log_weight == 1.01
+    assert smc_step.particles[1].log_weight == 1.02
