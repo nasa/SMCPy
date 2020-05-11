@@ -12,9 +12,6 @@ class StubSMCStep:
     def __init__(self):
         pass
 
-    def set_particles(self, particles):
-        self.particles = particles
-
 
 @pytest.fixture
 def initializer(stub_mcmc_kernel, stub_comm, mocker):

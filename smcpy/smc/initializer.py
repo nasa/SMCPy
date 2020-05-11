@@ -89,7 +89,7 @@ class Initializer():
             particles.append(Particle(params, non_norm_log_weight, log_like))
 
         smc_step = SMCStep()
-        smc_step.set_particles(particles)
+        smc_step.particles = particles
         return smc_step
 
     def initialize_particles_from_samples(self, samples, proposal_pdensity):
@@ -130,7 +130,7 @@ class Initializer():
             particles.append(Particle(params, non_norm_log_weight, log_like))
 
         smc_step = SMCStep()
-        smc_step.set_particles(particles)
+        smc_step.particles = particles
         return smc_step
 
     @property
