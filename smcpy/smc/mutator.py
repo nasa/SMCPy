@@ -68,7 +68,7 @@ class Mutator():
             p.params = self.mcmc_kernel.get_final_trace_values()
             p.log_like = self.mcmc_kernel.get_log_likelihood(p.params)
 
-        smc_step.particles = self._comm.gather(particles, root=0)
+        smc_step.particles = self._comm.gather(particles, root=0)[0]
         return smc_step
 
     @property

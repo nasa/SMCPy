@@ -36,7 +36,7 @@ def test_mutate(mutator, mocker):
     smc_step = mocker.Mock()
     cov = None
     mocker.patch.object(smc_step, 'get_covariance', return_value=cov)
-    mocker.patch.object(mutator._comm, 'gather', new=lambda x, root: x)
+    mocker.patch.object(mutator._comm, 'gather', new=lambda x, root: [x])
     mocker.patch.object(mutator, 'partition_particles', return_value = \
                         [mocker.Mock(), mocker.Mock(), mocker.Mock()])
 
