@@ -49,9 +49,9 @@ class Particle():
         :param log_like: the log likelihood of the particle
         :type log_like: float or int
         '''
-        self.params = self._check_params(params)
-        self.log_weight = self._check_log_weight(log_weight)
-        self.log_like = self._check_log_like(log_like)
+        self.params = params
+        self.log_weight = log_weight
+        self.log_like = log_like
 
     def print_particle_info(self):
         '''
@@ -67,21 +67,33 @@ class Particle():
         '''
         return deepcopy(self)
 
-    @staticmethod
-    def _check_params(params):
+    @property
+    def params(self):
+        return self._params
+
+    @params.setter
+    def params(self, params):
         if type(params) is not dict:
             raise TypeError('Input "params" must be a dictionary.')
-        return params
+        self._params = params
 
-    @staticmethod
-    def _check_log_weight(log_weight):
+    @property
+    def log_weight(self):
+        return self._log_weight
+
+    @log_weight.setter
+    def log_weight(self, log_weight):
         if not isinstance(log_weight, int) and \
            not isinstance(log_weight, float):
             raise TypeError('Input "log_weight" must be an integer or float')
-        return log_weight
+        self._log_weight = log_weight
 
-    @staticmethod
-    def _check_log_like(log_like):
+    @property
+    def log_like(self):
+        return self._log_like
+
+    @log_like.setter
+    def log_like(self, log_like):
         if not isinstance(log_like, float) and not isinstance(log_like, int):
             raise TypeError('Input "log_like" must be an integer or float')
-        return log_like
+        self._log_like = log_like
