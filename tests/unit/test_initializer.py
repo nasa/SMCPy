@@ -5,7 +5,6 @@ import pytest
 from collections import namedtuple
 
 from smcpy.smc.initializer import Initializer
-from smcpy.mcmc.translator_base import Translator
 
 
 class StubSMCStep:
