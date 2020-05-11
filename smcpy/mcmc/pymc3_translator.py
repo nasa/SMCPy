@@ -23,12 +23,12 @@ class PyMC3Translator(Translator):
     def get_log_likelihood(self, params):
         return float(self._pymc3_model.observed_RVs[0].logp(params))
 
-    def sample(self, samples, init_params, phi):
+    def sample(self, num_samples, init_params, cov, phi):
         with self.pymc3_model:
-            self._last_step_method = self._step_method(phi=phi)
-            self._last_trace = pymc3.sampling.sample(draws=samples,
+            self._last_step_method = self._step_method(S=cov, phi=phi)
+            self._last_trace = pymc3.sampling.sample(draws=num_samples,
                                       step=self._last_step_method, chains=1,
-                                      cores=1, start=init_params, tune=0,
+                                      cores=1, start=init_params, tune=False,
                                       discard_tuned_samples=False)
 
     def get_final_trace_values(self):

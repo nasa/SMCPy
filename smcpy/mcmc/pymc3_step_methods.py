@@ -27,7 +27,7 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
     scaling : scalar or array
         Initial scale factor for proposal. Defaults to 1.
     tune : bool
-        Flag for tuning. Defaults to True.
+        Flag for tuning. Defaults to False.
     tune_interval : int
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
@@ -45,7 +45,7 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
     }]
 
     def __init__(self, vars=None, S=None, proposal_dist=None, scaling=1.,
-                 tune=True, tune_interval=100, model=None, mode=None, phi=1,
+                 tune=False, tune_interval=100, model=None, mode=None, phi=1,
                  **kwargs):
 
         self.phi = phi

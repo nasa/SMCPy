@@ -7,8 +7,9 @@ from smcpy.mcmc import SMCStepMethod
 
 class DummyStepMethod(SMCStepMethod):
 
-    def __init__(self, phi):
+    def __init__(self, S, phi):
         self.phi = phi
+        self.S = S
 
 
 class RVDummySampler:
@@ -72,20 +73,23 @@ def test_get_log_likelihood(translator):
 
 def test_sample_phi_is_set(translator):
     phi = 0.1
-    translator.sample(samples=100, phi=phi, init_params={})
+    cov = None
+    translator.sample(num_samples=100, cov=cov, phi=phi, init_params={})
     assert translator._last_step_method.phi == phi
 
 
 def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
-    samples = 100
+    num_samples = 100
     phi = 0.1
+    cov = None
     init_params = {}
 
     mocker.patch('pymc3.sampling.sample')
     import pymc3
 
-    translator.sample(samples=samples, phi=phi, init_params=init_params)
-    pymc3.sampling.sample.assert_called_with(draws=samples,
+    translator.sample(num_samples=num_samples, phi=phi, cov=cov,
+                      init_params=init_params)
+    pymc3.sampling.sample.assert_called_with(draws=num_samples,
                               step=translator._last_step_method,
                               chains=1, cores=1, start=init_params,
                               tune=0, discard_tuned_samples=False)
