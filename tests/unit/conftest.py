@@ -6,6 +6,7 @@ from smcpy.mcmc.translator_base import Translator
 @pytest.fixture
 def stub_comm(mocker):
     comm = mocker.Mock()
+    comm.gather = lambda x, root: [x]
     return comm
 
 

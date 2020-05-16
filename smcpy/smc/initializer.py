@@ -30,42 +30,23 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-from copy import copy
 from ..mcmc.translator_base import Translator
 from ..particles.particle import Particle
 from ..smc.smc_step import SMCStep
 from ..utils.single_rank_comm import SingleRankComm
 import numpy as np
-import warnings
 
+from .mpi_base_class import MPIBaseClass
 
-class Initializer():
+class Initializer(MPIBaseClass):
     '''
     Generates SMCStep objects based on either samples from a prior distribution
     or given input samples from a sampling distribution.
     '''
     def __init__(self, mcmc_kernel, phi_init, mpi_comm=SingleRankComm()):
         self.phi_init = phi_init
-        self._size = mpi_comm.Get_size()
-        self._rank = mpi_comm.Get_rank()
         self.mcmc_kernel = mcmc_kernel
-
-    def get_num_particles_in_partition(self, total_num_particles, rank):
-        '''
-        Get number of particles in partition based on MPI rank and total
-        number of particles requested.
-
-        :param total_num_particles: number of particles accross all ranks
-        :type total_num_particles: int
-        :param rank: MPI rank
-        :type rank: int
-        '''
-        num_particles_for_partition = int(total_num_particles / self._size)
-        remainder = total_num_particles % self._size
-        overtime_ranks = range(remainder)
-        if rank in overtime_ranks:
-            num_particles_for_partition += 1
-        return num_particles_for_partition
+        super().__init__(mpi_comm)
 
     def initialize_particles_from_prior(self, num_particles):
         '''
@@ -89,7 +70,7 @@ class Initializer():
             particles.append(Particle(params, non_norm_log_weight, log_like))
 
         smc_step = SMCStep()
-        smc_step.particles = particles
+        smc_step.particles = self._comm.gather(particles, root=0)[0]
         return smc_step
 
     def initialize_particles_from_samples(self, samples, proposal_pdensity):
@@ -130,7 +111,7 @@ class Initializer():
             particles.append(Particle(params, non_norm_log_weight, log_like))
 
         smc_step = SMCStep()
-        smc_step.particles = particles
+        smc_step.particles = self._comm.gather(particles, root=0)[0]
         return smc_step
 
     @property

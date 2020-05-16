@@ -31,37 +31,27 @@ AGREEMENT.
 '''
 
 
+from .mpi_base_class import MPIBaseClass
 from ..mcmc.translator_base import Translator
 from ..utils.single_rank_comm import SingleRankComm
 from copy import copy
 import numpy as np
 
 
-class Mutator():
+class Mutator(MPIBaseClass):
     '''
     Copies and mutates an SMCStep using an MCMC kernel.
     '''
     def __init__(self, mcmc_kernel, mpi_comm=SingleRankComm()):
-        self._comm = mpi_comm
-        self._size = mpi_comm.Get_size()
-        self._rank = mpi_comm.Get_rank()
         self.mcmc_kernel = mcmc_kernel
-
-    def partition_particles(self, smc_step):
-        smc_step.normalize_step_log_weights()
-
-        if self._rank == 0:
-            particles = np.array_split(smc_step.particles, self._size)
-        else:
-            particles = []
-        particles = self._comm.scatter(particles, root=0)
-        return particles
+        super().__init__(mpi_comm)
 
     def mutate(self, smc_step, num_mcmc_samples, phi):
         smc_step = smc_step.copy()
         cov = smc_step.get_covariance()
 
-        particles = self.partition_particles(smc_step)
+        smc_step.normalize_step_log_weights()
+        particles = self.partition_and_scatter_particles(smc_step.particles)
         for p in particles:
             self.mcmc_kernel.sample(num_samples=num_mcmc_samples,
                                     init_params=p.params, cov=cov, phi=phi)
