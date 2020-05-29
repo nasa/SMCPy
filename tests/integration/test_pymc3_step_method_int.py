@@ -102,3 +102,13 @@ def test_phi_change_on_instance(step_method, phi, data, sigma, model,
         pymc_accept = step_method.calc_acceptance_ratio(q1, q0)
 
     np.testing.assert_array_almost_equal(pymc_accept, np.array(log_acceptance))
+
+
+@pytest.mark.parametrize('step_method', [SMCMetropolis])
+def test_std_dev_change_on_instance(step_method, pymc_model):
+    with pymc_model:
+        step_method = SMCMetropolis(phi=0.1)
+        original_proposal = step_method.proposal_dist
+        assert original_proposal == step_method.proposal_dist
+        step_method.S = np.array([[1]])
+        assert original_proposal != step_method.proposal_dist
