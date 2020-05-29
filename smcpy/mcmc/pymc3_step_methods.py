@@ -84,11 +84,16 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
 
         shared = pm.make_shared_replacements(vars, model)
 
-        posterior_logp = model.logpt - model.observed_RVs[0].logpt + \
-                         self.phi * model.observed_RVs[0].logpt
-        self.delta_logp = delta_logp(posterior_logp, vars, shared)
+        likelihood_logp = model.observed_RVs[0].logpt
+        prior_logp = model.logpt - model.observed_RVs[0].logpt
+        self.delta_likelihood_logp = delta_logp(likelihood_logp, vars, shared)
+        self.delta_prior_logp = delta_logp(prior_logp, vars, shared)
 
         super().__init__(vars, shared)
+
+    def calc_acceptance_ratio(self, q, q0):
+        return self.delta_likelihood_logp(q, q0) * self.phi + \
+               self.delta_prior_logp(q, q0)
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
@@ -113,7 +118,7 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
         else:
             q = floatX(q0 + delta)
 
-        accept = self.delta_logp(q, q0)
+        accept = self.calc_acceptance_ratio(q, q0)
         q_new, accepted = metrop_select(accept, q, q0)
         self.accepted += accepted
 
@@ -129,6 +134,3 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
     @staticmethod
     def competence(var, has_grad):
         return Competence.COMPATIBLE
-
-
-
