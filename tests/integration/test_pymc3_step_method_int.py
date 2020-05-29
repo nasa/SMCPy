@@ -72,7 +72,7 @@ def test_acceptance_ratio_in_smc_step_methods(step_method, phi, data, sigma,
 
     with pymc_model:
         step_method = SMCMetropolis(phi=phi)
-        pymc_accept = step_method.delta_logp(q1, q0)
+        pymc_accept = step_method.calc_acceptance_ratio(q1, q0)
 
     np.testing.assert_array_almost_equal(pymc_accept, np.array(log_acceptance))
 
@@ -83,3 +83,22 @@ def test_bad_phi(step_method, phi, pymc_model):
     with pytest.raises(ValueError):
         with pymc_model:
             SMCMetropolis(phi=phi)
+
+
+@pytest.mark.parametrize('phi', [0.5, 1.0])
+@pytest.mark.parametrize('step_method', [SMCMetropolis])
+def test_phi_change_on_instance(step_method, phi, data, sigma, model,
+                                pymc_model):
+    q0 = floatX(np.array([0]))
+    q1 = floatX(np.array([1]))
+
+    acceptance = (prior(q1) * likelihood(q1, data, sigma, model) ** phi) / \
+                 (prior(q0) * likelihood(q0, data, sigma, model) ** phi)
+    log_acceptance = np.log(acceptance[0])
+
+    with pymc_model:
+        step_method = SMCMetropolis(phi=0.1)
+        step_method.phi = phi
+        pymc_accept = step_method.calc_acceptance_ratio(q1, q0)
+
+    np.testing.assert_array_almost_equal(pymc_accept, np.array(log_acceptance))
