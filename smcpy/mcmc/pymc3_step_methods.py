@@ -48,25 +48,18 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
                  tune=False, tune_interval=100, model=None, mode=None, phi=1,
                  **kwargs):
 
-        self.phi = phi
+        self._vars = vars
+        self._proposal_dist = proposal_dist
 
         model = pm.modelcontext(model)
 
-        if vars is None:
+        if self._vars is None:
             vars = model.vars
         vars = pm.inputvars(vars)
+        self._vars = vars
 
-        if S is None:
-            S = np.ones(sum(v.dsize for v in vars))
-
-        if proposal_dist is not None:
-            self.proposal_dist = proposal_dist(S)
-        elif S.ndim == 1:
-            self.proposal_dist = NormalProposal(S)
-        elif S.ndim == 2:
-            self.proposal_dist = MultivariateNormalProposal(S)
-        else:
-            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+        self.phi = phi
+        self.S = S
 
         self.scaling = np.atleast_1d(scaling).astype('d')
         self.tune = tune
@@ -84,11 +77,45 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
 
         shared = pm.make_shared_replacements(vars, model)
 
-        posterior_logp = model.logpt - model.observed_RVs[0].logpt + \
-                         self.phi * model.observed_RVs[0].logpt
-        self.delta_logp = delta_logp(posterior_logp, vars, shared)
+        likelihood_logp = model.observed_RVs[0].logpt
+        prior_logp = model.logpt - model.observed_RVs[0].logpt
+        self.delta_likelihood_logp = delta_logp(likelihood_logp, vars, shared)
+        self.delta_prior_logp = delta_logp(prior_logp, vars, shared)
 
         super().__init__(vars, shared)
+
+    @property
+    def phi(self):
+        return self._phi
+
+    @phi.setter
+    def phi(self, phi):
+        if phi <= 1.0 and phi >= 0.0:
+            self._phi = phi
+        else:
+            raise ValueError('phi = {} not in [0, 1]'.format(phi))
+
+    @property
+    def S(self):
+        return self._S
+
+    @S.setter
+    def S(self, S):
+        if S is None:
+            S = np.ones(sum(v.dsize for v in self._vars))
+        if self._proposal_dist is not None:
+            self.proposal_dist = self._proposal_dist(S)
+        elif S.ndim == 1:
+            self.proposal_dist = NormalProposal(S)
+        elif S.ndim == 2:
+            self.proposal_dist = MultivariateNormalProposal(S)
+        else:
+            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+        self._S = S
+
+    def calc_acceptance_ratio(self, q, q0):
+        return self.delta_likelihood_logp(q, q0) * self.phi + \
+               self.delta_prior_logp(q, q0)
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
@@ -113,7 +140,7 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
         else:
             q = floatX(q0 + delta)
 
-        accept = self.delta_logp(q, q0)
+        accept = self.calc_acceptance_ratio(q, q0)
         q_new, accepted = metrop_select(accept, q, q0)
         self.accepted += accepted
 
@@ -129,6 +156,3 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
     @staticmethod
     def competence(var, has_grad):
         return Competence.COMPATIBLE
-
-
-
