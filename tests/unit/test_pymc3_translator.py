@@ -62,6 +62,11 @@ def translator(stub_pymc3_model):
     return PyMC3Translator(stub_pymc3_model, DummyStepMethod)
 
 
+def test_step_method_set_with_defaults(translator):
+    assert translator.step_method.phi == 0.
+    assert translator.step_method.S == None
+
+
 def test_get_data(translator, data):
     np.testing.assert_array_equal(translator.get_data(), data)
 
@@ -71,11 +76,12 @@ def test_get_log_likelihood(translator):
     assert loglike == 99
 
 
-def test_sample_phi_is_set(translator):
+def test_sample_phi_and_cov_are_set(translator):
     phi = 0.1
     cov = None
     translator.sample(num_samples=100, cov=cov, phi=phi, init_params={})
-    assert translator._last_step_method.phi == phi
+    assert translator.step_method.phi == phi
+    assert translator.step_method.S == cov
 
 
 def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
@@ -90,7 +96,7 @@ def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
     translator.sample(num_samples=num_samples, phi=phi, cov=cov,
                       init_params=init_params)
     pymc3.sampling.sample.assert_called_with(draws=num_samples,
-                              step=translator._last_step_method,
+                              step=translator.step_method,
                               chains=1, cores=1, start=init_params,
                               tune=0, discard_tuned_samples=False)
 

@@ -80,7 +80,7 @@ def test_sample_from_prior(translator, size):
 
 def test_sample(translator):
     init_params={'a': 0, 'b': 0}
-    translator.sample(100, init_params=init_params, phi=1)
+    translator.sample(100, cov=np.eye(2), init_params=init_params, phi=1)
     new_params = translator.get_final_trace_values()
     assert len(translator._last_trace.get_values('a')) == 100
     assert new_params.keys() == init_params.keys()

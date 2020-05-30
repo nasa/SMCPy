@@ -30,14 +30,12 @@ def perform_sampling(num_particles, num_steps, num_mcmc_samples, phi_sequence,
 
 if __name__ == '__main__':
 
-    np.random.seed(100)
+    #np.random.seed(100)
 
     # instance model / set up ground truth / add noise
     x = np.arange(100)
-    #my_model = Model(x)
     eval_model = lambda a, b: a * x + b
-    std_dev = 1.
-    #y_true = my_model.evaluate(a=2, b=3.5) 
+    std_dev = 0.1
     y_true = eval_model(2, 3.5)
     noisy_data = y_true + np.random.normal(0, std_dev, y_true.shape)
 
@@ -46,17 +44,17 @@ if __name__ == '__main__':
     with pymc3_model:
         a = pm.Uniform('a', 0., 5., transform=None)
         b = pm.Uniform('b', 0., 5., transform=None)
-        std_dev = pm.Uniform('std_dev', 0, 5, transform=None)
+        std_dev = 0.1
+        #std_dev = pm.Uniform('std_dev', 0, 5, transform=None)
 
-        #mu = my_model.evaluate(a=a, b=b)
-        mu = eval_model(a, b)
+        mu = a * x + b
 
         obs = pm.Normal('obs', mu=mu, sigma=std_dev, observed=noisy_data)
 
     # run smc
-    num_particles = 100 
-    num_steps = 5 
-    num_mcmc_samples = 1
+    num_particles = 1000
+    num_steps = 10
+    num_mcmc_samples = 2
     phi_sequence = np.linspace(0, 1, num_steps)
 
     import cProfile, pstats, io
