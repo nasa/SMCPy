@@ -63,11 +63,3 @@ class PyMC3Translator(Translator):
             if not param_name.endswith('__'):
                 random_sample[param_name] = param.random(size=size)
         return random_sample
-
-
-    @staticmethod
-    def _check_step_method(step_method):
-        is_class = inspect.isclass(step_method)
-        is_smc_step = SMCStepMethod in step_method.__bases__
-        if not is_class or not is_smc_step:
-            raise TypeError
