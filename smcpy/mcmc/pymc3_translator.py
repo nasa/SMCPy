@@ -32,7 +32,7 @@ class PyMC3Translator(Translator):
         if not is_class or not is_smc_step:
             raise TypeError
         with self.pymc3_model:
-            self._step_method = step_method(S=None, phi=0.)
+            self._step_method = step_method()
 
     def get_data(self):
         return self._pymc3_model.observed_RVs[0].observations
@@ -42,8 +42,8 @@ class PyMC3Translator(Translator):
 
     def sample(self, num_samples, init_params, cov, phi):
         with self.pymc3_model:
-            self._step_method.S = cov
-            self._step_method.phi = phi
+            for method in self._step_method.methods:
+                method.phi = phi
             self._last_trace = pymc3.sampling.sample(draws=num_samples,
                                       step=self._step_method, chains=1,
                                       cores=1, start=init_params, tune=False,
@@ -54,7 +54,6 @@ class PyMC3Translator(Translator):
         param_names = self._last_trace.varnames
         param_names = [pn for pn in param_names if not pn.endswith('__')]
         return {pn: self._last_trace.get_values(pn)[-1] for pn in param_names}
-
 
     def sample_from_prior(self, size=1):
         random_sample = {}

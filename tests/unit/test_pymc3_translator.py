@@ -5,11 +5,21 @@ from smcpy.mcmc import PyMC3Translator
 from smcpy.mcmc import SMCStepMethod
 
 
-class DummyStepMethod(SMCStepMethod):
+class DummyStepMethodObject():
 
-    def __init__(self, S, phi):
-        self.phi = phi
-        self.S = S
+    def __init__(self):
+        self.phi = 0
+        self.S = None
+
+
+class DummyStepMethodClass(SMCStepMethod):
+
+    def __init__(self):
+        self.methods = [DummyStepMethodObject(), DummyStepMethodObject()]
+
+    @property
+    def __bases__(self):
+        return [SMCStepMethod]
 
 
 class RVDummySampler:
@@ -59,12 +69,7 @@ def stub_trace(mocker):
 
 @pytest.fixture
 def translator(stub_pymc3_model):
-    return PyMC3Translator(stub_pymc3_model, DummyStepMethod)
-
-
-def test_step_method_set_with_defaults(translator):
-    assert translator.step_method.phi == 0.
-    assert translator.step_method.S == None
+    return PyMC3Translator(stub_pymc3_model, DummyStepMethodClass)
 
 
 def test_get_data(translator, data):
@@ -80,8 +85,8 @@ def test_sample_phi_and_cov_are_set(translator):
     phi = 0.1
     cov = None
     translator.sample(num_samples=100, cov=cov, phi=phi, init_params={})
-    assert translator.step_method.phi == phi
-    assert translator.step_method.S == cov
+    assert translator.step_method.methods[0].phi == phi
+    assert translator.step_method.methods[0].S == cov
 
 
 def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
@@ -98,7 +103,8 @@ def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
     pymc3.sampling.sample.assert_called_with(draws=num_samples,
                               step=translator.step_method,
                               chains=1, cores=1, start=init_params,
-                              tune=0, discard_tuned_samples=False)
+                              tune=0, discard_tuned_samples=False,
+                              progressbar=False)
 
 
 def test_sample_checks_step_isinstance_smcstep(translator, stub_pymc3_model):

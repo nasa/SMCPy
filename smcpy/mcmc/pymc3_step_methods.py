@@ -44,22 +44,19 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
         'tune': np.bool,
     }]
 
-    def __init__(self, vars=None, S=None, proposal_dist=None, scaling=1.,
-                 tune=False, tune_interval=100, model=None, mode=None, phi=1,
+    def __init__(self, vars=None, proposal_dist=None, scaling=1.,
+                 tune=False, tune_interval=100, model=None, mode=None,
                  **kwargs):
 
-        self._vars = vars
         self._proposal_dist = proposal_dist
 
         model = pm.modelcontext(model)
 
-        if self._vars is None:
+        if vars is None:
             vars = model.vars
         vars = pm.inputvars(vars)
         self._vars = vars
-
-        self.phi = phi
-        self.S = S
+        self.S = np.ones(sum(v.dsize for v in vars))
 
         self.scaling = np.atleast_1d(scaling).astype('d')
         self.tune = tune
@@ -77,10 +74,13 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
 
         shared = pm.make_shared_replacements(vars, model)
 
-        likelihood_logp = model.observed_RVs[0].logpt
         prior_logp = model.logpt - model.observed_RVs[0].logpt
-        self.delta_likelihood_logp = delta_logp(likelihood_logp, vars, shared)
+        likelihood_logp = model.observed_RVs[0].logpt
+        posterior_logp = model.logpt
+
         self.delta_prior_logp = delta_logp(prior_logp, vars, shared)
+        #self.delta_like_logp = delta_logp(likelihood_logp, vars, shared)
+        self.delta_post_logp = delta_logp(posterior_logp, vars, shared)
 
         super().__init__(vars, shared)
 
@@ -101,8 +101,6 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
 
     @S.setter
     def S(self, S):
-        if S is None:
-            S = np.ones(sum(v.dsize for v in self._vars))
         if self._proposal_dist is not None:
             self.proposal_dist = self._proposal_dist(S)
         elif S.ndim == 1:
@@ -114,8 +112,8 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
         self._S = S
 
     def calc_acceptance_ratio(self, q, q0):
-        return self.delta_likelihood_logp(q, q0) * self.phi + \
-               self.delta_prior_logp(q, q0)
+        likelihood = self.delta_post_logp(q, q0) - self.delta_prior_logp(q, q0)
+        return likelihood * self.phi + self.delta_prior_logp(q, q0)
 
     def astep(self, q0):
         if not self.steps_until_tune and self.tune:
