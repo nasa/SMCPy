@@ -43,11 +43,11 @@ class PyMC3Translator(Translator):
 
     def sample(self, num_samples, init_params, cov, phi):
         with self.pymc3_model:
-            for i, method in enumerate(self._step_method.methods):
+            for i, method in enumerate(self.step_method.methods):
                 method.phi = phi
                 method.S = np.sqrt(cov[i, i]).reshape(1,)
             self._last_trace = pymc3.sampling.sample(draws=num_samples,
-                                      step=self._step_method, chains=1,
+                                      step=self.step_method, chains=1,
                                       cores=1, start=init_params, tune=False,
                                       discard_tuned_samples=False,
                                       progressbar=False)
