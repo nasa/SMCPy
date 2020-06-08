@@ -13,6 +13,14 @@ from smcpy.mcmc.step_method_base import SMCStepMethod
 
 class SMCMetropolis(ArrayStepShared, SMCStepMethod):
     """
+    Modification of the PyMC3 Metropolis step method for use with SMCPy; 
+    main changes are to allow for manually changing the proposal distribution
+    standard deviation or covariance on the fly, and for specifying a phi value
+    for tempering the likelihood function. Original PyMC3 docstring is copied
+    below.
+
+    ---
+
     Metropolis-Hastings sampling step
 
     Parameters
@@ -56,6 +64,7 @@ class SMCMetropolis(ArrayStepShared, SMCStepMethod):
             vars = model.vars
         vars = pm.inputvars(vars)
         self._vars = vars
+
         self.S = np.ones(sum(v.dsize for v in vars))
 
         self.scaling = np.atleast_1d(scaling).astype('d')

@@ -1,4 +1,5 @@
 import inspect
+import numpy as np
 import pymc3
 
 from copy import copy
@@ -42,18 +43,23 @@ class PyMC3Translator(Translator):
 
     def sample(self, num_samples, init_params, cov, phi):
         with self.pymc3_model:
-            for method in self._step_method.methods:
+            for i, method in enumerate(self._step_method.methods):
                 method.phi = phi
+                method.S = np.sqrt(cov[i, i]).reshape(1,)
             self._last_trace = pymc3.sampling.sample(draws=num_samples,
                                       step=self._step_method, chains=1,
                                       cores=1, start=init_params, tune=False,
                                       discard_tuned_samples=False,
                                       progressbar=False)
 
-    def get_final_trace_values(self):
+    def get_all_trace_values(self):
         param_names = self._last_trace.varnames
         param_names = [pn for pn in param_names if not pn.endswith('__')]
-        return {pn: self._last_trace.get_values(pn)[-1] for pn in param_names}
+        return {pn: list(self._last_trace.get_values(pn)) for pn in param_names}
+
+    def get_final_trace_values(self):
+        trace = self.get_all_trace_values()
+        return {pn: values[-1] for pn, values in trace.items()}
 
     def sample_from_prior(self, size=1):
         random_sample = {}

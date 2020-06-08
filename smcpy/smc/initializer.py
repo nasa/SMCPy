@@ -30,13 +30,16 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
+import numpy as np
+
+from copy import copy
+
 from ..mcmc.translator_base import Translator
 from ..particles.particle import Particle
 from ..smc.smc_step import SMCStep
 from ..utils.single_rank_comm import SingleRankComm
-import numpy as np
-
 from .mpi_base_class import MPIBaseClass
+
 
 class Initializer(MPIBaseClass):
     '''

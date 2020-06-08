@@ -83,16 +83,18 @@ def test_get_log_likelihood(translator):
 
 def test_sample_phi_and_cov_are_set(translator):
     phi = 0.1
-    cov = None
+    cov = np.array([[4, 1.2], [1.2, 1]])
     translator.sample(num_samples=100, cov=cov, phi=phi, init_params={})
     assert translator.step_method.methods[0].phi == phi
-    assert translator.step_method.methods[0].S == cov
+    assert translator.step_method.methods[0].S == 2
+    assert translator.step_method.methods[1].phi == phi
+    assert translator.step_method.methods[1].S == 1
 
 
 def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
     num_samples = 100
     phi = 0.1
-    cov = None
+    cov = np.eye(2)
     init_params = {}
 
     mocker.patch('pymc3.sampling.sample')
@@ -122,6 +124,13 @@ def test_get_final_values_of_last_trace(translator, stub_trace):
 
     values = translator.get_final_trace_values()
     assert values == {'a': 1, 'b': 2}
+
+
+def test_get_last_trace(translator, stub_trace):
+    translator._last_trace = stub_trace
+
+    values = translator.get_all_trace_values()
+    assert values == {'a': [1, 1], 'b': [2, 2]}
 
 
 def test_sample_from_prior(translator):
