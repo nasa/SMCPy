@@ -2,15 +2,18 @@ import numpy as np
 
 class VectorMCMC:
     
-    def __init__(self, model, data, prior_pdfs):
+    def __init__(self, model, data, prior_pdfs, std_dev=None):
         self._model = model
         self._data = data
         self._prior_pdfs = prior_pdfs
+        self._fixed_std_dev = std_dev
 
-    def evaluate_log_likelihood(self, inputs, std_dev):
+    def evaluate_log_likelihood(self, inputs):
+        std_dev = self._fixed_std_dev
         if std_dev is None:
             std_dev = inputs[:, -1]
         var = std_dev ** 2
+
         output = self._model(inputs)
         data = np.tile(self._data, [inputs.shape[0], 1])
         ssqe = np.sum((output - data) ** 2, axis=1)
@@ -25,7 +28,7 @@ class VectorMCMC:
         return np.hstack(log_priors)
 
     @staticmethod
-    def evaluate_posterior(log_likelihood, log_priors):
+    def evaluate_log_posterior(log_likelihood, log_priors):
         return np.sum(np.hstack((log_likelihood, log_priors)), axis=1)
 
     @staticmethod
@@ -36,8 +39,8 @@ class VectorMCMC:
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
                          old_log_priors):
-        old_log_post = self.evaluate_posterior(old_log_like, old_log_priors)
-        new_log_post = self.evaluate_posterior(new_log_like, new_log_priors)
+        old_log_post = self.evaluate_log_posterior(old_log_like, old_log_priors)
+        new_log_post = self.evaluate_log_posterior(new_log_like, new_log_priors)
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
     @staticmethod
@@ -45,14 +48,14 @@ class VectorMCMC:
         reject = acceptance_ratios < u
         return np.where(reject, old_values, new_values)
 
-    def smc_metropolis(self, num_samples, inputs, cov, std_dev=None):
-        log_like = self.evaluate_log_likelihood(inputs, std_dev)
+    def smc_metropolis(self, num_samples, inputs, cov, phi):
+        log_like = phi * self.evaluate_log_likelihood(inputs)
         log_priors = self.evaluate_log_priors(inputs)
     
         for i in range(num_samples):
     
             new_inputs = self.proposal(inputs, cov)
-            new_log_like = self.evaluate_log_likelihood(new_inputs, std_dev)
+            new_log_like = phi * self.evaluate_log_likelihood(new_inputs)
             new_log_priors = self.evaluate_log_priors(new_inputs)
     
             accpt_ratio = self.acceptance_ratio(new_log_like, log_like,

@@ -26,7 +26,7 @@ def prior_pdfs():
 
 @pytest.fixture
 def vector_mcmc(stub_model, data, prior_pdfs):
-    return VectorMCMC(stub_model, data, prior_pdfs)
+    return VectorMCMC(stub_model, data, prior_pdfs, std_dev=None)
 
 
 @pytest.mark.parametrize('inputs, std_dev', (
@@ -35,10 +35,12 @@ def vector_mcmc(stub_model, data, prior_pdfs):
                          (np.array([[0, 1, 0.5, np.sqrt(2 * np.pi)]] * 4), None)
                         )))
 def test_vectorized_likelihood(vector_mcmc, inputs, std_dev):
+    vector_mcmc._fixed_std_dev = std_dev
+
     expected_like = np.array(inputs.shape[0] * [[np.exp(-2 / np.pi)]])
     expected_log_like = np.log(expected_like)
 
-    log_like = vector_mcmc.evaluate_log_likelihood(inputs, std_dev)
+    log_like = vector_mcmc.evaluate_log_likelihood(inputs)
 
     np.testing.assert_array_almost_equal(log_like, expected_log_like)
 
@@ -103,27 +105,28 @@ def test_vectorized_selection(vector_mcmc, new_inputs, old_inputs, mocker):
                                   expected[:new_inputs.shape[0]])
 
 
+@pytest.mark.parametrize('phi', (0.5, 1))
 @pytest.mark.parametrize('num_samples', (1, 2))
-def test_vectorized_smc_metropolis(vector_mcmc, num_samples, mocker):
+def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
-    std_dev = 1
+    vector_mcmc._std_dev = 1
     vector_mcmc._prior_pdfs = [mocker.Mock(), mocker.Mock(), mocker.Mock()]
 
     mocker.patch('numpy.random.uniform')
-    mocker.patch.object(vector_mcmc, 'acceptance_ratio')
-    mocker.patch.object(vector_mcmc, 'proposal')
-    log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
-                                   return_value=inputs * 2)
+    mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
+    mocker.patch.object(vector_mcmc, 'proposal',
+                        side_effect=[inputs + 1, inputs + 2])
     mocker.patch.object(vector_mcmc, 'selection',
-                        side_effect= [inputs + 1, inputs * 2, None,
-                                      inputs + 2, inputs * 2, None])
+                        new=lambda new_log_like, x, y, z: new_log_like)
+    log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
+                                   return_value = inputs * 2)
 
     new_inputs, new_log_likes = vector_mcmc.smc_metropolis(num_samples, inputs,
-                                                           cov, std_dev)
+                                                           cov, phi)
 
     expected_new_inputs = inputs + num_samples
-    expected_new_log_likes = inputs * 2
+    expected_new_log_likes = inputs * 2 * phi
 
     np.testing.assert_array_equal(new_inputs, expected_new_inputs)
     np.testing.assert_array_equal(new_log_likes, expected_new_log_likes)
