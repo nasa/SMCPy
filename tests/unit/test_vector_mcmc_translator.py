@@ -45,12 +45,12 @@ def test_translator_log_likelihoods(vector_mcmc, param_dict, expected, mocker):
 
 
 @pytest.mark.parametrize('param_dict, expected',
-                         ([{'a': 1, 'b': 2}, np.array([[1]])],
-                          [{'a': [1, 1], 'b': [1, 2]}, np.array([[1], [1]])]))
+                         ([{'a': 1, 'b': 2}, np.array([[3]])],
+                          [{'a': [1, 1], 'b': [1, 2]}, np.array([[2], [3]])]))
 def test_translator_log_priors(vector_mcmc, param_dict, expected, mocker):
     vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['b', 'a'])
     mocker.patch.object(vector_mcmc, 'evaluate_log_priors',
-                        new=lambda x: x[:, 1].reshape(-1, 1))
+                        new=lambda x: x)
     
     log_priors = vmcmc.get_log_prior(param_dict)
     np.testing.assert_array_equal(log_priors, expected)
@@ -86,4 +86,7 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
     np.testing.assert_array_equal([p.log_like for p in mutated],
                                   [p.log_like for p in expected_particles])
 
-    # NEED AN ASSERT CALLED WITH FOR SMC_METROPOLIS
+    calls = smc_metropolis.call_args[0]
+    for i, expected in enumerate([expected_input_array, num_samples,
+                                  proposal_cov, phi]):
+        np.testing.assert_array_equal(calls[i], expected)
