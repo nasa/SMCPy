@@ -18,7 +18,7 @@ class VectorMCMC:
         data = np.tile(self._data, [inputs.shape[0], 1])
         ssqe = np.sum((output - data) ** 2, axis=1)
 
-        term1 = np.log(2 * np.pi / var) ** (len(data) / 2.) 
+        term1 = -np.log(2 * np.pi * var) * (data.shape[1] / 2.) 
         term2 = -1 / 2. * ssqe / var
         return (term1 + term2).reshape(-1, 1)
 
@@ -48,7 +48,7 @@ class VectorMCMC:
         reject = acceptance_ratios < u
         return np.where(reject, old_values, new_values)
 
-    def smc_metropolis(self, num_samples, inputs, cov, phi):
+    def smc_metropolis(self, inputs, num_samples, cov, phi):
         log_like = phi * self.evaluate_log_likelihood(inputs)
         log_priors = self.evaluate_log_priors(inputs)
     
@@ -60,7 +60,7 @@ class VectorMCMC:
     
             accpt_ratio = self.acceptance_ratio(new_log_like, log_like,
                                                 new_log_priors, log_priors)
-    
+
             u = np.random.uniform(0, 1, accpt_ratio.shape)
     
             inputs = self.selection(new_inputs, inputs, accpt_ratio, u)
@@ -69,3 +69,30 @@ class VectorMCMC:
                                         accpt_ratio, u)
     
         return inputs, log_like
+
+    def metropolis(self, inputs, num_samples, cov):
+        chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
+        chain[:, :, 0] = inputs
+
+        log_like = self.evaluate_log_likelihood(inputs)
+        log_priors = self.evaluate_log_priors(inputs)
+    
+        for i in range(num_samples):
+    
+            new_inputs = self.proposal(inputs, cov)
+            new_log_like = self.evaluate_log_likelihood(new_inputs)
+            new_log_priors = self.evaluate_log_priors(new_inputs)
+    
+            accpt_ratio = self.acceptance_ratio(new_log_like, log_like,
+                                                new_log_priors, log_priors)
+
+            u = np.random.uniform(0, 1, accpt_ratio.shape)
+    
+            inputs = self.selection(new_inputs, inputs, accpt_ratio, u)
+            log_like = self.selection(new_log_like, log_like, accpt_ratio, u)
+            log_priors = self.selection(new_log_priors, log_priors,
+                                        accpt_ratio, u)
+
+            chain[:, :, i + 1] = inputs
+    
+        return chain
