@@ -16,7 +16,7 @@ class VectorMCMCTranslator(Translator):
         for i, p in enumerate(particles):
             input_array[i, :] = [p.params[key] for key in self._param_order]
 
-        params, log_likes = self._mcmc.smc_metropolis(num_samples, input_array,
+        params, log_likes = self._mcmc.smc_metropolis(input_array, num_samples,
                                                       proposal_cov, phi)
 
         for i, p in enumerate(particles):
@@ -32,7 +32,8 @@ class VectorMCMCTranslator(Translator):
 
     def get_log_prior(self, param_dict):
         input_array = self._translate_param_dict_to_input_array(param_dict)
-        return self._mcmc.evaluate_log_priors(input_array)
+        log_priors = self._mcmc.evaluate_log_priors(input_array)
+        return np.sum(log_priors, axis=1).reshape(-1, 1)
 
     def _translate_param_dict_to_input_array(self, param_dict):
         return np.array([[param_dict[k] for k in self._param_order]])
