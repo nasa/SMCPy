@@ -105,6 +105,20 @@ def test_vectorized_selection(vector_mcmc, new_inputs, old_inputs, mocker):
                                   expected[:new_inputs.shape[0]])
 
 
+@pytest.mark.parametrize('adapt_interval,expected_cov',
+                         ([3, np.eye(2)], [5, np.array([[2, 1], [1, 3]])]))
+def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval,
+                                        expected_cov, mocker):
+    num_parallel_chains = 3
+    old_cov = np.eye(2)
+    chain = np.ones([num_parallel_chains, 2, 10])
+    mocker.patch('numpy.cov', return_value=np.array([[2, 1], [1, 3]]))
+
+    cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, adapt_interval)
+
+    np.testing.assert_array_equal(cov, expected_cov)
+
+
 @pytest.mark.parametrize('phi', (0.5, 1))
 @pytest.mark.parametrize('num_samples', (1, 2))
 def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
@@ -135,8 +149,10 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     assert vector_mcmc._prior_pdfs[0].call_count == num_samples + 1
 
 
+@pytest.mark.parametrize('adapt_interval', (None, 1))
 @pytest.mark.parametrize('num_samples', (1, 5))
-def test_vectorized_smc_metropolis(vector_mcmc, num_samples, mocker):
+def test_vectorized_smc_metropolis(vector_mcmc, num_samples, adapt_interval,
+                                   mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
@@ -149,15 +165,17 @@ def test_vectorized_smc_metropolis(vector_mcmc, num_samples, mocker):
     mocker.patch.object(vector_mcmc, 'selection',
                         new=lambda new_log_like, x, y, z: new_log_like)
     log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood')
+    adapt = mocker.patch.object(vector_mcmc, 'adapt_proposal_cov')
 
     expected_chain = np.zeros([10, 3, num_samples + 1])
     expected_chain[:, :, 0] = inputs
     for i in range(num_samples):
         expected_chain[:, :, i + 1] = expected_chain[:, :, i].copy() + 1
 
-    chain = vector_mcmc.metropolis(inputs, num_samples, cov)
+    chain = vector_mcmc.metropolis(inputs, num_samples, cov, adapt_interval)
 
     np.testing.assert_array_equal(chain, expected_chain)
 
     assert log_like.call_count == num_samples + 1
+    assert adapt.call_count == num_samples
     assert vector_mcmc._prior_pdfs[0].call_count == num_samples + 1

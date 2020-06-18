@@ -48,6 +48,15 @@ class VectorMCMC:
         reject = acceptance_ratios < u
         return np.where(reject, old_values, new_values)
 
+    @staticmethod
+    def adapt_proposal_cov(cov, chain, adapt_interval):
+        n_samples = chain.shape[2]
+        if adapt_interval is not None and n_samples % adapt_interval == 0:
+            flat_chain = [chain[:, i, :].flatten() \
+                          for i in range(chain.shape[1])]
+            cov = np.cov(np.array(flat_chain).T)
+        return cov
+
     def smc_metropolis(self, inputs, num_samples, cov, phi):
         log_like = phi * self.evaluate_log_likelihood(inputs)
         log_priors = self.evaluate_log_priors(inputs)
@@ -70,7 +79,7 @@ class VectorMCMC:
     
         return inputs, log_like
 
-    def metropolis(self, inputs, num_samples, cov):
+    def metropolis(self, inputs, num_samples, cov, adapt_interval=None):
         chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
         chain[:, :, 0] = inputs
 
@@ -94,5 +103,7 @@ class VectorMCMC:
                                         accpt_ratio, u)
 
             chain[:, :, i + 1] = inputs
+
+            cov = self.adapt_proposal_cov(cov, chain, adapt_interval)
     
         return chain
