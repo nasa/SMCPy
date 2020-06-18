@@ -1,3 +1,4 @@
+from copy import copy
 import numpy as np
 import pytest
 
@@ -14,24 +15,23 @@ def test_mcmc_kernel_not_translator_instance():
         initializer = Mutator(None)
 
 
-def test_mutate(mutator, mocker):
+def test_mutate(mutator, stub_mcmc_kernel, mocker):
     smc_step = mocker.Mock()
-    cov = None
-    mocker.patch.object(smc_step, 'get_covariance', return_value=cov)
-    mocker.patch.object(mutator, 'partition_and_scatter_particles',
-                        return_value = \
-                        [mocker.Mock(), mocker.Mock(), mocker.Mock()])
+    num_mcmc_samples = 1
     phi = 1
-    n_samples = 1
-    expected_params = [1, 2, 5]
-    expected_log_likes = [0.1, 0.1, 0.1]
 
-    new_smc_step = mutator.mutate(smc_step, num_mcmc_samples=n_samples, phi=phi)
-    particles = new_smc_step.particles
+    mocker.patch.object(smc_step, 'get_covariance')
+    mocker.patch.object(smc_step, 'normalize_step_log_weights')
+    mocker.patch.object(smc_step, 'copy', return_value=smc_step)
 
-    mutator.partition_and_scatter_particles.assert_called()
-    mutator.mcmc_kernel.sample.assert_called()
-    assert new_smc_step is not smc_step
-    for i, p in enumerate(particles):
-        assert p.params['a'] == expected_params[i]
-        assert p.log_like == expected_log_likes[i]
+    comm = mocker.Mock()
+    mocker.patch.object(comm, 'gather', new=lambda x, root: [x])
+    mutator._comm = comm
+    mocker.patch.object(mutator, 'partition_and_scatter_particles')
+    mocker.patch.object(stub_mcmc_kernel, 'mutate_particles',
+                        return_value=np.array([1, 2, 3]))
+
+    new_smc_step = mutator.mutate(smc_step, num_mcmc_samples, phi)
+
+    np.testing.assert_array_equal(new_smc_step.particles, np.array([1, 2, 3]))
+    # NEED ADDITIONAL TESTING HERE -- ASSERT_CALLED ON MOCKED FUNCTIONS

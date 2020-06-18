@@ -49,15 +49,12 @@ class Mutator(MPIBaseClass):
     def mutate(self, smc_step, num_mcmc_samples, phi):
         smc_step = smc_step.copy()
         cov = smc_step.get_covariance()
-
         smc_step.normalize_step_log_weights()
-        particles = self.partition_and_scatter_particles(smc_step.particles)
-        for p in particles:
-            self.mcmc_kernel.sample(num_samples=num_mcmc_samples,
-                                    init_params=p.params, cov=cov, phi=phi)
-            p.params = self.mcmc_kernel.get_final_trace_values()
-            p.log_like = self.mcmc_kernel.get_log_likelihood(p.params)
 
+        particles = self.partition_and_scatter_particles(smc_step.particles)
+        particles = self.mcmc_kernel.mutate_particles(particles,
+                                                      num_mcmc_samples,
+                                                      cov, phi)
         smc_step.particles = self._comm.gather(particles, root=0)[0]
         return smc_step
 
