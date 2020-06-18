@@ -49,12 +49,11 @@ class VectorMCMC:
         return np.where(reject, old_values, new_values)
 
     @staticmethod
-    def adapt_proposal_cov(cov, chain, adapt_interval):
-        n_samples = chain.shape[2]
-        if adapt_interval is not None and n_samples % adapt_interval == 0:
-            flat_chain = [chain[:, i, :].flatten() \
+    def adapt_proposal_cov(cov, chain, sample_count, adapt_interval):
+        if adapt_interval is not None and sample_count % adapt_interval == 0:
+            flat_chain = [chain[:, i, :sample_count + 2].flatten() \
                           for i in range(chain.shape[1])]
-            cov = np.cov(np.array(flat_chain).T)
+            cov = np.cov(flat_chain)
         return cov
 
     def smc_metropolis(self, inputs, num_samples, cov, phi):
@@ -104,6 +103,7 @@ class VectorMCMC:
 
             chain[:, :, i + 1] = inputs
 
-            cov = self.adapt_proposal_cov(cov, chain, adapt_interval)
+            cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval)
+        print(cov)
     
         return chain
