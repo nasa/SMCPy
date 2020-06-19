@@ -166,8 +166,7 @@ class SMCStep(Checks):
 
     def get_covariance(self):
         '''
-        Estimates the covariance matrix for the step. Uses weighted sample
-        formula https://en.wikipedia.org/wiki/Sample_mean_and_covariance
+        Estimates the covariance matrix for the step.
         '''
         param_names = self.particles[0].params.keys()
         normalized_weights = self.normalize_step_weights()
@@ -274,7 +273,9 @@ class SMCStep(Checks):
                     r -= 1e-12
 
                 if a <= r < b:
-                    new_particles.append(copy.copy(self.particles[i]))
+                    p = self.particles[i]
+                    new_particles.append(Particle(p.params, p.log_weight,
+                                                  p.log_like))
                     new_particles[-1].log_weight = uniform_weight
                     break
 
