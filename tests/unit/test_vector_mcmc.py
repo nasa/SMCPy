@@ -106,15 +106,18 @@ def test_vectorized_selection(vector_mcmc, new_inputs, old_inputs, mocker):
 
 
 @pytest.mark.parametrize('adapt_interval,expected_cov',
-                         ([3, np.eye(2)], [5, np.array([[2, 1], [1, 3]])]))
+                         ([3, np.eye(2)], [4, np.array([[2, 1], [1, 3]])]))
 def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval,
                                         expected_cov, mocker):
     num_parallel_chains = 3
+    current_sample_count = 8
+    num_samples = 10
     old_cov = np.eye(2)
-    chain = np.ones([num_parallel_chains, 2, 10])
+    chain = np.zeros([num_parallel_chains, 2, num_samples])
     mocker.patch('numpy.cov', return_value=np.array([[2, 1], [1, 3]]))
 
-    cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, adapt_interval)
+    cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, current_sample_count,
+                                         adapt_interval)
 
     np.testing.assert_array_equal(cov, expected_cov)
 
@@ -140,7 +143,7 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
                                                            cov, phi)
 
     expected_new_inputs = inputs + num_samples
-    expected_new_log_likes = inputs * 2 * phi
+    expected_new_log_likes = inputs * 2
 
     np.testing.assert_array_equal(new_inputs, expected_new_inputs)
     np.testing.assert_array_equal(new_log_likes, expected_new_log_likes)
@@ -151,7 +154,7 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
 
 @pytest.mark.parametrize('adapt_interval', (None, 1))
 @pytest.mark.parametrize('num_samples', (1, 5))
-def test_vectorized_smc_metropolis(vector_mcmc, num_samples, adapt_interval,
+def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
                                    mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)

@@ -36,9 +36,9 @@ def test_translator_instance(vector_mcmc, stub_model, data, prior_pdfs):
                          ([{'a': 1, 'b': 2}, np.array([[1]])],
                           [{'a': [1, 1], 'b': [1, 2]}, np.array([[1], [1]])]))
 def test_translator_log_likelihoods(vector_mcmc, param_dict, expected, mocker):
-    vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['a', 'b'])
     mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
                         new=lambda x: x[:, 0].reshape(-1, 1))
+    vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['a', 'b'])
     
     log_likes = vmcmc.get_log_likelihood(param_dict)
     np.testing.assert_array_equal(log_likes, expected)
@@ -48,9 +48,9 @@ def test_translator_log_likelihoods(vector_mcmc, param_dict, expected, mocker):
                          ([{'a': 1, 'b': 2}, np.array([[3]])],
                           [{'a': [1, 1], 'b': [1, 2]}, np.array([[2], [3]])]))
 def test_translator_log_priors(vector_mcmc, param_dict, expected, mocker):
-    vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['b', 'a'])
     mocker.patch.object(vector_mcmc, 'evaluate_log_priors',
                         new=lambda x: x)
+    vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['b', 'a'])
     
     log_priors = vmcmc.get_log_prior(param_dict)
     np.testing.assert_array_equal(log_priors, expected)
