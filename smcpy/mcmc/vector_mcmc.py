@@ -57,16 +57,17 @@ class VectorMCMC:
         return cov
 
     def smc_metropolis(self, inputs, num_samples, cov, phi):
-        log_like = phi * self.evaluate_log_likelihood(inputs)
+        log_like = self.evaluate_log_likelihood(inputs)
         log_priors = self.evaluate_log_priors(inputs)
     
         for i in range(num_samples):
     
             new_inputs = self.proposal(inputs, cov)
-            new_log_like = phi * self.evaluate_log_likelihood(new_inputs)
+            new_log_like = self.evaluate_log_likelihood(new_inputs)
             new_log_priors = self.evaluate_log_priors(new_inputs)
     
-            accpt_ratio = self.acceptance_ratio(new_log_like, log_like,
+            accpt_ratio = self.acceptance_ratio(new_log_like * phi,
+                                                log_like * phi,
                                                 new_log_priors, log_priors)
 
             u = np.random.uniform(0, 1, accpt_ratio.shape)
