@@ -46,9 +46,8 @@ class Mutator(MPIBaseClass):
         self.mcmc_kernel = mcmc_kernel
         super().__init__(mpi_comm)
 
-    def mutate(self, smc_step, num_mcmc_samples, phi):
-        smc_step = smc_step.copy()
-        cov = smc_step.get_covariance()
+    def mutate(self, smc_step, num_mcmc_samples, cov, phi):
+        #smc_step = smc_step.copy()
         smc_step.normalize_step_log_weights()
 
         particles = self.partition_and_scatter_particles(smc_step.particles)
