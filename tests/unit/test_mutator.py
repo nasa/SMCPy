@@ -18,9 +18,9 @@ def test_mcmc_kernel_not_translator_instance():
 def test_mutate(mutator, stub_mcmc_kernel, mocker):
     smc_step = mocker.Mock()
     num_mcmc_samples = 1
+    cov = 1
     phi = 1
 
-    mocker.patch.object(smc_step, 'get_covariance')
     mocker.patch.object(smc_step, 'normalize_step_log_weights')
     mocker.patch.object(smc_step, 'copy', return_value=smc_step)
 
@@ -31,7 +31,10 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     mocker.patch.object(stub_mcmc_kernel, 'mutate_particles',
                         return_value=np.array([1, 2, 3]))
 
-    new_smc_step = mutator.mutate(smc_step, num_mcmc_samples, phi)
+    new_smc_step = mutator.mutate(smc_step, num_mcmc_samples, cov, phi)
 
     np.testing.assert_array_equal(new_smc_step.particles, np.array([1, 2, 3]))
-    # NEED ADDITIONAL TESTING HERE -- ASSERT_CALLED ON MOCKED FUNCTIONS
+
+    new_smc_step.normalize_step_log_weights.assert_called()
+    mutator.partition_and_scatter_particles.assert_called()
+    stub_mcmc_kernel.mutate_particles.assert_called()
