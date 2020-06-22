@@ -157,10 +157,16 @@ def test_resample(smc_step, particle, mocker):
 
     p1 = copy(particle)
     p1.params = {'a': 1}
+    p1.log_weight = 0.1
+    p1.log_like = 0.1
     p2 = copy(particle)
     p2.params = {'a': 2}
+    p2.log_weight = 0.1
+    p2.log_like = 0.1
     p3 = copy(particle)
     p3.params = {'a': 3}
+    p3.log_weight = 0.1
+    p3.log_like = 0.1
 
     smc_step.particles = [p1, p2, p3]
     mocker.patch.object(smc_step, 'normalize_step_log_weights')
