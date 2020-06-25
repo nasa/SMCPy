@@ -184,7 +184,7 @@ class Particles(Checks):
         '''
         return np.sum(self.params * self.weights, axis=0)
 
-    # MARKED FOR MOVE
+    # MARKED FOR MOVE TO MUTATOR
     #def resample_if_needed(self, ess_threshold):
     #    ess = self.compute_ess()
     #    if ess < ess_threshold:
@@ -201,17 +201,13 @@ class Particles(Checks):
         norm = 1 / (1 - np.sum(self.weights ** 2))
         return np.sum(self.weights * (self.params - means) ** 2, axis=0) * norm
 
-    def get_std_dev(self):
+    @package_for_user
+    def compute_std_dev(self):
         '''
         Returns the estimated variance of each parameter in step. 
         '''
-        return {k: np.sqrt(v) for k, v in self.get_variance().items()}
-
-    def get_log_weights(self):
-        '''
-        Returns a list of the log weights of each particle in the step
-        '''
-        return [p.log_weight for p in self.particles]
+        var = self.compute_variance(package=False)
+        return np.sqrt(var)
 
     def get_covariance(self):
         '''
@@ -238,212 +234,179 @@ class Particles(Checks):
 
         return cov_matrix
 
-    def update_weights(self, delta_phi):
-        self.normalize_step_log_weights()
-        for p in self.particles:
-            p.log_weight = p.log_weight + delta_phi * p.log_like
-        return None
+    # MARKED FOR MOVE TO MUTATOR
+    #def update_weights(self, delta_phi):
+    #    self.normalize_step_log_weights()
+    #    for p in self.particles:
+    #        p.log_weight = p.log_weight + delta_phi * p.log_like
+    #    return None
 
-    def get_params(self, key):
-        '''
-        Retrieves parameter values in every particle of a specific parameter
+    # MARKED FOR MOVE TO MUTATOR
+    #def resample(self):
+    #    '''
+    #    Resamples the step based on normalized weights. Assigns discrete
+    #    probabilities to each particle (sum to 1), resample from this discrete
+    #    distribution using copies of particle objects.
+    #    '''
+    #    self.normalize_step_log_weights()
+    #    weights = np.exp(self.get_log_weights())
+    #    weights_cs = np.cumsum(weights)
 
-        :param key: parameter name
-        :type key: str
-        '''
-        particles = self.particles
-        return np.array([p.params[key] for p in particles])
+    #    num_particles = len(weights)
+    #    uniform_weight = np.log(1. / num_particles)
 
-    def get_param_dicts(self):
-        '''
-        Retrieves the entire parameter dictionary for every particle
-        '''
-        particles = self.particles
-        return [p.params for p in particles]
+    #    # intervals based on weights to use for discrete probability draw
+    #    intervals = np.c_[np.insert(weights_cs, 0, 0)[:-1], weights_cs]
 
-    def get_particles(self):
-        '''
-        Retrieves the list of particles within the step object
-        '''
-        return self.particles
+    #    # generate random numbers, iterate to find intervals for resample
+    #    R = np.random.uniform(0, 1, num_particles)
 
-    def resample(self):
-        '''
-        Resamples the step based on normalized weights. Assigns discrete
-        probabilities to each particle (sum to 1), resample from this discrete
-        distribution using copies of particle objects.
-        '''
-        self.normalize_step_log_weights()
-        weights = np.exp(self.get_log_weights())
-        weights_cs = np.cumsum(weights)
+    #    new_particles = []
+    #    for r in R:
 
-        num_particles = len(weights)
-        uniform_weight = np.log(1. / num_particles)
+    #        for i, (a, b) in enumerate(intervals):
 
-        # intervals based on weights to use for discrete probability draw
-        intervals = np.c_[np.insert(weights_cs, 0, 0)[:-1], weights_cs]
+    #            if r == 1: # should never happen, but just in case
+    #                r -= 1e-12
 
-        # generate random numbers, iterate to find intervals for resample
-        R = np.random.uniform(0, 1, num_particles)
+    #            if a <= r < b:
+    #                p = self.particles[i]
+    #                new_particles.append(Particle(p.params, p.log_weight,
+    #                                              p.log_like))
+    #                new_particles[-1].log_weight = uniform_weight
+    #                break
 
-        new_particles = []
-        for r in R:
-
-            for i, (a, b) in enumerate(intervals):
-
-                if r == 1: # should never happen, but just in case
-                    r -= 1e-12
-
-                if a <= r < b:
-                    p = self.particles[i]
-                    new_particles.append(Particle(p.params, p.log_weight,
-                                                  p.log_like))
-                    new_particles[-1].log_weight = uniform_weight
-                    break
-
-        self.particles = new_particles
-        return None
+    #    self.particles = new_particles
+    #    return None
 
 
-    @_mpi_decorator
-    def plot_marginal(self, key, save=False, show=True,
-                      prefix='marginal_'):  # pragma no cover
-        '''
-        Plots a single marginal approximation for param given by <key>.
-        '''
-        try:
-            plt
-        except:
-            import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        for p in self.particles:
-            ax.plot([p.params[key], p.params[key]], [0.0, np.exp(p.log_weight)])
-            ax.plot(p.params[key], np.exp(p.log_weight), 'o')
-        if save:
-            plt.savefig(prefix + key + '.png')
-        if show:
-            plt.show()
-        plt.close(fig)
-        return None
+    # MARKED FOR REFACTOR
+    #@_mpi_decorator
+    #def plot_marginal(self, key, save=False, show=True,
+    #                  prefix='marginal_'):  # pragma no cover
+    #    '''
+    #    Plots a single marginal approximation for param given by <key>.
+    #    '''
+    #    try:
+    #        plt
+    #    except:
+    #        import matplotlib.pyplot as plt
+    #    fig = plt.figure()
+    #    ax = fig.add_subplot(111)
+    #    for p in self.particles:
+    #        ax.plot([p.params[key], p.params[key]], [0.0, np.exp(p.log_weight)])
+    #        ax.plot(p.params[key], np.exp(p.log_weight), 'o')
+    #    if save:
+    #        plt.savefig(prefix + key + '.png')
+    #    if show:
+    #        plt.show()
+    #    plt.close(fig)
+    #    return None
 
-    def plot_pairwise_weights(self, param_names=None, labels=None,
-                              save=False, show=True, param_lims=None,
-                              label_size=None, tick_size=None, nbins=None,
-                              prefix='pairwise'):  # pragma no cover
-        '''
-        Plots pairwise distributions of all parameter combos. Color codes each
-        by weight.
-        '''
-        try:
-            plt
-        except:
-            import matplotlib.pyplot as plt
-        # get particles
-        particles = self.particles
+    #def plot_pairwise_weights(self, param_names=None, labels=None,
+    #                          save=False, show=True, param_lims=None,
+    #                          label_size=None, tick_size=None, nbins=None,
+    #                          prefix='pairwise'):  # pragma no cover
+    #    '''
+    #    Plots pairwise distributions of all parameter combos. Color codes each
+    #    by weight.
+    #    '''
+    #    try:
+    #        plt
+    #    except:
+    #        import matplotlib.pyplot as plt
+    #    # get particles
+    #    particles = self.particles
 
-        # set up label dictionary
-        if param_names is None:
-            param_names = particles[0].params.keys()
-        if labels is None:
-            labels = param_names
-        label_dict = {key: lab for key, lab in zip(param_names, labels)}
-        if param_lims is not None:
-            lim_dict = {key: l for key, l in zip(param_names, param_lims)}
-        if nbins is not None:
-            bin_dict = {key: n for key, n in zip(param_names, nbins)}
-        L = len(param_names)
+    #    # set up label dictionary
+    #    if param_names is None:
+    #        param_names = particles[0].params.keys()
+    #    if labels is None:
+    #        labels = param_names
+    #    label_dict = {key: lab for key, lab in zip(param_names, labels)}
+    #    if param_lims is not None:
+    #        lim_dict = {key: l for key, l in zip(param_names, param_lims)}
+    #    if nbins is not None:
+    #        bin_dict = {key: n for key, n in zip(param_names, nbins)}
+    #    L = len(param_names)
 
-        # setup figure
-        fig = plt.figure(figsize=[10 * (L - 1) / 2, 10 * (L - 1) / 2])
+    #    # setup figure
+    #    fig = plt.figure(figsize=[10 * (L - 1) / 2, 10 * (L - 1) / 2])
 
-        # create lower triangle to obtain param combos
-        tril = np.tril(np.arange(L**2).reshape([L, L]), -1)
-        ikeys = np.transpose(np.nonzero(tril)).tolist()
+    #    # create lower triangle to obtain param combos
+    #    tril = np.tril(np.arange(L**2).reshape([L, L]), -1)
+    #    ikeys = np.transpose(np.nonzero(tril)).tolist()
 
-        # use lower triangle to id subplots
-        tril = np.tril(np.arange((L - 1)**2).reshape([L - 1, L - 1]) + 1)
-        iplts = [i for i in tril.flatten() if i > 0]
+    #    # use lower triangle to id subplots
+    #    tril = np.tril(np.arange((L - 1)**2).reshape([L - 1, L - 1]) + 1)
+    #    iplts = [i for i in tril.flatten() if i > 0]
 
-        norm_weights = self.normalize_step_weights()
-        means = self.get_mean()
-        for i in zip(iplts, ikeys):
-            iplt = i[0]     # subplot index
-            ikey1 = i[1][1]  # key index for xparam
-            ikey2 = i[1][0]  # key index for yparam
-            key1 = param_names[ikey1]
-            key2 = param_names[ikey2]
-            ax = {key1 + '+' + key2: fig.add_subplot(L - 1, L - 1, iplt)}
-            # get list of all particle params for key1, key2 combinations
-            pkey1 = []
-            pkey2 = []
-            for p in particles:
-                pkey1.append(p.params[key1])
-                pkey2.append(p.params[key2])
-            # plot parameter combos with weight as color
+    #    norm_weights = self.normalize_step_weights()
+    #    means = self.get_mean()
+    #    for i in zip(iplts, ikeys):
+    #        iplt = i[0]     # subplot index
+    #        ikey1 = i[1][1]  # key index for xparam
+    #        ikey2 = i[1][0]  # key index for yparam
+    #        key1 = param_names[ikey1]
+    #        key2 = param_names[ikey2]
+    #        ax = {key1 + '+' + key2: fig.add_subplot(L - 1, L - 1, iplt)}
+    #        # get list of all particle params for key1, key2 combinations
+    #        pkey1 = []
+    #        pkey2 = []
+    #        for p in particles:
+    #            pkey1.append(p.params[key1])
+    #            pkey2.append(p.params[key2])
+    #        # plot parameter combos with weight as color
 
-            def rnd_to_sig(x):
-                return round(x, -int(np.floor(np.log10(abs(x)))) + 1)
-            sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=norm_weights, vmin=0.0,
-                                               vmax=rnd_to_sig(max(norm_weights)))
-            ax[key1 + '+' + key2].axvline(means[key1], color='C1', linestyle='--')
-            ax[key1 + '+' + key2].axhline(means[key2], color='C1', linestyle='--')
-            ax[key1 + '+' + key2].set_xlabel(label_dict[key1])
-            ax[key1 + '+' + key2].set_ylabel(label_dict[key2])
+    #        def rnd_to_sig(x):
+    #            return round(x, -int(np.floor(np.log10(abs(x)))) + 1)
+    #        sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=norm_weights, vmin=0.0,
+    #                                           vmax=rnd_to_sig(max(norm_weights)))
+    #        ax[key1 + '+' + key2].axvline(means[key1], color='C1', linestyle='--')
+    #        ax[key1 + '+' + key2].axhline(means[key2], color='C1', linestyle='--')
+    #        ax[key1 + '+' + key2].set_xlabel(label_dict[key1])
+    #        ax[key1 + '+' + key2].set_ylabel(label_dict[key2])
 
-            # if provided, set x y lims
-            if param_lims is not None:
-                ax[key1 + '+' + key2].set_xlim(lim_dict[key1])
-                ax[key1 + '+' + key2].set_ylim(lim_dict[key2])
-            # if provided set font sizes
-            if tick_size is not None:
-                ax[key1 + '+' + key2].tick_params(labelsize=tick_size)
-            if label_size is not None:
-                ax[key1 + '+' + key2].xaxis.label.set_size(label_size)
-                ax[key1 + '+' + key2].yaxis.label.set_size(label_size)
-            # if provided, set x ticks
-            if nbins is not None:
-                ax[key1 + '+' + key2].locator_params(axis='x', nbins=bin_dict[key1])
-                ax[key1 + '+' + key2].locator_params(axis='y', nbins=bin_dict[key2])
+    #        # if provided, set x y lims
+    #        if param_lims is not None:
+    #            ax[key1 + '+' + key2].set_xlim(lim_dict[key1])
+    #            ax[key1 + '+' + key2].set_ylim(lim_dict[key2])
+    #        # if provided set font sizes
+    #        if tick_size is not None:
+    #            ax[key1 + '+' + key2].tick_params(labelsize=tick_size)
+    #        if label_size is not None:
+    #            ax[key1 + '+' + key2].xaxis.label.set_size(label_size)
+    #            ax[key1 + '+' + key2].yaxis.label.set_size(label_size)
+    #        # if provided, set x ticks
+    #        if nbins is not None:
+    #            ax[key1 + '+' + key2].locator_params(axis='x', nbins=bin_dict[key1])
+    #            ax[key1 + '+' + key2].locator_params(axis='y', nbins=bin_dict[key2])
 
-        fig.tight_layout()
+    #    fig.tight_layout()
 
-        # colorbar
-        if L <= 2:
-            cb = plt.colorbar(sc, ax=ax[key1 + '+' + key2])
-        else:
-            ax1_position = fig.axes[0].get_position()
-            ax3_position = fig.axes[2].get_position()
-            y0 = ax1_position.y0
-            x0 = ax3_position.x0
-            w = 0.02
-            h = abs(ax1_position.y1 - ax1_position.y0)
-            empty_ax = fig.add_axes([x0, y0, w, h])
-            cb = plt.colorbar(sc, cax=empty_ax)
-            if tick_size is not None:
-                empty_ax.tick_params(labelsize=tick_size)
+    #    # colorbar
+    #    if L <= 2:
+    #        cb = plt.colorbar(sc, ax=ax[key1 + '+' + key2])
+    #    else:
+    #        ax1_position = fig.axes[0].get_position()
+    #        ax3_position = fig.axes[2].get_position()
+    #        y0 = ax1_position.y0
+    #        x0 = ax3_position.x0
+    #        w = 0.02
+    #        h = abs(ax1_position.y1 - ax1_position.y0)
+    #        empty_ax = fig.add_axes([x0, y0, w, h])
+    #        cb = plt.colorbar(sc, cax=empty_ax)
+    #        if tick_size is not None:
+    #            empty_ax.tick_params(labelsize=tick_size)
 
-        cb.ax.get_yaxis().labelpad = 15
-        cb.ax.set_ylabel('Normalized weights', rotation=270)
+    #    cb.ax.get_yaxis().labelpad = 15
+    #    cb.ax.set_ylabel('Normalized weights', rotation=270)
 
-        plt.tight_layout()
+    #    plt.tight_layout()
 
-        if save:
-            plt.savefig(prefix + '.png')
-        if show:
-            plt.show()
-        plt.close(fig)
-        return None
-
-    def _check_step(self, particle_list):
-        if not isinstance(particle_list, (list, np.ndarray)):
-            raise TypeError('Input must be a list or numpy array')
-        for particle in particle_list:
-            self._check_particle(particle)
-        return particle_list
-
-    @staticmethod
-    def _check_particle(particle):
-        if not isinstance(particle, Particle):
-            raise TypeError('Input must be instance of the Particle class')
-        return particle
+    #    if save:
+    #        plt.savefig(prefix + '.png')
+    #    if show:
+    #        plt.show()
+    #    plt.close(fig)
+    #    return None
