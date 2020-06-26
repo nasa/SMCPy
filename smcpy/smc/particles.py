@@ -204,35 +204,27 @@ class Particles(Checks):
     @package_for_user
     def compute_std_dev(self):
         '''
-        Returns the estimated variance of each parameter in step. 
+        Returns the estimated standard deviation of each parameter. 
         '''
         var = self.compute_variance(package=False)
         return np.sqrt(var)
 
-    def get_covariance(self):
+    def compute_covariance(self):
         '''
-        Estimates the covariance matrix for the step.
+        Estimates the covariance matrix. Uses weighted sample formula
+        https://en.wikipedia.org/wiki/Sample_mean_and_covariance 
         '''
-        param_names = self.particles[0].params.keys()
-        normalized_weights = self.normalize_step_weights()
-        means = self.get_mean()
+        means = self.compute_mean(package=False)
+        diff = self.params - means
+        norm = 1 / (1 - np.sum(self.weights ** 2))
+        cov = np.dot(diff.T, diff * self.weights) * norm
 
-        cov_list = []
-        for i, p in enumerate(self.particles):
-            param_vector = np.array([p.params[pn] for pn in param_names])
-            mean_vector = np.array([means[pn] for pn in param_names])
-            diff = (param_vector - mean_vector).reshape(-1, 1)
-            R = np.dot(diff, diff.transpose())
-            cov_list.append(normalized_weights[i] * R)
-        cov_matrix = np.sum(cov_list, axis=0)
-        cov_matrix = cov_matrix * 1 / (1 - np.sum(normalized_weights**2))
+        if not self._is_positive_definite(cov):
+            warnings.warn('Covariance matrix is not positive definite; setting '
+                          'off-diagonal terms to zero.')
+            cov= np.eye(cov.shape[0]) * np.diag(cov)
 
-        if not self._is_positive_definite(cov_matrix):
-            msg = 'current step cov not pos def, setting to identity matrix'
-            warnings.warn(msg)
-            cov_matrix = np.eye(cov_matrix.shape[0])
-
-        return cov_matrix
+        return cov
 
     # MARKED FOR MOVE TO MUTATOR
     #def update_weights(self, delta_phi):

@@ -4,6 +4,14 @@ import numpy as np
 class Checks(object):
 
     @classmethod
+    def _is_dict(class_, input_):
+        return isinstance(input_, dict)
+
+    @classmethod
+    def _is_1D_array(class_, input_):
+        return input_.ndim != 1
+
+    @classmethod
     def _is_integer_or_float(class_, input_):
         return any((class_._is_integer(input_), class_._is_float(input_)))
 

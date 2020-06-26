@@ -119,54 +119,37 @@ def test_get_std_dev(params, weights, expected_var):
     expected_var['b'] = np.sqrt(expected_var['b'])
     assert particles.compute_std_dev() == pytest.approx(expected_var)
 
-def test_compute_covariance(smc_step, particle, mocker):
-    # need to prob use this example
-    p1 = copy(particle)
-    p1.params = {'a': 1.1, 'b': 2.2}
-    p2 = copy(particle)
-    p2.params = {'a': 1.0, 'b': 2.1}
-    p3 = copy(particle)
-    p3.params = {'a': 0.8, 'b': 1.9}
+def test_compute_covariance(mocker):
+    params = {'a': [1.1, 1.0, 0.8], 'b': [2.2, 2.1, 1.9]}
+    log_likes = np.ones(3)
+    log_weights = np.log([0.1, 0.7, 0.2])
 
-    smc_step.particles = [p1, p2, p3]
-    mocker.patch.object(smc_step, 'normalize_step_log_weights',
-                        return_value=np.array([0.1, 0.7, 0.2]))
-    mocker.patch.object(smc_step, 'get_mean',
-                        return_value={'a': 0.97, 'b': 2.06})
+    particles = Particles(params, log_likes, log_weights)
+    mocker.patch.object(particles, 'compute_mean',
+                        return_value=np.array([0.97, 2.06]))
 
     scale = 1 / (1 - np.sum(np.array([0.1, 0.7, 0.2]) ** 2))
     expected_cov = np.array([[0.0081, 0.0081], [0.0081, 0.0082]]) * scale
-    np.testing.assert_array_almost_equal(smc_step.get_covariance(),
+    np.testing.assert_array_almost_equal(particles.compute_covariance(),
                                          expected_cov)
 
 
-#@pytest.mark.filterwarnings('ignore: current step')
-#def test_covariance_not_positive_definite_is_eye(smc_step, particle, mocker):
-#    particle.params = {'a': 1.1, 'b': 2.2}
-#    smc_step.particles = [particle] * 3
-#    mocker.patch.object(smc_step, 'normalize_step_log_weights',
-#                        return_value=np.array([0.1, 0.7, 0.2]))
-#    mocker.patch.object(smc_step, 'get_mean', return_value={'a': 1, 'b': 2})
-#    mocker.patch.object(smc_step, '_is_positive_definite', return_value=False)
-#    np.testing.assert_array_equal(smc_step.get_covariance(), np.eye(2))
-#
-#
+@pytest.mark.filterwarnings('ignore: Covariance matrix is')
+@pytest.mark.parametrize('params, weights, expected_var',
+        (({'a': [1, 2], 'b': [2, 3]}, [1, 1], np.array([0.5, 0.5])),
+         ({'a': [1, 5/3], 'b': [4, 2]}, [1, 3], np.array([2/9, 2.]))))
+def test_non_positive_def_cov_is_independent(params, weights, expected_var,
+                                             mocker):
+    log_likes = np.ones(2)
+    particles = Particles(params, log_likes, np.log(weights))
+    mocker.patch.object(particles, '_is_positive_definite', return_value=False)
+    expected_cov = np.eye(2) * expected_var
+
+    cov = particles.compute_covariance()
+
+    np.testing.assert_array_almost_equal(cov, expected_cov)
 
 
-#
-
-#def test_get_params(smc_step, particle):
-#    particle.params = {'a': 1}
-#    smc_step.particles = [particle] * 3
-#    np.testing.assert_array_equal(smc_step.get_params('a'), np.array([1] * 3))
-#
-#
-#def test_get_param_dicts(smc_step, particle):
-#    particle.params = {'a': 1, 'b': 2}
-#    smc_step.particles = [particle] * 3
-#    assert smc_step.get_param_dicts() == [{'a': 1, 'b': 2}] * 3
-#
-#
 #def test_resample(smc_step, particle, mocker):
 #
 #    p1 = copy(particle)
