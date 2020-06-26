@@ -40,7 +40,7 @@ import numpy as np
 
 class Mutator(MPIBaseClass):
     '''
-    Copies and mutates an SMCStep using an MCMC kernel.
+    Mutates particles using an MCMC kernel.
     '''
     def __init__(self, mcmc_kernel, mpi_comm=SingleRankComm()):
         self.mcmc_kernel = mcmc_kernel
