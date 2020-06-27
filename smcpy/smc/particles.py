@@ -184,13 +184,6 @@ class Particles(Checks):
         '''
         return np.sum(self.params * self.weights, axis=0)
 
-    # MARKED FOR MOVE TO MUTATOR
-    #def resample_if_needed(self, ess_threshold):
-    #    ess = self.compute_ess()
-    #    if ess < ess_threshold:
-    #        self.resample()
-    #    return None
-
     @package_for_user
     def compute_variance(self):
         '''
@@ -225,52 +218,6 @@ class Particles(Checks):
             cov= np.eye(cov.shape[0]) * np.diag(cov)
 
         return cov
-
-    # MARKED FOR MOVE TO MUTATOR
-    #def update_weights(self, delta_phi):
-    #    self.normalize_step_log_weights()
-    #    for p in self.particles:
-    #        p.log_weight = p.log_weight + delta_phi * p.log_like
-    #    return None
-
-    # MARKED FOR MOVE TO MUTATOR
-    #def resample(self):
-    #    '''
-    #    Resamples the step based on normalized weights. Assigns discrete
-    #    probabilities to each particle (sum to 1), resample from this discrete
-    #    distribution using copies of particle objects.
-    #    '''
-    #    self.normalize_step_log_weights()
-    #    weights = np.exp(self.get_log_weights())
-    #    weights_cs = np.cumsum(weights)
-
-    #    num_particles = len(weights)
-    #    uniform_weight = np.log(1. / num_particles)
-
-    #    # intervals based on weights to use for discrete probability draw
-    #    intervals = np.c_[np.insert(weights_cs, 0, 0)[:-1], weights_cs]
-
-    #    # generate random numbers, iterate to find intervals for resample
-    #    R = np.random.uniform(0, 1, num_particles)
-
-    #    new_particles = []
-    #    for r in R:
-
-    #        for i, (a, b) in enumerate(intervals):
-
-    #            if r == 1: # should never happen, but just in case
-    #                r -= 1e-12
-
-    #            if a <= r < b:
-    #                p = self.particles[i]
-    #                new_particles.append(Particle(p.params, p.log_weight,
-    #                                              p.log_like))
-    #                new_particles[-1].log_weight = uniform_weight
-    #                break
-
-    #    self.particles = new_particles
-    #    return None
-
 
     # MARKED FOR REFACTOR
     #@_mpi_decorator

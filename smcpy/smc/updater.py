@@ -30,11 +30,11 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
+import numpy as np
 
 from .mpi_base_class import MPIBaseClass
+from .particles import Particles
 from ..utils.single_rank_comm import SingleRankComm
-
-from smcpy.smc.particles import Particles
 
 
 class Updater(MPIBaseClass):
@@ -58,7 +58,24 @@ class Updater(MPIBaseClass):
     def ess_threshold(self, ess_threshold):
         if ess_threshold < 0. or ess_threshold > 1.:
             raise ValueError('ESS threshold must be between 0 and 1.')
+        self._ess_threshold = ess_threshold
 
     def update(self, particles, delta_phi):
-        log_weights = particles.log_weights + particles.log_likes * delta_phi
-        return Particles(particles.params, particles.log_likes, log_weights)
+        new_log_weights = self._compute_new_weights(particles, delta_phi)
+        new_particles = Particles(particles.params, particles.log_likes,
+                                  new_log_weights)
+
+        if new_particles.compute_ess() < self.ess_threshold:
+            return self._resample(new_particles)
+        return new_particles
+
+    def _compute_new_weights(self, particles, delta_phi):
+        return particles.log_weights + particles.log_likes * delta_phi
+
+    def _resample(self, particles):
+        u = np.random.uniform(0, 1, particles.num_particles)
+        resample_indices = np.digitize(u, np.cumsum(particles.weights))
+        uniform_weights = [1/particles.num_particles] * particles.num_particles
+        return Particles(particles.params[resample_indices],
+                         particles.log_likes[resample_indices],
+                         np.log(uniform_weights))
