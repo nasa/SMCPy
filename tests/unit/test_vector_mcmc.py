@@ -4,6 +4,23 @@ import sys
 
 from smcpy.mcmc.vector_mcmc import *
 
+
+
+class DummyPrior:
+
+    def __init__(self, pdf_func, sample_func):
+        self._pdf = pdf_func
+        self._rvs = sample_func
+
+    @property
+    def pdf(self):
+        return self._pdf
+
+    @property
+    def rvs(self):
+        return self._rvs
+
+
 @pytest.fixture
 def stub_model():
     x = np.array([1, 2, 3])
@@ -25,8 +42,28 @@ def prior_pdfs():
 
 
 @pytest.fixture
-def vector_mcmc(stub_model, data, prior_pdfs):
-    return VectorMCMC(stub_model, data, prior_pdfs, std_dev=None)
+def prior_samplers():
+    return [lambda x: np.array([1] * x), lambda x: np.array([2] * x),
+            lambda x: np.array([3] * x)]
+
+
+@pytest.fixture
+def priors(prior_pdfs, prior_samplers):
+    priors = []
+    for i, funcs in enumerate(zip(prior_pdfs, prior_samplers)):
+        priors.append(DummyPrior(*funcs))
+    return priors
+
+
+@pytest.fixture
+def vector_mcmc(stub_model, data, priors):
+    return VectorMCMC(stub_model, data, priors, std_dev=None)
+
+
+def test_vectorized_prior_sampling(vector_mcmc):
+    prior_samples = vector_mcmc.sample_from_priors(num_samples=4)
+
+    np.testing.assert_array_equal(prior_samples, np.tile([1, 2, 3], (4, 1)))
 
 
 @pytest.mark.parametrize('inputs, std_dev', (
@@ -128,7 +165,9 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
-    vector_mcmc._prior_pdfs = [mocker.Mock(), mocker.Mock(), mocker.Mock()]
+    vector_mcmc._priors = [mocker.Mock(DummyPrior, autospec=True),
+                           mocker.Mock(DummyPrior, autospec=True),
+                           mocker.Mock(DummyPrior, autospec=True)]
 
     mocker.patch('numpy.random.uniform')
     mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
@@ -149,7 +188,7 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     np.testing.assert_array_equal(new_log_likes, expected_new_log_likes)
 
     assert log_like.call_count == num_samples + 1
-    assert vector_mcmc._prior_pdfs[0].call_count == num_samples + 1
+    assert vector_mcmc._priors[0].pdf.call_count == num_samples + 1
 
 
 @pytest.mark.parametrize('adapt_interval', (None, 1))
@@ -159,7 +198,11 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
     inputs = np.ones([10, 3])
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
-    vector_mcmc._prior_pdfs = [mocker.Mock(), mocker.Mock(), mocker.Mock()]
+    vector_mcmc._priors = [mocker.Mock(DummyPrior, autospec=True),
+                           mocker.Mock(DummyPrior, autospec=True),
+                           mocker.Mock(DummyPrior, autospec=True)]
+
+    mocker.patch('numpy.random.uniform')
 
     mocker.patch('numpy.random.uniform')
     mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
@@ -181,4 +224,4 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
 
     assert log_like.call_count == num_samples + 1
     assert adapt.call_count == num_samples
-    assert vector_mcmc._prior_pdfs[0].call_count == num_samples + 1
+    assert vector_mcmc._priors[0].pdf.call_count == num_samples + 1

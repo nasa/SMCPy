@@ -15,21 +15,33 @@ def data(mocker):
 
 
 @pytest.fixture
-def prior_pdfs(mocker):
+def priors(mocker):
     return mocker.Mock()
 
 
 @pytest.fixture
-def vector_mcmc(stub_model, data, prior_pdfs):
-    return VectorMCMC(stub_model, data, prior_pdfs)
+def vector_mcmc(stub_model, data, priors):
+    return VectorMCMC(stub_model, data, priors)
 
 
-def test_translator_instance(vector_mcmc, stub_model, data, prior_pdfs):
+def test_translator_instance(vector_mcmc, stub_model, data, priors):
     vmcmc = VectorMCMCTranslator(vector_mcmc, tuple('a'))
     assert vmcmc._mcmc._model == stub_model
     assert vmcmc._mcmc._data == data
-    assert vmcmc._mcmc._prior_pdfs == prior_pdfs
+    assert vmcmc._mcmc._priors == priors
     assert vmcmc._param_order == tuple('a')
+
+
+def test_sample_from_prior(vector_mcmc, mocker):
+    mocked_sample = np.array([[1, 2], [3, 4], [5, 6]])
+    mocker.patch.object(vector_mcmc, 'sample_from_priors',
+                        return_value=mocked_sample)
+    vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['a', 'b'])
+
+    samples = vmcmc.sample_from_prior(num_samples=3)
+
+    np.testing.assert_array_equal(samples['a'], mocked_sample[:, 0])
+    np.testing.assert_array_equal(samples['b'], mocked_sample[:, 1])
 
 
 @pytest.mark.parametrize('param_dict, expected',

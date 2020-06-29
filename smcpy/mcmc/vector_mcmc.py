@@ -2,11 +2,21 @@ import numpy as np
 
 class VectorMCMC:
     
-    def __init__(self, model, data, prior_pdfs, std_dev=None):
+    def __init__(self, model, data, priors, std_dev=None):
         self._model = model
         self._data = data
-        self._prior_pdfs = prior_pdfs
+        self._priors = priors
         self._fixed_std_dev = std_dev
+
+    def sample_from_priors(self, num_samples):
+        samples = [p.rvs(num_samples).reshape(-1, 1) \
+                   for i, p in enumerate(self._priors)]
+        return np.hstack(samples)
+
+    def evaluate_log_priors(self, inputs):
+        log_priors = [np.log(p.pdf(inputs.T[i]).reshape(-1, 1)) \
+                      for i, p in enumerate(self._priors)]
+        return np.hstack(log_priors)
 
     def evaluate_log_likelihood(self, inputs):
         std_dev = self._fixed_std_dev
@@ -21,11 +31,6 @@ class VectorMCMC:
         term1 = -np.log(2 * np.pi * var) * (data.shape[1] / 2.) 
         term2 = -1 / 2. * ssqe / var
         return (term1 + term2).reshape(-1, 1)
-
-    def evaluate_log_priors(self, inputs):
-        log_priors = [np.log(p(inputs.T[i]).reshape(-1, 1)) \
-                      for i, p in enumerate(self._prior_pdfs)]
-        return np.hstack(log_priors)
 
     @staticmethod
     def evaluate_log_posterior(log_likelihood, log_priors):

@@ -26,6 +26,10 @@ class VectorMCMCTranslator(Translator):
 
         return particles
 
+    def sample_from_prior(self, num_samples):
+        samples = self._mcmc.sample_from_priors(num_samples)
+        return dict(zip(self._param_order, samples.T))
+
     def get_log_likelihood(self, param_dict):
         input_array = self._translate_param_dict_to_input_array(param_dict)
         return self._mcmc.evaluate_log_likelihood(input_array)

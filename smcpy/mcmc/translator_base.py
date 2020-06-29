@@ -13,6 +13,10 @@ class Translator(ABC):
         return new_param_values, new_log_likelihoods
 
     @abc.abstractmethod
+    def sample_from_prior(self, num_samples):
+        return param_values
+
+    @abc.abstractmethod
     def get_log_likelihood(self, param_dict):
         return log_likelihoods
 
