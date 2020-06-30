@@ -3,6 +3,14 @@ import numpy as np
 import pytest
 
 from smcpy.smc.mutator import Mutator
+from smcpy.smc.particles import Particles
+
+class DummyParticles:
+
+    def __init__(self, params, log_likes, log_weights):
+        self.params = params
+        self.log_likes = log_likes
+        self.log_weights = log_weights
 
 
 @pytest.fixture
@@ -16,25 +24,25 @@ def test_mcmc_kernel_not_translator_instance():
 
 
 def test_mutate(mutator, stub_mcmc_kernel, mocker):
-    smc_step = mocker.Mock()
+    particles = mocker.Mock(Particles, autospec=True)
     num_mcmc_samples = 1
-    cov = 1
     phi = 1
 
-    mocker.patch.object(smc_step, 'normalize_step_log_weights')
-    mocker.patch.object(smc_step, 'copy', return_value=smc_step)
+    mocker.patch('smcpy.smc.mutator.Particles', new=DummyParticles)
 
     comm = mocker.Mock()
     mocker.patch.object(comm, 'gather', new=lambda x, root: [x])
     mutator._comm = comm
     mocker.patch.object(mutator, 'partition_and_scatter_particles')
     mocker.patch.object(stub_mcmc_kernel, 'mutate_particles',
-                        return_value=np.array([1, 2, 3]))
+                        return_value=[1, 2, 3])
 
-    new_smc_step = mutator.mutate(smc_step, num_mcmc_samples, cov, phi)
+    mutated_particles = mutator.mutate(particles, num_mcmc_samples, phi)
 
-    np.testing.assert_array_equal(new_smc_step.particles, np.array([1, 2, 3]))
+    assert mutated_particles.params == 1
+    assert mutated_particles.log_likes == 2
+    assert mutated_particles.log_weights == 3
 
-    new_smc_step.normalize_step_log_weights.assert_called()
+    particles.compute_covariance.assert_called()
     mutator.partition_and_scatter_particles.assert_called()
     stub_mcmc_kernel.mutate_particles.assert_called()

@@ -5,39 +5,41 @@ from .translator_base import Translator
 
 class VectorMCMCTranslator(Translator):
 
-    def __init__(self, vector_mcmc_object, param_order):
+    def __init__(self, vector_mcmc_object, param_order, num_samples):
         self._mcmc = vector_mcmc_object
         self._param_order = param_order
+        self._num_samples = num_samples
 
-    def mutate_particles(self, particles, num_samples, proposal_cov, phi):
-        particles = copy(particles)
-
-        input_array = np.zeros([len(particles), len(self._param_order)])
-        for i, p in enumerate(particles):
-            input_array[i, :] = [p.params[key] for key in self._param_order]
-
-        params, log_likes = self._mcmc.smc_metropolis(input_array, num_samples,
-                                                      proposal_cov, phi)
-
-        for i, p in enumerate(particles):
-            p.params = {key: params[i][j] \
-                        for j, key in enumerate(self._param_order)}
-            p.log_like = log_likes[i, 0]
-
-        return particles
+    def mutate_particles(self, param_dict, log_likes, log_weights, cov, phi):
+        param_array = self._translate_param_dict_to_param_array(param_dict)
+        param_array, log_likes = self._mcmc.smc_metropolis(param_array,
+                                                           self._num_samples,
+                                                           cov, phi)
+        param_dict = self._translate_param_array_to_param_dict(param_array)
+        return param_dict, log_likes, log_weights
 
     def sample_from_prior(self, num_samples):
-        samples = self._mcmc.sample_from_priors(num_samples)
-        return dict(zip(self._param_order, samples.T))
+        param_array = self._mcmc.sample_from_priors(num_samples)
+        return self._translate_param_array_to_param_dict(param_array)
 
     def get_log_likelihood(self, param_dict):
-        input_array = self._translate_param_dict_to_input_array(param_dict)
-        return self._mcmc.evaluate_log_likelihood(input_array)
+        param_array = self._translate_param_dict_to_param_array(param_dict)
+        return self._mcmc.evaluate_log_likelihood(param_array)
 
     def get_log_prior(self, param_dict):
-        input_array = self._translate_param_dict_to_input_array(param_dict)
-        log_priors = self._mcmc.evaluate_log_priors(input_array)
+        param_array = self._translate_param_dict_to_param_array(param_dict)
+        log_priors = self._mcmc.evaluate_log_priors(param_array)
         return np.sum(log_priors, axis=1).reshape(-1, 1)
 
-    def _translate_param_dict_to_input_array(self, param_dict):
-        return np.array([[param_dict[k] for k in self._param_order]])
+    def _translate_param_array_to_param_dict(self, param_array):
+        return dict(zip(self._param_order, param_array.T))
+
+    def _translate_param_dict_to_param_array(self, param_dict):
+        dim0 = 1
+        if not isinstance(param_dict[self._param_order[0]], (int, float)):
+            dim0 = len(param_dict[self._param_order[0]])
+        param_array = np.zeros((dim0, len(self._param_order)))
+
+        for i, k in enumerate(self._param_order):
+            param_array[:, i] = param_dict[k]
+        return param_array

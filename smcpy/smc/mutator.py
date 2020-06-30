@@ -32,6 +32,7 @@ AGREEMENT.
 
 
 from .mpi_base_class import MPIBaseClass
+from .particles import Particles
 from ..mcmc.translator_base import Translator
 from ..utils.single_rank_comm import SingleRankComm
 from copy import copy
@@ -46,15 +47,13 @@ class Mutator(MPIBaseClass):
         self.mcmc_kernel = mcmc_kernel
         super().__init__(mpi_comm)
 
-    def mutate(self, smc_step, num_mcmc_samples, cov, phi):
-        smc_step.normalize_step_log_weights()
-
-        particles = self.partition_and_scatter_particles(smc_step.particles)
-        particles = self.mcmc_kernel.mutate_particles(particles,
-                                                      num_mcmc_samples,
-                                                      cov, phi)
-        smc_step.particles = self._comm.gather(particles, root=0)[0]
-        return smc_step
+    def mutate(self, particles, num_mcmc_samples, phi):
+        cov = particles.compute_covariance()
+        particles = self.partition_and_scatter_particles(particles)
+        mutated = self.mcmc_kernel.mutate_particles(particles, num_mcmc_samples,
+                                                    cov, phi)
+        mutated = self._comm.gather(mutated, root=0)[0]
+        return Particles(*mutated)
 
     @property
     def mcmc_kernel(self):
