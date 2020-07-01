@@ -65,7 +65,8 @@ class Updater(MPIBaseClass):
         new_particles = Particles(particles.param_dict, particles.log_likes,
                                   new_log_weights)
 
-        if new_particles.compute_ess() < self.ess_threshold:
+        eff_sample_size = new_particles.compute_ess()
+        if eff_sample_size < self.ess_threshold * new_particles.num_particles:
             return self._resample(new_particles)
         return new_particles
 

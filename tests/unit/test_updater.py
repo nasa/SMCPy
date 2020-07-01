@@ -16,7 +16,7 @@ class MockedParticles:
         self.num_particles = len(log_weights)
 
     def compute_ess(self):
-        return 0.5
+        return 0.5 * self.params.shape[0]
 
 
 @pytest.fixture
