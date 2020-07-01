@@ -62,7 +62,8 @@ class Updater(MPIBaseClass):
 
     def update(self, particles, delta_phi):
         new_log_weights = self._compute_new_weights(particles, delta_phi)
-        new_particles = Particles(particles.params, particles.log_likes,
+        copied_params = dict(zip(particles.param_names, particles.params.T))
+        new_particles = Particles(copied_params, particles.log_likes,
                                   new_log_weights)
 
         if new_particles.compute_ess() < self.ess_threshold:
@@ -75,7 +76,13 @@ class Updater(MPIBaseClass):
     def _resample(self, particles):
         u = np.random.uniform(0, 1, particles.num_particles)
         resample_indices = np.digitize(u, np.cumsum(particles.weights))
+
+        new_params = particles.params[resample_indices]
+        param_dict = dict(zip(particles.param_names, new_params.T))
+
+        new_log_likes = particles.log_likes[resample_indices]
+
         uniform_weights = [1/particles.num_particles] * particles.num_particles
-        return Particles(particles.params[resample_indices],
-                         particles.log_likes[resample_indices],
-                         np.log(uniform_weights))
+        new_weights = np.log(uniform_weights)
+
+        return Particles(param_dict, new_log_likes, new_weights)
