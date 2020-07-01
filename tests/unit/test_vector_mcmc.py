@@ -97,6 +97,7 @@ def test_vectorized_proposal(vector_mcmc, inputs, mocker):
     mvn_mock = mocker.patch('numpy.random.multivariate_normal',
                             return_value=np.ones(inputs.shape))
     cov = np.eye(inputs.shape[1])
+    cov_scale = 2.38 ** 2 / inputs.shape[1]
     expected = inputs + 1
 
     inputs_new = vector_mcmc.proposal(inputs, cov=cov)
@@ -104,7 +105,7 @@ def test_vectorized_proposal(vector_mcmc, inputs, mocker):
     calls = mvn_mock.call_args[0]
     np.testing.assert_array_equal(inputs_new, expected)
     np.testing.assert_array_equal(calls[0], np.zeros(cov.shape[0]))
-    np.testing.assert_array_equal(calls[1], cov)
+    np.testing.assert_array_equal(calls[1], cov_scale * cov)
     np.testing.assert_array_equal(calls[2], inputs.shape[0])
 
 

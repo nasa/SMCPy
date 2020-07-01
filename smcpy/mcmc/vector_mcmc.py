@@ -38,8 +38,10 @@ class VectorMCMC:
 
     @staticmethod
     def proposal(inputs, cov):
+        scale_factor = 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         mean = np.zeros(cov.shape[0])
-        delta = np.random.multivariate_normal(mean, cov, inputs.shape[0])
+        delta = np.random.multivariate_normal(mean, scale_factor * cov,
+                                              inputs.shape[0])
         return inputs + delta
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
@@ -66,7 +68,7 @@ class VectorMCMC:
         log_priors = self.evaluate_log_priors(inputs)
     
         for i in range(num_samples):
-    
+
             new_inputs = self.proposal(inputs, cov)
             new_log_like = self.evaluate_log_likelihood(new_inputs)
             new_log_priors = self.evaluate_log_priors(new_inputs)
