@@ -47,14 +47,16 @@ class Mutator(MPIBaseClass):
         self.mcmc_kernel = mcmc_kernel
         super().__init__(mpi_comm)
 
-    def mutate(self, particles, phi):
+    def mutate(self, particles, phi, num_samples):
         cov = particles.compute_covariance()
         particles = self.partition_and_scatter_particles(particles)
         mutated = self.mcmc_kernel.mutate_particles(particles.param_dict,
-                                                    particles.log_weights,
+                                                    particles.log_likes,
+                                                    num_samples,
                                                     cov, phi)
-        mutated = self._comm.gather(mutated, root=0)[0]
-        return Particles(*mutated)
+        particles = Particles(mutated[0], mutated[1], particles.log_weights)
+        particles = self._comm.gather(particles, root=0)[0]
+        return particles
 
     @property
     def mcmc_kernel(self):

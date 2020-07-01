@@ -62,8 +62,7 @@ class Updater(MPIBaseClass):
 
     def update(self, particles, delta_phi):
         new_log_weights = self._compute_new_weights(particles, delta_phi)
-        copied_params = dict(zip(particles.param_names, particles.params.T))
-        new_particles = Particles(copied_params, particles.log_likes,
+        new_particles = Particles(particles.param_dict, particles.log_likes,
                                   new_log_weights)
 
         if new_particles.compute_ess() < self.ess_threshold:

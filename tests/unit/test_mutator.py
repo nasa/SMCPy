@@ -27,6 +27,7 @@ def test_mcmc_kernel_not_translator_instance():
 
 
 def test_mutate(mutator, stub_mcmc_kernel, mocker):
+    num_samples = 100
     cov = 0
     phi = 1
 
@@ -45,13 +46,14 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     mocker.patch.object(mutator, 'partition_and_scatter_particles',
                         return_value=mocked_particles)
     mocker.patch.object(stub_mcmc_kernel, 'mutate_particles',
-                        return_value=[1, 2, 3])
+                        return_value=[10, 20])
 
-    mutated_particles = mutator.mutate(mocked_particles, phi)
+    mutated_particles = mutator.mutate(mocked_particles, phi, num_samples)
 
-    assert mutated_particles.params == 1
-    assert mutated_particles.log_likes == 2
+    assert mutated_particles.params == 10
+    assert mutated_particles.log_likes == 20
     assert mutated_particles.log_weights == 3
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
-            mocked_particles.param_dict, mocked_particles.log_weights, cov, phi)
+            mocked_particles.param_dict, mocked_particles.log_likes,
+            num_samples, cov, phi)

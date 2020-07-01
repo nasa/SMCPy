@@ -44,6 +44,8 @@ def test_set_particles(particles, dummy_params, dummy_log_likes,
     np.testing.assert_array_equal(particles.log_likes, log_likes)
     np.testing.assert_array_equal(particles.log_weights, normalized_log_weights)
     np.testing.assert_array_almost_equal(particles.weights, normalized_weights)
+    np.testing.assert_array_equal(particles.param_dict['a'], params[:, 0])
+    np.testing.assert_array_equal(particles.param_dict['b'], params[:, 1])
 
 
 def test_params_value_error():

@@ -125,6 +125,10 @@ class Particles(Checks):
         self._num_particles = self._params.shape[0]
 
     @property
+    def param_dict(self):
+        return dict(zip(self._param_names, self._params.T))
+
+    @property
     def log_likes(self):
         return self._log_likes
 
@@ -191,8 +195,8 @@ class Particles(Checks):
         sample formula https://en.wikipedia.org/wiki/Sample_mean_and_covariance 
         '''
         means = self.compute_mean(package=False)
-        norm = 1 / (1 - np.sum(self.weights ** 2))
-        return np.sum(self.weights * (self.params - means) ** 2, axis=0) * norm
+        norm = 1 - np.sum(self.weights ** 2)
+        return np.sum(self.weights * (self.params - means) ** 2, axis=0) / norm
 
     @package_for_user
     def compute_std_dev(self):

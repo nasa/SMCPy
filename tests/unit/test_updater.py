@@ -8,6 +8,7 @@ class MockedParticles:
 
     def __init__(self, params, log_likes, log_weights):
         self.param_names = tuple(params.keys())
+        self.param_dict = params
         self.params = np.array([params[k] for k in self.param_names]).T
         self.log_likes = log_likes
         self.log_weights = log_weights
@@ -27,27 +28,27 @@ def mocked_particles(mocker):
     return particles
 
 
-#@pytest.mark.parametrize('ess_threshold', [-0.1, 1.1])
-#def test_ess_threshold_valid(ess_threshold):
-#    with pytest.raises(ValueError):
-#        Updater(ess_threshold)
-#
-#
-#def test_update(mocked_particles, mocker):
-#    mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
-#
-#    updater =  Updater(ess_threshold=0.0)
-#    delta_phi = 0.1
-#
-#    expect_log_weights = mocked_particles.log_likes * delta_phi + \
-#                         mocked_particles.log_weights
-#
-#    new_particles = updater.update(mocked_particles, delta_phi)
-#
-#    np.testing.assert_array_equal(new_particles.log_weights, expect_log_weights)
-#    np.testing.assert_array_equal(new_particles.params, mocked_particles.params)
-#    np.testing.assert_array_equal(new_particles.log_likes,
-#                                  mocked_particles.log_likes)
+@pytest.mark.parametrize('ess_threshold', [-0.1, 1.1])
+def test_ess_threshold_valid(ess_threshold):
+    with pytest.raises(ValueError):
+        Updater(ess_threshold)
+
+
+def test_update(mocked_particles, mocker):
+    mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
+
+    updater =  Updater(ess_threshold=0.0)
+    delta_phi = 0.1
+
+    expect_log_weights = mocked_particles.log_likes * delta_phi + \
+                         mocked_particles.log_weights
+
+    new_particles = updater.update(mocked_particles, delta_phi)
+
+    np.testing.assert_array_equal(new_particles.log_weights, expect_log_weights)
+    np.testing.assert_array_equal(new_particles.params, mocked_particles.params)
+    np.testing.assert_array_equal(new_particles.log_likes,
+                                  mocked_particles.log_likes)
 
 @pytest.mark.parametrize('random_samples, resample_indices',
                          ((np.array([.3, .3, .7]), [1, 1, 2]),
