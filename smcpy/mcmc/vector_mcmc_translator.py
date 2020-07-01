@@ -22,11 +22,11 @@ class VectorMCMCTranslator(Translator):
         param_array = self._mcmc.sample_from_priors(num_samples)
         return self._translate_param_array_to_param_dict(param_array)
 
-    def get_log_likelihood(self, param_dict):
+    def get_log_likelihoods(self, param_dict):
         param_array = self._translate_param_dict_to_param_array(param_dict)
         return self._mcmc.evaluate_log_likelihood(param_array)
 
-    def get_log_prior(self, param_dict):
+    def get_log_priors(self, param_dict):
         param_array = self._translate_param_dict_to_param_array(param_dict)
         log_priors = self._mcmc.evaluate_log_priors(param_array)
         return np.sum(log_priors, axis=1).reshape(-1, 1)

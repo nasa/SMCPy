@@ -17,9 +17,9 @@ class Translator(ABC):
         return param_values
 
     @abc.abstractmethod
-    def get_log_likelihood(self, param_dict):
+    def get_log_likelihoods(self, param_dict):
         return log_likelihoods
 
     @abc.abstractmethod
-    def get_log_prior(self, param_dict):
+    def get_log_priors(self, param_dict):
         return log_priors

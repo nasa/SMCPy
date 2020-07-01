@@ -56,7 +56,7 @@ def test_translator_log_likelihoods(vector_mcmc, param_dict, expected, mocker):
     vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['a', 'b'],
                                  num_samples=1)
     
-    log_likes = vmcmc.get_log_likelihood(param_dict)
+    log_likes = vmcmc.get_log_likelihoods(param_dict)
     np.testing.assert_array_equal(log_likes, expected)
 
 
@@ -69,7 +69,7 @@ def test_translator_log_priors(vector_mcmc, param_dict, expected, mocker):
     vmcmc = VectorMCMCTranslator(vector_mcmc, param_order=['b', 'a'],
                                  num_samples=1)
     
-    log_priors = vmcmc.get_log_prior(param_dict)
+    log_priors = vmcmc.get_log_priors(param_dict)
     np.testing.assert_array_equal(log_priors, expected)
 
 
