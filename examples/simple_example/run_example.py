@@ -9,19 +9,17 @@ from scipy.stats import uniform
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_translator import VectorMCMCTranslator
-from smcpy.smc.initializer import Initializer
-from smcpy.smc.mutator import Mutator
-from smcpy.smc.updater import Updater
+from smcpy import SMCSampler
 
 from model import Model
 
 
-def perform_smc_sampling(num_particles, num_steps, num_mcmc_samples,
-                         phi_sequence, mcmc_kernel):
+def perform_smc_sampling(num_particles, num_mcmc_samples, phi_sequence,
+                         mcmc_kernel, ess_threshold=0.75):
 
     initializer = Initializer(mcmc_kernel, phi_sequence[1])
     mutator = Mutator(mcmc_kernel)
-    updater = Updater(ess_threshold=0.75)
+    updater = Updater(ess_threshold)
 
     particles = initializer.init_particles_from_prior(num_particles)
     step_list = [particles]
@@ -32,7 +30,6 @@ def perform_smc_sampling(num_particles, num_steps, num_mcmc_samples,
 
     print(particles.compute_covariance())
     print('smc mean = {}'.format(particles.compute_mean()))
-    import pdb; pdb.set_trace()
     return step_list
 
 
@@ -68,7 +65,7 @@ if __name__ == '__main__':
         b = theta[:, 1, None]
         return a * x + b
 
-    std_dev = 2
+    std_dev = 1
     y_true = eval_model(np.array([[2, 3.5]]))
     noisy_data = y_true + np.random.normal(0, std_dev, y_true.shape)
     plot_noisy_data(x, y_true, noisy_data)
@@ -77,21 +74,23 @@ if __name__ == '__main__':
     priors = [uniform(0., 6.), uniform(0., 6.)]
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
 
-    # set smc params
+    # run and time smc
     num_particles = 1000
-    num_steps = 25
-    num_mcmc_samples = 5
+    num_steps = 10
+    num_mcmc_samples = 2
+    ess_threshold = 0.75
     phi_sequence = np.linspace(0, 1, num_steps)
-    #phi_sequence = (np.exp(5 * phi_sequence/num_steps) - 1) / (np.exp(5) - 1)
-
-    # set up mcmc kernel translator
     mcmc_kernel = VectorMCMCTranslator(vector_mcmc, param_order=('a', 'b'))
 
-    # run and time smc
     time0 = time.time()
-    step_list = perform_smc_sampling(num_particles, num_steps, num_mcmc_samples,
-                                     phi_sequence, mcmc_kernel)
+    smc = SMCSampler(mcmc_kernel)
+    step_list = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
+                           ess_threshold)
+    mean = step_list[-1].compute_mean()
+    evidence = smc.estimate_marginal_likelihood(step_list, phi_sequence)
     time1 = time.time()
+    print('smc mean = {}'.format(mean))
+    print('smc marginal log like = {}'.format(np.log(evidence)))
     print('total smc time = {}'.format(time1 - time0))
 
     # run and time mcmc
@@ -111,3 +110,26 @@ if __name__ == '__main__':
     plot_mcmc_chain(chain, ['a', 'b'], burnin=burnin)
     print('mcmc mean = a: {}, b: {}'.format(mean[0], mean[1]))
     print('total mcmc time = {}'.format(time1 - time0))
+
+    # run and time smc w/ pymc3
+    import pymc3 as pm
+    model = pm.Model()
+    with model:
+        a = pm.Uniform('a', 0, 6)
+        b = pm.Uniform('b', 0, 6)
+        mu = a * x + b
+        obs = pm.Normal('obs', mu=mu, sigma=std_dev, observed=noisy_data)
+
+    time0 = time.time()
+    with model:
+        trace = pm.sample_smc(draws=num_particles, n_steps=num_mcmc_samples,
+                              kernel='metropolis', parallel=False,
+                              tune_steps=False, threshold=ess_threshold)
+    time1 = time.time()
+
+    mll = model.marginal_log_likelihood
+    mean_a = np.mean(trace.get_values('a'))
+    mean_b = np.mean(trace.get_values('b'))
+    print('smc pymc3 mean = a: {}, b: {}'.format(mean_a, mean_b))
+    print('smc pymc3 marginal log like = {}'.format(mll))
+    print('total smc pymc3 time = {}'.format(time1 - time0))
