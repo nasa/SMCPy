@@ -34,11 +34,12 @@ class MPIBaseClass:
         :type particles: list or array
         :returns: partition of particles for each mpi process
         '''
-        if self._rank == 0:
-            particles = np.array_split(particles, self._size)
-        else:
-            particles = []
-        particles = self._comm.scatter(particles, root=0)
+        # MARKED FOR REFACTOR WITH NEW PARTICLES OBJECT
+        #if self._rank == 0:
+        #    particles = np.array_split(particles, self._size)
+        #else:
+        #    particles = []
+        #particles = self._comm.scatter(particles, root=0)
         return particles
 
     def gather_and_concat_particles(self, particles):
@@ -51,7 +52,8 @@ class MPIBaseClass:
         :returns: concatenated list of particles (rank 0) empty list (all
                   other ranks)
         '''
-        particles = self._comm.gather(particles, root=0)
-        if self._rank == 0:
-            particles = list(np.concatenate(particles))
+        # MARKED FOR REFACTOR WITH NEW PARTICLES OBJECT
+        #particles = self._comm.gather(particles, root=0)
+        #if self._rank == 0:
+        #    particles = list(np.concatenate(particles))
         return particles
