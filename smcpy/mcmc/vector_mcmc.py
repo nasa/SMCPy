@@ -115,6 +115,4 @@ class VectorMCMC:
             if i > adapt_delay - 1:
                 cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval)
 
-        print(cov)
-    
         return chain
