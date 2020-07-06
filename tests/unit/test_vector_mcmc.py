@@ -192,10 +192,11 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     assert vector_mcmc._priors[0].pdf.call_count == num_samples + 1
 
 
+@pytest.mark.parametrize('adapt_delay', (0, 2))
 @pytest.mark.parametrize('adapt_interval', (None, 1))
 @pytest.mark.parametrize('num_samples', (1, 5))
 def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
-                                   mocker):
+                               adapt_delay, mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
@@ -219,10 +220,15 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
     for i in range(num_samples):
         expected_chain[:, :, i + 1] = expected_chain[:, :, i].copy() + 1
 
-    chain = vector_mcmc.metropolis(inputs, num_samples, cov, adapt_interval)
+    chain = vector_mcmc.metropolis(inputs, num_samples, cov, adapt_interval,
+                                   adapt_delay)
 
     np.testing.assert_array_equal(chain, expected_chain)
 
+    num_expected_adapt_calls = 0
+    if num_samples > adapt_delay:
+        num_expected_adapt_calls = num_samples - adapt_delay
+
     assert log_like.call_count == num_samples + 1
-    assert adapt.call_count == num_samples
     assert vector_mcmc._priors[0].pdf.call_count == num_samples + 1
+    assert adapt.call_count == num_expected_adapt_calls

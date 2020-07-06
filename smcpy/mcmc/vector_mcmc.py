@@ -86,7 +86,8 @@ class VectorMCMC:
     
         return inputs, log_like
 
-    def metropolis(self, inputs, num_samples, cov, adapt_interval=None):
+    def metropolis(self, inputs, num_samples, cov, adapt_interval=None,
+                   adapt_delay=0):
         chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
         chain[:, :, 0] = inputs
 
@@ -111,7 +112,9 @@ class VectorMCMC:
 
             chain[:, :, i + 1] = inputs
 
-            cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval)
+            if i > adapt_delay - 1:
+                cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval)
+
         print(cov)
     
         return chain
