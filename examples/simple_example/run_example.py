@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     # run and time smcpy
     num_particles = 1000
-    num_steps = 500
+    num_steps = 25 
     num_mcmc_samples = 2
     ess_threshold = 0.75
     phi_sequence = np.linspace(0, 1, num_steps)
