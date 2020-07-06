@@ -50,7 +50,5 @@ def test_marginal_likelihood_estimator(step_list, phi_sequence):
     dphi = phi_sequence[1] - phi_sequence[0]
     Z_exp = np.prod([np.sum(np.exp(step.log_weights + step.log_likes * dphi)) \
                      for step in step_list[:-1]])
-    Z = SMCSampler.estimate_marginal_likelihood(step_list, phi_sequence)
-    assert Z == Z_exp
-
-
+    Z = SMCSampler.estimate_marginal_log_likelihood(step_list, phi_sequence)
+    assert Z == np.log(Z_exp)

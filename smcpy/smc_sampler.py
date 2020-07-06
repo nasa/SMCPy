@@ -25,8 +25,8 @@ class SMCSampler:
 
         return step_list
 
-    @staticmethod
-    def estimate_marginal_likelihood(step_list, phi_sequence):
+    @classmethod
+    def estimate_marginal_log_likelihood(clss_, step_list, phi_sequence):
         num_particles = step_list[0].num_particles
 
         delta_phi = np.tile(np.diff(phi_sequence)[1:], (num_particles, 1))
@@ -37,6 +37,14 @@ class SMCSampler:
             log_weights[:, i] = step.log_weights.flatten()
             log_likes[:, i] = step.log_likes.flatten()
 
-        Z = np.exp(log_weights + log_likes * delta_phi)
+        marg_log_like = log_weights + log_likes * delta_phi
+        marg_log_like = clss_._logsum(marg_log_like)
 
-        return np.prod(Z.sum(axis=0))
+        return np.sum(marg_log_like)
+
+    @staticmethod
+    def _logsum(Z):
+        Z = -np.sort(-Z, axis=0) # descending
+        Z0 = Z[0, :]
+        Z_shifted = Z[1:, :] - Z0
+        return Z0 + np.log(1 + np.sum(np.exp(Z_shifted), axis=0))
