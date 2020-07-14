@@ -34,33 +34,9 @@ def plot_mcmc_chain(chain, param_names, burnin=0):
     plt.show()
 
 
-if __name__ == '__main__':
+def run_and_time_smcpy(vector_mcmc, num_particles, num_mcmc_samples,
+                       phi_sequence, ess_threshold):
 
-    np.random.seed(100)
-
-    # instance model / set up ground truth / add noise
-    x = np.arange(100)
-
-    def eval_model(theta):
-        a = theta[:, 0, None]
-        b = theta[:, 1, None]
-        return a * x + b
-
-    std_dev = 2
-    y_true = eval_model(np.array([[2, 3.5]]))
-    noisy_data = y_true + np.random.normal(0, std_dev, y_true.shape)
-    plot_noisy_data(x, y_true, noisy_data)
-
-    # setup vector mcmc model
-    priors = [uniform(0., 6.), uniform(0., 6.)]
-    vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
-
-    # run and time smcpy
-    num_particles = 1000
-    num_steps = 25 
-    num_mcmc_samples = 2
-    ess_threshold = 0.75
-    phi_sequence = np.linspace(0, 1, num_steps)
     mcmc_kernel = VectorMCMCTranslator(vector_mcmc, param_order=('a', 'b'))
     smc = SMCSampler(mcmc_kernel)
 
@@ -71,43 +47,31 @@ if __name__ == '__main__':
 
     mean = step_list[-1].compute_mean()
     evidence = smc.estimate_marginal_log_likelihood(step_list, phi_sequence)
-    print('smc mean = {}'.format(mean))
-    print('smc marginal log like = {}'.format(evidence))
-    print('total smc time = {}'.format(time1 - time0))
 
-    # run and time mcmc
-    num_parallel_chains = 4
-    num_samples = int(num_particles * num_steps * num_mcmc_samples /
-                      num_parallel_chains)
-    burnin = int(num_samples / 3)
-    cov = np.array([[1, 0], [0, 1]])
-    adapt_interval = 100
+    return mean, evidence, (time1 - time0)
+
+
+def run_and_time_mcmc(priors, num_samples, init_cov, adapt_interval, burnin,
+                      plot=True):
 
     prior_samples = [prior.rvs(num_parallel_chains) for prior in priors]
     time0 = time.time()
     chain = vector_mcmc.metropolis(np.array(prior_samples).T,
-                                   num_samples, cov, adapt_interval,
+                                   num_samples, init_cov, adapt_interval,
                                    adapt_delay=burnin)
     time1 = time.time()
 
     mean = chain[:, :, burnin:].mean(axis=2).mean(axis=0)
-    plot_mcmc_chain(chain, ['a', 'b'], burnin=burnin)
+    if plot:
+        plot_mcmc_chain(chain, ['a', 'b'], burnin=burnin)
     stacked_chain = np.hstack(chain[:, :, burnin:]).T
     log_likes = vector_mcmc.evaluate_log_likelihood(stacked_chain)
-    mll = 1 / (np.sum(1 / np.exp(log_likes)) / len(log_likes))
-    print('mcmc mean = a: {}, b: {}'.format(mean[0], mean[1]))
-    print('mcmc marginal log like = {}'.format(np.log(mll)))
-    print('total mcmc time = {}'.format(time1 - time0))
+    evidence = 1 / (np.sum(1 / np.exp(log_likes)) / len(log_likes))
 
-    # run and time smc w/ pymc3
-    import pymc3 as pm
-    model = pm.Model()
-    with model:
-        a = pm.Uniform('a', 0, 6)
-        b = pm.Uniform('b', 0, 6)
-        mu = a * x + b
-        obs = pm.Normal('obs', mu=mu, sigma=std_dev, observed=noisy_data)
+    return mean, np.log(evidence), (time1 - time0)
 
+def run_and_time_pymc3smc(model, num_particles, ess_threshold,
+                          num_mcmc_samples):
     time0 = time.time()
     with model:
         trace = pm.sample_smc(draws=num_particles, n_steps=num_mcmc_samples,
@@ -115,10 +79,110 @@ if __name__ == '__main__':
                               tune_steps=False, threshold=ess_threshold)
     time1 = time.time()
 
-    mll = model.marginal_log_likelihood
+    evidence = model.marginal_log_likelihood
     mean_a = np.mean(trace.get_values('a'))
     mean_b = np.mean(trace.get_values('b'))
+
     print('smc pymc3 num_steps = {}'.format(trace._report._n_steps))
-    print('smc pymc3 mean = a: {}, b: {}'.format(mean_a, mean_b))
-    print('smc pymc3 marginal log like = {}'.format(mll))
-    print('total smc pymc3 time = {}'.format(time1 - time0))
+    return {'a': mean_a, 'b': mean_b}, evidence, (time1 - time0)
+
+
+def generate_data(eval_model, std_dev, plot=True):
+    y_true = eval_model(np.array([[2, 3.5]]))
+    noisy_data = y_true + np.random.normal(0, std_dev, y_true.shape)
+    if plot:
+        plot_noisy_data(x, y_true, noisy_data)
+    return noisy_data
+
+
+def generate_vector_mcmc(eval_model, noisy_data, priors, std_dev):
+    return VectorMCMC(eval_model, noisy_data, priors, std_dev)
+
+
+def generate_pymc3_model(priors, std_dev):
+    model = pm.Model()
+    with model:
+        a = pm.Uniform('a', *priors[0].support())
+        b = pm.Uniform('b', *priors[1].support())
+        mu = a * x + b
+        obs = pm.Normal('obs', mu=mu, sigma=std_dev, observed=noisy_data)
+    return model
+
+
+if __name__ == '__main__':
+
+    np.random.seed(200)
+
+    x = np.arange(100)
+    def eval_model(theta):
+        a = theta[:, 0, None]
+        b = theta[:, 1, None]
+        return a * x + b
+
+    std_dev = 2
+    noisy_data = generate_data(eval_model, std_dev, plot=False)
+
+    # set smc params
+    num_particles = 500
+    num_steps = 20
+    num_mcmc_samples = 2
+    ess_threshold = 0.9
+    phi_sequence = np.linspace(0, 1, num_steps)
+    priors = [uniform(0., 6.), uniform(0., 6.)]
+
+    # set mcmc params
+    num_parallel_chains = 1
+    num_samples = int(num_particles * num_steps * num_mcmc_samples)
+    burnin = int(num_samples / 3)
+    init_cov = np.array([[1, 0], [0, 1]])
+    adapt_interval = 100
+
+    vector_mcmc = generate_vector_mcmc(eval_model, noisy_data, priors, std_dev)
+    pymc3_model = generate_pymc3_model(priors, std_dev)
+
+    num_repeats = 2
+
+    smcpy_mll = []
+    smcpy_mean_a = []
+    smcpy_mean_b = []
+    mcmc_mll = []
+    mcmc_mean_a = []
+    mcmc_mean_b = []
+    pymc3_mll = []
+    pymc3_mean_a = []
+    pymc3_mean_b = []
+
+    for i in range(num_repeats):
+        outputs = run_and_time_smcpy(vector_mcmc, num_particles,
+                                     num_mcmc_samples,
+                                     phi_sequence, ess_threshold)
+
+        smcpy_mean_a.append(outputs[0]['a'])
+        smcpy_mean_b.append(outputs[0]['b'])
+        smcpy_mll.append(outputs[1])
+
+        outputs = run_and_time_mcmc(priors, num_samples, init_cov,
+                                    adapt_interval, burnin, plot=False)
+
+        mcmc_mean_a.append(outputs[0][0])
+        mcmc_mean_b.append(outputs[0][1])
+        mcmc_mll.append(outputs[1])
+
+        outputs = run_and_time_pymc3smc(pymc3_model, num_particles,
+                                        ess_threshold, num_mcmc_samples)
+
+        pymc3_mean_a.append(outputs[0]['a'])
+        pymc3_mean_b.append(outputs[0]['b'])
+        pymc3_mll.append(outputs[1])
+
+    print(np.mean(smcpy_mean_a))
+    print(np.mean(smcpy_mean_b))
+    print(np.mean(np.log(np.mean(np.exp(smcpy_mll)))))
+
+    print(np.mean(mcmc_mean_a))
+    print(np.mean(mcmc_mean_b))
+    print(np.mean(np.log(np.mean(np.exp(mcmc_mll)))))
+
+    print(np.mean(pymc3_mean_a))
+    print(np.mean(pymc3_mean_b))
+    print(np.mean(np.log(np.mean(np.exp(pymc3_mll)))))

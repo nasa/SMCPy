@@ -29,9 +29,9 @@ class SMCSampler:
     def estimate_marginal_log_likelihood(clss_, step_list, phi_sequence):
         num_particles = step_list[0].num_particles
 
-        delta_phi = np.tile(np.diff(phi_sequence)[1:], (num_particles, 1))
-        log_weights = np.zeros(delta_phi.shape)
-        log_likes = np.zeros(delta_phi.shape)
+        delta_phi = np.diff(phi_sequence)[1:].reshape(1, -1)
+        log_weights = np.zeros((num_particles, delta_phi.shape[1]))
+        log_likes = np.zeros((num_particles, delta_phi.shape[1]))
 
         for i, step in enumerate(step_list[:-1]):
             log_weights[:, i] = step.log_weights.flatten()
