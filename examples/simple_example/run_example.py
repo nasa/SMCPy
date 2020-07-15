@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas
 import pymc3 as pm
+import sys
 import time
 
 from copy import copy
@@ -83,7 +85,7 @@ def run_and_time_pymc3smc(model, num_particles, ess_threshold,
     mean_a = np.mean(trace.get_values('a'))
     mean_b = np.mean(trace.get_values('b'))
 
-    print('smc pymc3 num_steps = {}'.format(trace._report._n_steps))
+    #print('smc pymc3 num_steps = {}'.format(trace._report._n_steps))
     return {'a': mean_a, 'b': mean_b}, evidence, (time1 - time0)
 
 
@@ -140,49 +142,41 @@ if __name__ == '__main__':
     vector_mcmc = generate_vector_mcmc(eval_model, noisy_data, priors, std_dev)
     pymc3_model = generate_pymc3_model(priors, std_dev)
 
-    num_repeats = 2
+    num_repeats = 500
 
-    smcpy_mll = []
-    smcpy_mean_a = []
-    smcpy_mean_b = []
-    mcmc_mll = []
-    mcmc_mean_a = []
-    mcmc_mean_b = []
-    pymc3_mll = []
-    pymc3_mean_a = []
-    pymc3_mean_b = []
+    df = pandas.DataFrame(columns=['smcpy_mll', 'smcpy_mean_a', 'smcpy_mean_b',
+                                   'mcmc_mll', 'mcmc_mean_a', 'mcmc_mean_b',
+                                   'pymc3_mll', 'pymc3_mean_a', 'pymc3_mean_b'])
 
     for i in range(num_repeats):
+
+        print(i)
+        sys.stdout.flush()
+
+        row_dict = {}
+
         outputs = run_and_time_smcpy(vector_mcmc, num_particles,
                                      num_mcmc_samples,
                                      phi_sequence, ess_threshold)
 
-        smcpy_mean_a.append(outputs[0]['a'])
-        smcpy_mean_b.append(outputs[0]['b'])
-        smcpy_mll.append(outputs[1])
+        row_dict['smcpy_mean_a'] = outputs[0]['a']
+        row_dict['smcpy_mean_b'] = outputs[0]['b']
+        row_dict['smcpy_mll'] = outputs[1]
 
         outputs = run_and_time_mcmc(priors, num_samples, init_cov,
                                     adapt_interval, burnin, plot=False)
 
-        mcmc_mean_a.append(outputs[0][0])
-        mcmc_mean_b.append(outputs[0][1])
-        mcmc_mll.append(outputs[1])
+        row_dict['mcmc_mean_a'] = outputs[0][0]
+        row_dict['mcmc_mean_b'] = outputs[0][1]
+        row_dict['mcmc_mll'] = outputs[1]
 
         outputs = run_and_time_pymc3smc(pymc3_model, num_particles,
                                         ess_threshold, num_mcmc_samples)
 
-        pymc3_mean_a.append(outputs[0]['a'])
-        pymc3_mean_b.append(outputs[0]['b'])
-        pymc3_mll.append(outputs[1])
+        row_dict['pymc3_mean_a'] = outputs[0]['a']
+        row_dict['pymc3_mean_b'] = outputs[0]['b']
+        row_dict['pymc3_mll'] = outputs[1]
 
-    print(np.mean(smcpy_mean_a))
-    print(np.mean(smcpy_mean_b))
-    print(np.mean(np.log(np.mean(np.exp(smcpy_mll)))))
+        df = df.append(row_dict, ignore_index=True)
 
-    print(np.mean(mcmc_mean_a))
-    print(np.mean(mcmc_mean_b))
-    print(np.mean(np.log(np.mean(np.exp(mcmc_mll)))))
-
-    print(np.mean(pymc3_mean_a))
-    print(np.mean(pymc3_mean_b))
-    print(np.mean(np.log(np.mean(np.exp(pymc3_mll)))))
+    df.to_hdf('temp.h5', key='data')
