@@ -3,7 +3,7 @@ import abc
 # compatible with Python 2 *and* 3:
 ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 
-class Translator(ABC):
+class MCMCKernel(ABC):
 
     def __init__(self):
         pass

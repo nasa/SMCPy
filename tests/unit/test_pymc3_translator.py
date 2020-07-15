@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy.mcmc import PyMC3Translator
+from smcpy.mcmc.pymc3_kernel import PyMC3Kernel
 from smcpy.mcmc import SMCStepMethod
 
 
@@ -68,30 +68,30 @@ def stub_trace(mocker):
 
 
 @pytest.fixture
-def translator(stub_pymc3_model):
-    return PyMC3Translator(stub_pymc3_model, DummyStepMethodClass)
+def kernel(stub_pymc3_model):
+    return PyMC3Kernel(stub_pymc3_model, DummyStepMethodClass)
 
 
-def test_get_data(translator, data):
-    np.testing.assert_array_equal(translator.get_data(), data)
+def test_get_data(kernel, data):
+    np.testing.assert_array_equal(kernel.get_data(), data)
 
 
-def test_get_log_likelihood(translator):
-    loglike = translator.get_log_likelihood({})
+def test_get_log_likelihood(kernel):
+    loglike = kernel.get_log_likelihood({})
     assert loglike == 99
 
 
-def test_sample_phi_and_cov_are_set(translator):
+def test_sample_phi_and_cov_are_set(kernel):
     phi = 0.1
     cov = np.array([[4, 1.2], [1.2, 1]])
-    translator.sample(num_samples=100, cov=cov, phi=phi, init_params={})
-    assert translator.step_method.methods[0].phi == phi
-    assert translator.step_method.methods[0].S == 2
-    assert translator.step_method.methods[1].phi == phi
-    assert translator.step_method.methods[1].S == 1
+    kernel.sample(num_samples=100, cov=cov, phi=phi, init_params={})
+    assert kernel.step_method.methods[0].phi == phi
+    assert kernel.step_method.methods[0].S == 2
+    assert kernel.step_method.methods[1].phi == phi
+    assert kernel.step_method.methods[1].S == 1
 
 
-def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
+def test_sample_inputs_are_passed(kernel, stub_pymc3_model, mocker):
     num_samples = 100
     phi = 0.1
     cov = np.eye(2)
@@ -100,44 +100,44 @@ def test_sample_inputs_are_passed(translator, stub_pymc3_model, mocker):
     mocker.patch('pymc3.sampling.sample')
     import pymc3
 
-    translator.sample(num_samples=num_samples, phi=phi, cov=cov,
+    kernel.sample(num_samples=num_samples, phi=phi, cov=cov,
                       init_params=init_params)
     pymc3.sampling.sample.assert_called_with(draws=num_samples,
-                              step=translator.step_method,
+                              step=kernel.step_method,
                               chains=1, cores=1, start=init_params,
                               tune=0, discard_tuned_samples=False,
                               progressbar=False)
 
 
-def test_sample_checks_step_isinstance_smcstep(translator, stub_pymc3_model):
+def test_sample_checks_step_isinstance_smcstep(kernel, stub_pymc3_model):
     step = object
     with pytest.raises(TypeError):
-        PyMC3Translator(stub_pymc3_model, step)
+        PyMC3Kernel(stub_pymc3_model, step)
 
 
-def test_model_is_copy(translator, stub_pymc3_model):
-    assert translator.pymc3_model is not stub_pymc3_model
+def test_model_is_copy(kernel, stub_pymc3_model):
+    assert kernel.pymc3_model is not stub_pymc3_model
 
 
-def test_get_final_values_of_last_trace(translator, stub_trace):
-    translator._last_trace = stub_trace
+def test_get_final_values_of_last_trace(kernel, stub_trace):
+    kernel._last_trace = stub_trace
 
-    values = translator.get_final_trace_values()
+    values = kernel.get_final_trace_values()
     assert values == {'a': 1, 'b': 2}
 
 
-def test_get_last_trace(translator, stub_trace):
-    translator._last_trace = stub_trace
+def test_get_last_trace(kernel, stub_trace):
+    kernel._last_trace = stub_trace
 
-    values = translator.get_all_trace_values()
+    values = kernel.get_all_trace_values()
     assert values == {'a': [1, 1], 'b': [2, 2]}
 
 
-def test_sample_from_prior(translator):
-    random_sample = translator.sample_from_prior(size=1)
+def test_sample_from_prior(kernel):
+    random_sample = kernel.sample_from_prior(size=1)
     assert random_sample == {'a': 1, 'b': 2}
 
 
-def test_multiple_samples_from_prior(translator):
-    random_sample = translator.sample_from_prior(size=10)
+def test_multiple_samples_from_prior(kernel):
+    random_sample = kernel.sample_from_prior(size=10)
     assert random_sample == {'a': [1] * 10, 'b': [2] * 10}

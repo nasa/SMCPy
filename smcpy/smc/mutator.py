@@ -33,7 +33,7 @@ AGREEMENT.
 
 from .mpi_base_class import MPIBaseClass
 from .particles import Particles
-from ..mcmc.translator_base import Translator
+from ..mcmc.kernel_base import MCMCKernel
 from ..utils.single_rank_comm import SingleRankComm
 from copy import copy
 import numpy as np
@@ -64,6 +64,6 @@ class Mutator(MPIBaseClass):
 
     @mcmc_kernel.setter
     def mcmc_kernel(self, mcmc_kernel):
-        if not isinstance(mcmc_kernel, Translator):
+        if not isinstance(mcmc_kernel, MCMCKernel):
             raise TypeError
         self._mcmc_kernel = mcmc_kernel

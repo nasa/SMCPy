@@ -10,7 +10,7 @@ from scipy.optimize import minimize
 from scipy.stats import uniform
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
-from smcpy.mcmc.vector_mcmc_translator import VectorMCMCTranslator
+from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import SMCSampler
 
 from model import Model
@@ -39,7 +39,7 @@ def plot_mcmc_chain(chain, param_names, burnin=0):
 def run_and_time_smcpy(vector_mcmc, num_particles, num_mcmc_samples,
                        phi_sequence, ess_threshold):
 
-    mcmc_kernel = VectorMCMCTranslator(vector_mcmc, param_order=('a', 'b'))
+    mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b'))
     smc = SMCSampler(mcmc_kernel)
 
     time0 = time.time()

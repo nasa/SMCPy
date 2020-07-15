@@ -5,7 +5,6 @@ import pytest
 from collections import namedtuple
 
 from smcpy.smc.initializer import Initializer
-from smcpy.mcmc.translator_base import Translator
 
 
 class StubParticles:
@@ -32,7 +31,7 @@ def test_get_num_particles_in_partition(stub_comm, stub_mcmc_kernel, rank,
     assert initializer.get_num_particles_in_partition(10, rank) == expected
 
 
-def test_mcmc_kernel_not_translator_instance():
+def test_mcmc_kernel_not_kernel_instance():
     with pytest.raises(TypeError):
         initializer = Initializer(None, None)
 
