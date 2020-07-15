@@ -6,7 +6,7 @@ import time
 from copy import copy
 
 from smcpy.mcmc.pymc3_step_methods import SMCMetropolis
-from smcpy.mcmc.pymc3_translator import PyMC3Translator
+from smcpy.mcmc.pymc3_kernel import PyMC3Kernel
 
 
 def run_timed_vanilla_mcmc(num_samples, init_params, pymc3_model):
@@ -59,7 +59,7 @@ def pymc3_model(std_dev, noisy_data):
 
 @pytest.fixture
 def mcmc_kernel(pymc3_model):
-    return PyMC3Translator(copy(pymc3_model), SMCMetropolis)
+    return PyMC3Kernel(copy(pymc3_model), SMCMetropolis)
 
 
 @pytest.mark.filterwarnings('ignore: The number of samples is too small')

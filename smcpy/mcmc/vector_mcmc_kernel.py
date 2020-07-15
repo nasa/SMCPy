@@ -1,9 +1,9 @@
 from copy import copy
 import numpy as np
 
-from .translator_base import Translator
+from .kernel_base import MCMCKernel
 
-class VectorMCMCTranslator(Translator):
+class VectorMCMCKernel(MCMCKernel):
 
     def __init__(self, vector_mcmc_object, param_order):
         self._mcmc = vector_mcmc_object

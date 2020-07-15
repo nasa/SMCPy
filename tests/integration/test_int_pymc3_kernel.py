@@ -3,7 +3,7 @@ import pymc3 as pm
 import pytest
 
 from smcpy.mcmc.pymc3_step_methods import SMCMetropolis
-from smcpy.mcmc.pymc3_translator import PyMC3Translator
+from smcpy.mcmc.pymc3_kernel import PyMC3Kernel
 
 
 np.random.seed(2)
@@ -55,33 +55,33 @@ def pymc_model(model, sigma, data):
 
 
 @pytest.fixture
-def translator(pymc_model):
-    return PyMC3Translator(pymc_model, SMCMetropolis)
+def kernel(pymc_model):
+    return PyMC3Kernel(pymc_model, SMCMetropolis)
 
 
-def test_get_data(data, translator):
-    np.testing.assert_array_equal(translator.get_data(), data)
+def test_get_data(data, kernel):
+    np.testing.assert_array_equal(kernel.get_data(), data)
 
 
 @pytest.mark.parametrize('a,b', [(0.1, 0.4), (0.5, 0.9)])
-def test_get_log_likelihood(a, b, data, sigma, model, translator):
+def test_get_log_likelihood(a, b, data, sigma, model, kernel):
     like = likelihood(a, b, data, sigma, model)
-    assert translator.get_log_likelihood({'a': a, 'b': b}) == \
+    assert kernel.get_log_likelihood({'a': a, 'b': b}) == \
            pytest.approx(np.log(like))
 
 
 @pytest.mark.parametrize('size', [100, 1000, 2000])
-def test_sample_from_prior(translator, size):
-    samples = translator.sample_from_prior(size)
+def test_sample_from_prior(kernel, size):
+    samples = kernel.sample_from_prior(size)
     for key in ['a', 'b']:
         assert len(samples[key]) == size
         assert all([s <= 1 and s >= 0 for s in samples[key]])
 
 
-def test_sample(translator):
+def test_sample(kernel):
     init_params={'a': 0, 'b': 0}
-    translator.sample(100, cov=np.eye(2), init_params=init_params, phi=1)
-    new_params = translator.get_final_trace_values()
-    assert len(translator._last_trace.get_values('a')) == 100
+    kernel.sample(100, cov=np.eye(2), init_params=init_params, phi=1)
+    new_params = kernel.get_final_trace_values()
+    assert len(kernel._last_trace.get_values('a')) == 100
     assert new_params.keys() == init_params.keys()
     assert new_params.values() != init_params.values()

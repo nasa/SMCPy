@@ -4,7 +4,7 @@ import pymc3
 
 from copy import copy
 
-from .translator_base import Translator
+from .kernel_base import MCMCKernel
 from .pymc3_step_methods import SMCStepMethod
 
 import logging
@@ -12,7 +12,7 @@ logger = logging.getLogger('pymc3')
 logger.setLevel(logging.ERROR)
 
 
-class PyMC3Translator(Translator):
+class PyMC3Kernel(MCMCKernel):
 
     def __init__(self, pymc3_model, step_method):
         self._pymc3_model = pymc3_model

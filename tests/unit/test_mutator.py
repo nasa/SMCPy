@@ -21,7 +21,7 @@ def mutator(stub_mcmc_kernel, stub_comm):
     return Mutator(mcmc_kernel=stub_mcmc_kernel, mpi_comm=stub_comm)
 
 
-def test_mcmc_kernel_not_translator_instance():
+def test_mcmc_kernel_not_kernel_instance():
     with pytest.raises(TypeError):
         initializer = Mutator(None)
 
