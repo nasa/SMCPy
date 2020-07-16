@@ -49,6 +49,8 @@ class Updater(MPIBaseClass):
         :type ess_threshold: float
         '''
         self.ess_threshold = ess_threshold
+        self._ess = None
+        self._resampled = False
         self._marginal_likelihood = []
 
     @property
@@ -61,13 +63,28 @@ class Updater(MPIBaseClass):
             raise ValueError('ESS threshold must be between 0 and 1.')
         self._ess_threshold = ess_threshold
 
+    @property
+    def ess(self):
+        return self._ess
+
+    @property
+    def resampled(self):
+        return self._resampled
+
     def update(self, particles, delta_phi):
         new_log_weights = self._compute_new_weights(particles, delta_phi)
         new_particles = Particles(particles.param_dict, particles.log_likes,
                                   new_log_weights)
 
+        new_particles = self.resample_if_needed(new_particles)
+        return new_particles
+
+    def resample_if_needed(self, new_particles):
         eff_sample_size = new_particles.compute_ess()
+        self._ess = eff_sample_size
+        self._resampled = False
         if eff_sample_size < self.ess_threshold * new_particles.num_particles:
+            self._resampled = True
             return self._resample(new_particles)
         return new_particles
 

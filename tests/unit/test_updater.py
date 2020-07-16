@@ -45,6 +45,9 @@ def test_update(mocked_particles, mocker):
 
     new_particles = updater.update(mocked_particles, delta_phi)
 
+    assert updater.ess > 0
+    assert updater.resampled == False
+
     np.testing.assert_array_equal(new_particles.log_weights, expect_log_weights)
     np.testing.assert_array_equal(new_particles.params, mocked_particles.params)
     np.testing.assert_array_equal(new_particles.log_likes,
@@ -67,6 +70,9 @@ def test_update_with_resample(mocked_particles, random_samples,
                         return_value=np.log(new_weights))
 
     new_particles = updater.update(mocked_particles, delta_phi=None)
+
+    assert updater.ess < len(mocked_particles.params)
+    assert updater.resampled == True
 
     np.testing.assert_array_equal(new_particles.log_weights,
                                   np.log(np.ones(3) * 1 / 3))
