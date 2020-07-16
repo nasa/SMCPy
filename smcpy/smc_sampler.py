@@ -20,12 +20,13 @@ class SMCSampler:
         mutator = Mutator(self._mcmc_kernel)
 
         particles = initializer.init_particles_from_prior(num_particles)
+        particles = updater.resample_if_needed(particles)
         step_list = [particles]
 
         phi_iterator = phi_sequence[2:]
         if progress_bar:
             phi_iterator = tqdm(phi_iterator)
-        #set_bar(phi_iterator, 1, mutation_ratio='N/A', updater=updater)
+        set_bar(phi_iterator, 1, mutation_ratio=0, updater=updater)
 
         for i, phi in enumerate(phi_iterator):
             particles = updater.update(particles, phi - phi_sequence[i + 1])
