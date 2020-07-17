@@ -71,8 +71,9 @@ class SMCSampler:
         return step_list, self._estimate_marginal_log_likelihood(updater)
 
     def _estimate_marginal_log_likelihood(self, updater):
-        mll = [self._logsum(mll) for mll in updater._marginal_likelihood]
-        return np.sum(mll)
+        summed_un_log_wts = [self._logsum(ulw) \
+                             for ulw in updater._unnorm_log_weights]
+        return np.sum(sum_un_log_wts)
 
     @staticmethod
     def _logsum(Z):

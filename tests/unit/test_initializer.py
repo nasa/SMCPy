@@ -44,7 +44,8 @@ def test_initialize_particles_from_prior(initializer, mocker):
     expected_a_vals = [1, 1, 1, 2, 2]
     expected_b_vals = [2, 2, 2, 3, 3]
     expected_log_like = [0.1, 0.1, 0.1, 0.2, 0.2]
-    expected_log_weight = [0.2] * 3 + [0.4] * 2
+    expected_log_weight = [np.log(1 / len(expected_a_vals))] \
+                           * len(expected_a_vals)
 
     np.testing.assert_array_almost_equal(particles.params['a'], expected_a_vals)
     np.testing.assert_array_almost_equal(particles.params['b'], expected_b_vals)

@@ -72,8 +72,7 @@ class Initializer(MPIBaseClass):
                                                                   self._rank)
         params = self.mcmc_kernel.sample_from_prior(n_particles_in_part)
         log_likes = self.mcmc_kernel.get_log_likelihoods(params)
-        #log_weights = log_likes * self.phi_init
-        log_weights = np.array([[np.log(1/num_particles)]] * n_particles_in_part)
+        log_weights = np.array([np.log(1/num_particles)] * n_particles_in_part)
         particles = Particles(params, log_likes, log_weights)
         particles = self._comm.gather(particles, root=0)[0]
         return particles

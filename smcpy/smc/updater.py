@@ -51,7 +51,7 @@ class Updater(MPIBaseClass):
         self.ess_threshold = ess_threshold
         self._ess = None
         self._resampled = False
-        self._marginal_likelihood = []
+        self._unnorm_log_weights = []
 
     @property
     def ess_threshold(self):
@@ -89,9 +89,9 @@ class Updater(MPIBaseClass):
         return new_particles
 
     def _compute_new_weights(self, particles, delta_phi):
-        unnorm_log_weights = particles.log_weights + particles.log_likes * delta_phi
-        self._marginal_likelihood.append(unnorm_log_weights)
-        return unnorm_log_weights
+        un_log_weights = particles.log_weights + particles.log_likes * delta_phi
+        self._unnorm_log_weights.append(un_log_weights)
+        return un_log_weights
 
     def _resample(self, particles):
         u = np.random.uniform(0, 1, particles.num_particles)
