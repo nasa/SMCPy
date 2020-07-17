@@ -47,7 +47,7 @@ class SMCSampler:
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
                ess_threshold, progress_bar=False):
 
-        initializer = Initializer(self._mcmc_kernel, phi_sequence[1])
+        initializer = Initializer(self._mcmc_kernel, phi_sequence[0])
         updater = Updater(ess_threshold)
         mutator = Mutator(self._mcmc_kernel)
 
@@ -55,37 +55,24 @@ class SMCSampler:
         particles = updater.resample_if_needed(particles)
         step_list = [particles]
 
-        phi_iterator = phi_sequence[2:]
+        phi_iterator = phi_sequence[1:]
         if progress_bar:
             phi_iterator = tqdm(phi_iterator)
         set_bar(phi_iterator, 1, mutation_ratio=0, updater=updater)
 
         for i, phi in enumerate(phi_iterator):
-            particles = updater.update(particles, phi - phi_sequence[i + 1])
+            particles = updater.update(particles, phi - phi_sequence[i])
             particles = mutator.mutate(particles, phi, num_mcmc_samples)
             step_list.append(particles)
 
             mutation_ratio = self._compute_mutation_ratio(*step_list[-2:])
             set_bar(phi_iterator, i + 2, mutation_ratio, updater)
 
-        return step_list
+        return step_list, self._estimate_marginal_log_likelihood(updater)
 
-    @classmethod
-    def estimate_marginal_log_likelihood(clss_, step_list, phi_sequence):
-        num_particles = step_list[0].num_particles
-
-        delta_phi = np.diff(phi_sequence)[1:].reshape(1, -1)
-        log_weights = np.zeros((num_particles, delta_phi.shape[1]))
-        log_likes = np.zeros((num_particles, delta_phi.shape[1]))
-
-        for i, step in enumerate(step_list[:-1]):
-            log_weights[:, i] = step.log_weights.flatten()
-            log_likes[:, i] = step.log_likes.flatten()
-
-        marg_log_like = log_weights + log_likes * delta_phi
-        marg_log_like = clss_._logsum(marg_log_like)
-
-        return np.sum(marg_log_like)
+    def _estimate_marginal_log_likelihood(self, updater):
+        mll = [self._logsum(mll) for mll in updater._marginal_likelihood]
+        return np.sum(mll)
 
     @staticmethod
     def _logsum(Z):
