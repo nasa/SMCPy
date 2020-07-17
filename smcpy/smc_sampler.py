@@ -73,7 +73,7 @@ class SMCSampler:
     def _estimate_marginal_log_likelihood(self, updater):
         summed_un_log_wts = [self._logsum(ulw) \
                              for ulw in updater._unnorm_log_weights]
-        return np.sum(sum_un_log_wts)
+        return np.sum(summed_un_log_wts)
 
     @staticmethod
     def _logsum(Z):

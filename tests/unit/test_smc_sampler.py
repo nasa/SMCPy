@@ -41,14 +41,16 @@ def test_sample(mocker, prog_bar):
 
     smc = SMCSampler(mocker.Mock())
     mut_ratio = mocker.patch.object(smc, '_compute_mutation_ratio')
-    step_list = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
-                           ess_threshold, prog_bar)
+    mll_est = mocker.patch.object(smc, '_estimate_marginal_log_likelihood')
+    step_list, _ = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
+                              ess_threshold, prog_bar)
 
     init.assert_called_once_with(smc._mcmc_kernel, phi_sequence[1])
     upd.assert_called_once_with(ess_threshold)
     mut.assert_called_once_with(smc._mcmc_kernel)
-    np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[2:])
+    np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[1:])
     update_bar.assert_called()
+    mll_est.assert_called_once()
 
     assert len(step_list) == len(phi_sequence) - 1
 
@@ -58,11 +60,11 @@ def test_sample(mocker, prog_bar):
         assert call[0][1] == new_particles
 
 
-def test_marginal_likelihood_estimator(step_list, phi_sequence):
-    dphi = phi_sequence[1] - phi_sequence[0]
-    Z_exp = np.prod([np.sum(np.exp(step.log_weights + step.log_likes * dphi)) \
-                     for step in step_list[:-1]])
-    Z = SMCSampler.estimate_marginal_log_likelihood(step_list, phi_sequence)
+def test_marginal_likelihood_estimator(mocker):
+    updater = mocker.Mock()
+    updater._unnorm_log_weights = [np.ones((5, 1)) for _ in range(5)]
+    Z_exp = np.prod([np.sum(np.exp(uw)) for uw in updater._unnorm_log_weights])
+    Z = SMCSampler(None)._estimate_marginal_log_likelihood(updater)
     assert Z == np.log(Z_exp)
 
 
