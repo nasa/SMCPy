@@ -1,7 +1,8 @@
-def set_bar(pbar, t, last_ess, ess, acceptance_ratio, resample_status):
-    pbar.set_description("Step number: {:2d} | Last ess: {:8.2f} | "
-                         "Current ess: {:8.2f} | Samples accepted: "
-                         "{:.1%} | {} |"
-                         .format(t + 1, last_ess, ess, acceptance_ratio,
-                                 resample_status))
+from tqdm import tqdm
+
+def set_bar(pbar, t, mutation_ratio, updater):
+    if isinstance(pbar, tqdm):
+        desc = "t: {:2d} | ess: {:8.2f} | mut. ratio: {:.1%} | resample: {} |"
+        pbar.set_description(desc.format(t, updater.ess, mutation_ratio,
+                                         updater.resampled))
     return pbar
