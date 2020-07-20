@@ -38,7 +38,7 @@ class VectorMCMC:
         output = self._model(inputs)
         ssqe = np.sum((output - self._data) ** 2, axis=1)
 
-        term1 = -np.log(2 * np.pi * var) * (data.shape[1] / 2.) 
+        term1 = -np.log(2 * np.pi * var) * (output.shape[1] / 2.) 
         term2 = -1 / 2. * ssqe / var
         return (term1 + term2).reshape(-1, 1)
 
