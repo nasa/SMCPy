@@ -97,7 +97,7 @@ def test_vectorized_proposal(vector_mcmc, inputs, mocker):
     mvn_mock = mocker.patch('numpy.random.multivariate_normal',
                             return_value=np.ones(inputs.shape))
     cov = np.eye(inputs.shape[1])
-    cov_scale = 2.38 ** 2 / inputs.shape[1]
+    cov_scale = 1 #2.38 ** 2 / inputs.shape[1]
     expected = inputs + 1
 
     inputs_new = vector_mcmc.proposal(inputs, cov=cov)

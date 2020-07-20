@@ -3,6 +3,17 @@ import numpy as np
 class VectorMCMC:
     
     def __init__(self, model, data, priors, std_dev=None):
+        '''
+        :param model: maps inputs to outputs
+        :type model: callable
+        :param data: data corresponding to model outputs
+        :type data: 1D array
+        :param priors: random variable objects with a pdf and rvs method (e.g.
+            scipy stats random variable objects)
+        :type priors: list of objects
+        :param std_dev: Gaussian additive noise standard deviation
+        :type std_dev: float
+        '''
         self._model = model
         self._data = data
         self._priors = priors
@@ -25,8 +36,7 @@ class VectorMCMC:
         var = std_dev ** 2
 
         output = self._model(inputs)
-        data = np.tile(self._data, [inputs.shape[0], 1])
-        ssqe = np.sum((output - data) ** 2, axis=1)
+        ssqe = np.sum((output - self._data) ** 2, axis=1)
 
         term1 = -np.log(2 * np.pi * var) * (data.shape[1] / 2.) 
         term2 = -1 / 2. * ssqe / var
