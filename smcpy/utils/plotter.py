@@ -86,6 +86,27 @@ def _mpi_decorator(func):
 #    plt.close(fig)
 #    return None
 
+def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
+                    prefix='mcmc_chain'):
+    fig, ax = plt.subplots(chain.shape[1])
+    chain = chain[:, :, burnin:]
+    for i, name in enumerate(param_labels):
+        for parallel_chain in chain:
+            ax[i].plot(parallel_chain[i], '-')
+        ax[i].set_ylabel(name)
+    ax[-1].set_xlabel('sample #')
+
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(prefix + '.png', dpi=150)
+    if show:
+        plt.show()
+
+    plt.close(fig)
+
+    return None
+
 def plot_pairwise(samples, weights=None, param_names=None,
                   param_labels=None, save=False, show=True,
                   param_limits=None, label_size=None, tick_size=None,
