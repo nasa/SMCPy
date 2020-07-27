@@ -25,6 +25,7 @@ class DummyPrior:
 def stub_model():
     x = np.array([1, 2, 3])
     def evaluation(q):
+        assert q.shape[1] == 3
         output = (q[:, 0, None] * 2 + 3.25 * q[:, 1, None] - \
                   q[:, 2, None] ** 2) * x
         return output

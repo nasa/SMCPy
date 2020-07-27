@@ -33,6 +33,7 @@ class VectorMCMC:
         std_dev = self._fixed_std_dev
         if std_dev is None:
             std_dev = inputs[:, -1]
+            inputs = inputs[:, :-1]
         var = std_dev ** 2
 
         output = self._model(inputs)
