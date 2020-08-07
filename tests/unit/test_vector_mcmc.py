@@ -144,16 +144,20 @@ def test_vectorized_selection(vector_mcmc, new_inputs, old_inputs, mocker):
                                   expected[:new_inputs.shape[0]])
 
 
-@pytest.mark.parametrize('adapt_interval,expected_cov',
-                         ([3, np.eye(2)], [4, np.array([[2, 1], [1, 3]])]))
-def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval,
-                                        expected_cov, mocker):
+@pytest.mark.parametrize('adapt_interval,adapt', [(3, False), (4, True),
+                                                  (8, True), (11, False)])
+def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
+                                        mocker):
     num_parallel_chains = 3
     current_sample_count = 8
-    num_samples = 10
     old_cov = np.eye(2)
-    chain = np.zeros([num_parallel_chains, 2, num_samples])
-    mocker.patch('numpy.cov', return_value=np.array([[2, 1], [1, 3]]))
+    chain = np.zeros([num_parallel_chains, 2, current_sample_count])
+    flat_chain = np.zeros((2, num_parallel_chains * current_sample_count))
+
+    expected_cov = old_cov
+    if adapt:
+        expected_cov = flat_chain
+        mocker.patch('numpy.cov', return_value=flat_chain)
 
     cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, current_sample_count,
                                          adapt_interval)
@@ -193,9 +197,9 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     assert vector_mcmc._priors[0].pdf.call_count == num_samples + 1
 
 
-@pytest.mark.parametrize('adapt_delay', (0, 2))
-@pytest.mark.parametrize('adapt_interval', (None, 1))
-@pytest.mark.parametrize('num_samples', (1, 5))
+@pytest.mark.parametrize('adapt_delay', (0, 2, 4))
+@pytest.mark.parametrize('adapt_interval', (None, 1, 2))
+@pytest.mark.parametrize('num_samples', (1, 5, 5))
 def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
                                adapt_delay, mocker):
     inputs = np.ones([10, 3])
@@ -207,7 +211,6 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
 
     mocker.patch('numpy.random.uniform')
 
-    mocker.patch('numpy.random.uniform')
     mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
     mocker.patch.object(vector_mcmc, 'proposal',
                     side_effect=[inputs + i for i in range(1, num_samples + 1)])
@@ -227,7 +230,7 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
     np.testing.assert_array_equal(chain, expected_chain)
 
     num_expected_adapt_calls = 0
-    if num_samples > adapt_delay:
+    if num_samples > adapt_delay and adapt_interval is not None:
         num_expected_adapt_calls = num_samples - adapt_delay
 
     assert log_like.call_count == num_samples + 1

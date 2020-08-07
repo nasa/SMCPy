@@ -1,8 +1,11 @@
 import numpy as np
 
-class VectorMCMC:
+from .vector_mcmc_logger import VectorMCMCLogger
+
+
+class VectorMCMC(VectorMCMCLogger):
     
-    def __init__(self, model, data, priors, std_dev=None):
+    def __init__(self, model, data, priors, std_dev=None, debug=False):
         '''
         :param model: maps inputs to outputs
         :type model: callable
@@ -18,6 +21,8 @@ class VectorMCMC:
         self._data = data
         self._priors = priors
         self._fixed_std_dev = std_dev
+
+        super().__init__(__name__, debug)
 
     def sample_from_priors(self, num_samples):
         samples = [p.rvs(num_samples).reshape(-1, 1) \
@@ -67,9 +72,9 @@ class VectorMCMC:
         return np.where(reject, old_values, new_values)
 
     @staticmethod
-    def adapt_proposal_cov(cov, chain, sample_count, adapt_interval):
-        if adapt_interval is not None and sample_count % adapt_interval == 0:
-            flat_chain = [chain[:, i, :sample_count + 2].flatten() \
+    def adapt_proposal_cov(cov, chain, sample_idx, adapt_interval):
+        if adapt_interval <= sample_idx and sample_idx % adapt_interval == 0:
+            flat_chain = [chain[:, i, :sample_idx + 2].flatten() \
                           for i in range(chain.shape[1])]
             cov = np.cov(flat_chain)
         return cov
@@ -104,6 +109,8 @@ class VectorMCMC:
 
         log_like = self.evaluate_log_likelihood(inputs)
         log_priors = self.evaluate_log_priors(inputs)
+
+        self._log_sample(inputs, log_like, log_priors, 0, False)
     
         for i in range(num_samples):
     
@@ -111,6 +118,8 @@ class VectorMCMC:
             new_log_like = self.evaluate_log_likelihood(new_inputs)
             new_log_priors = self.evaluate_log_priors(new_inputs)
     
+            self._log_sample(new_inputs, new_log_like, new_log_priors,i, True)
+
             accpt_ratio = self.acceptance_ratio(new_log_like, log_like,
                                                 new_log_priors, log_priors)
 
@@ -121,9 +130,13 @@ class VectorMCMC:
             log_priors = self.selection(new_log_priors, log_priors,
                                         accpt_ratio, u)
 
+            self._log_acceptance(accpt_ratio, u)
+
             chain[:, :, i + 1] = inputs
 
-            if i > adapt_delay - 1:
+            if adapt_interval is not None and i > adapt_delay - 1:
                 cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval)
+
+            self._log_cov(cov)
 
         return chain
