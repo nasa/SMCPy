@@ -1,6 +1,6 @@
 import logging
 
-class VectorMCMCLogger:
+class MCMCLogger:
 
     def __init__(self, name, debug=False):
         self._logger = logging.getLogger(__name__)

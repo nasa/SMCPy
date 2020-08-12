@@ -34,21 +34,18 @@ import numpy as np
 
 from copy import copy
 
-from .mpi_base_class import MPIBaseClass
 from .particles import Particles
 from ..mcmc.kernel_base import MCMCKernel
 from ..utils.single_rank_comm import SingleRankComm
 
 
-class Initializer(MPIBaseClass):
+class Initializer:
     '''
     Generates SMCStep objects based on either samples from a prior distribution
     or given input samples from a sampling distribution.
     '''
-    def __init__(self, mcmc_kernel, phi_init, mpi_comm=SingleRankComm()):
-        self.phi_init = phi_init
+    def __init__(self, mcmc_kernel, mpi_comm=SingleRankComm()):
         self.mcmc_kernel = mcmc_kernel
-        super().__init__(mpi_comm)
 
     @property
     def mcmc_kernel(self):
@@ -68,13 +65,10 @@ class Initializer(MPIBaseClass):
             ranks)
         :type num_particles: int
         '''
-        n_particles_in_part = self.get_num_particles_in_partition(num_particles,
-                                                                  self._rank)
-        params = self.mcmc_kernel.sample_from_prior(n_particles_in_part)
+        params = self.mcmc_kernel.sample_from_prior(num_particles)
         log_likes = self.mcmc_kernel.get_log_likelihoods(params)
-        log_weights = np.array([np.log(1/num_particles)] * n_particles_in_part)
+        log_weights = np.array([np.log(1/num_particles)] * num_particles)
         particles = Particles(params, log_likes, log_weights)
-        particles = self._comm.gather(particles, root=0)[0]
         return particles
 
     def init_particles_from_samples(self, samples, proposal_pdensities):
@@ -91,31 +85,8 @@ class Initializer(MPIBaseClass):
             values; must be aligned with samples
         :type proposal_pdensities: list or nd.array
         '''
-        params, prop_pd = self._get_subset_by_rank(samples, proposal_pdensities)
-
-        log_likes = self.mcmc_kernel.get_log_likelihoods(params)
-        log_priors = self.mcmc_kernel.get_log_priors(params)
-        log_weights = log_likes * self.phi_init + log_priors - np.log(prop_pd)
-
-        particles = Particles(params, log_likes, log_weights)
-        particles = self._comm.gather(particles, root=0)[0]
+        log_likes = self.mcmc_kernel.get_log_likelihoods(samples)
+        log_priors = self.mcmc_kernel.get_log_priors(samples)
+        log_weights = log_priors - np.log(proposal_pdensities)
+        particles = Particles(samples, log_likes, log_weights)
         return particles
-
-    def _get_subset_by_rank(self, samples, proposal_pdensities):
-        num_particles = len(proposal_pdensities)
-        n_particles_in_parts = \
-            [self.get_num_particles_in_partition(num_particles, rank) for \
-             rank in range(self._size)]
-
-        param_names = list(samples.keys())
-        param_values = np.array([samples[pn] for pn in param_names])
-
-        start_index = int(np.sum(n_particles_in_parts[:self._rank]))
-        end_index = start_index + n_particles_in_parts[self._rank]
-
-        param_values = param_values[:, start_index:end_index]
-        proposal_pdensities = proposal_pdensities[start_index:end_index]
-
-        params = dict(zip(param_names, param_values))
-
-        return params, proposal_pdensities

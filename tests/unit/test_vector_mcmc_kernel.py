@@ -26,7 +26,7 @@ def vector_mcmc(stub_model, data, priors):
 
 def test_kernel_instance(vector_mcmc, stub_model, data, priors):
     vmcmc = VectorMCMCKernel(vector_mcmc, param_order=tuple('a'))
-    assert vmcmc._mcmc._model == stub_model
+    assert vmcmc._mcmc._eval_model == stub_model
     assert vmcmc._mcmc._data == data
     assert vmcmc._mcmc._priors == priors
     assert vmcmc._param_order == tuple('a')
