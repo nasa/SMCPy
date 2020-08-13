@@ -5,13 +5,6 @@ from smcpy.mcmc.kernel_base import MCMCKernel
 
 
 @pytest.fixture
-def stub_comm(mocker):
-    comm = mocker.Mock()
-    comm.gather = lambda x, root: [x]
-    return comm
-
-
-@pytest.fixture
 def stub_mcmc_kernel(mocker):
     stub_mcmc_kernel = mocker.Mock(MCMCKernel)
     mocker.patch.object(stub_mcmc_kernel, 'get_log_likelihoods', create=True,

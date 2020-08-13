@@ -44,7 +44,7 @@ class Initializer:
     Generates SMCStep objects based on either samples from a prior distribution
     or given input samples from a sampling distribution.
     '''
-    def __init__(self, mcmc_kernel, mpi_comm=SingleRankComm()):
+    def __init__(self, mcmc_kernel):
         self.mcmc_kernel = mcmc_kernel
 
     @property

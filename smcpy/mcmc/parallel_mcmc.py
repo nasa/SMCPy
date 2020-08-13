@@ -18,4 +18,4 @@ class ParallelMCMC(MCMCBase):
         partitioned_outputs = []
         for input_ in partitioned_inputs:
             partitioned_outputs.append(self._eval_model(input_))
-        return self._comm.gather(np.array(partitioned_outputs), root=0)
+        return self._comm.allgather(np.array(partitioned_outputs))[0]

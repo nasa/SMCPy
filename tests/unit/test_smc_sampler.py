@@ -45,7 +45,7 @@ def test_sample(mocker, prog_bar):
     step_list, _ = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
                               ess_threshold, prog_bar)
 
-    init.assert_called_once_with(smc._mcmc_kernel, phi_sequence[1])
+    init.assert_called_once_with(smc._mcmc_kernel)
     upd.assert_called_once_with(ess_threshold)
     mut.assert_called_once_with(smc._mcmc_kernel)
     np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[1:])

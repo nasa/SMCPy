@@ -47,7 +47,7 @@ class SMCSampler:
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
                ess_threshold, progress_bar=False):
 
-        initializer = Initializer(self._mcmc_kernel, phi_sequence[0])
+        initializer = Initializer(self._mcmc_kernel)
         updater = Updater(ess_threshold)
         mutator = Mutator(self._mcmc_kernel)
 

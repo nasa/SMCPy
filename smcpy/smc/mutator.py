@@ -31,31 +31,26 @@ AGREEMENT.
 '''
 
 
-from .mpi_base_class import MPIBaseClass
 from .particles import Particles
 from ..mcmc.kernel_base import MCMCKernel
-from ..utils.single_rank_comm import SingleRankComm
 from copy import copy
 import numpy as np
 
 
-class Mutator(MPIBaseClass):
+class Mutator:
     '''
     Mutates particles using an MCMC kernel.
     '''
-    def __init__(self, mcmc_kernel, mpi_comm=SingleRankComm()):
+    def __init__(self, mcmc_kernel):
         self.mcmc_kernel = mcmc_kernel
-        super().__init__(mpi_comm)
 
     def mutate(self, particles, phi, num_samples):
         cov = particles.compute_covariance()
-        particles = self.partition_and_scatter_particles(particles)
         mutated = self.mcmc_kernel.mutate_particles(particles.param_dict,
                                                     particles.log_likes,
                                                     num_samples,
                                                     cov, phi)
         particles = Particles(mutated[0], mutated[1], particles.log_weights)
-        particles = self._comm.gather(particles, root=0)[0]
         return particles
 
     @property

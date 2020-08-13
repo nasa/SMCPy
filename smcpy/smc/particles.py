@@ -38,37 +38,6 @@ import warnings
 from smcpy.utils.checks import Checks
 
 
-def _mpi_decorator(func):
-
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        """
-        Detects whether multiple processors are available and sets
-        self.number_CPUs and self.cpu_rank accordingly. Only calls decorated
-        function using rank 0.
-        """
-        try:
-            importlib.find_module('mpi4py')
-
-            from mpi4py import MPI
-            comm = MPI.COMM_WORLD.Clone()
-
-            size = comm.size
-            rank = comm.rank
-            comm = comm
-
-        except ImportError:
-
-            size = 1
-            rank = 0
-            comm = SingleRankComm()
-
-        if rank == 0:
-            func(self, *args, **kwargs)
-
-    return wrapper
-
-
 def package_for_user(func):
 
     @functools.wraps(func)

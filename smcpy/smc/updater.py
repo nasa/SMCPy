@@ -32,12 +32,10 @@ AGREEMENT.
 
 import numpy as np
 
-from .mpi_base_class import MPIBaseClass
 from .particles import Particles
-from ..utils.single_rank_comm import SingleRankComm
 
 
-class Updater(MPIBaseClass):
+class Updater:
     '''
     Updates particle weights (and resamples if necessary) based on delta phi
     and particle state.

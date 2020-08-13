@@ -16,9 +16,9 @@ class StubParticles:
 
 
 @pytest.fixture
-def initializer(stub_mcmc_kernel, stub_comm, mocker):
+def initializer(stub_mcmc_kernel, mocker):
     mocker.patch('smcpy.smc.initializer.Particles', new=StubParticles)
-    initializer = Initializer(stub_mcmc_kernel, mpi_comm=stub_comm)
+    initializer = Initializer(stub_mcmc_kernel)
     return initializer
 
 
