@@ -1,26 +1,18 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas
-import pymc3 as pm
-import sys
-import time
 
-from copy import copy
-from multiprocessing import Pool
-from scipy.optimize import minimize
+from mpi4py import MPI
 from scipy.stats import uniform
 
-from smcpy.mcmc.vector_mcmc import VectorMCMC
+from smcpy.mcmc.parallel_mcmc import ParallelMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import SMCSampler
-
-from model import Model
 
 
 def gen_noisy_data(eval_model, std_dev, plot=True):
     y_true = eval_model(np.array([[2, 3.5]]))
     noisy_data = y_true + np.random.normal(0, std_dev, y_true.shape)
-    if plot:
+    if plot and MPI.COMM_WORLD.Clone().Get_rank() == 0:
         plot_noisy_data(x, y_true, noisy_data)
     return noisy_data
 
@@ -38,30 +30,30 @@ if __name__ == '__main__':
 
     np.random.seed(200)
 
-    x = np.arange(100)
+    x = np.linspace(1, 5, 100)
     def eval_model(theta):
         a = theta[:, 0, None]
         b = theta[:, 1, None]
         return a * x + b
 
-    std_dev = 2
+    std_dev = 0.5
     noisy_data = gen_noisy_data(eval_model, std_dev, plot=False)
 
-    # set analysis params
-    num_repeats = 500
-    n_processors = 2
-
-    # set smc params
-    num_particles = 500
+    # configure
+    num_particles = 1000
+    num_smc_steps = 20
     num_mcmc_samples = 10
     ess_threshold = 0.8
     priors = [uniform(0., 6.), uniform(0., 6.)]
 
-    parallel_mcmc = ParallelMCMC(eval_model, noisy_data, priors, std_dev)
+    comm = MPI.COMM_WORLD.Clone()
+    parallel_mcmc = ParallelMCMC(eval_model, noisy_data, priors, std_dev, comm)
 
     phi_sequence = np.linspace(0, 1, num_smc_steps)
 
     mcmc_kernel = VectorMCMCKernel(parallel_mcmc, param_order=('a', 'b'))
-    step_list, evidence = SMCSampler(mcmc_kernel)
+    smc = SMCSampler(mcmc_kernel)
+    step_list, evidence = smc.sample(num_particles, num_mcmc_samples,
+                                     phi_sequence, ess_threshold)
 
-    print(step_list[-1].get_mean())
+    print('mean vector = {}'.format(step_list[-1].compute_mean()))

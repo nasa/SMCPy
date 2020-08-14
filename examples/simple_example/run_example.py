@@ -16,7 +16,6 @@ from smcpy import SMCSampler
 
 from model import Model
 
-
 def plot_noisy_data(x, y_true, noisy_data):
     fig, ax = plt.subplots(1)
     ax.plot(x.flatten(), y_true.flatten(), '-k')
@@ -81,6 +80,13 @@ def run_and_time_mcmc(priors, num_particles, num_smc_steps, num_mcmc_samples,
 
 def run_and_time_pymc3smc(model, num_particles, ess_threshold,
                           num_mcmc_samples):
+    # turn off pymc3 stdout
+    import logging
+    logger = logging.getLogger("pymc3")
+    logger.propagate = False
+    logger.setLevel(logging.ERROR)
+
+
     time0 = time.time()
     with model:
         trace = pm.sample_smc(draws=num_particles, n_steps=num_mcmc_samples,
@@ -120,6 +126,9 @@ def generate_pymc3_model(priors, std_dev):
 def run_one_repeat(vector_mcmc, num_particles, num_mcmc_samples,
                    ess_threshold, priors, init_cov, adapt_interval,
                    burnin_ratio, pymc3_model):
+    print('+')
+    import sys
+    sys.stdout.flush()
 
     row_dict = {'num_smc_steps': [], 'smcpy_mean_a': [], 'smcpy_mean_b': [],
                 'smcpy_mll': [], 'mcmc_mean_a': [], 'mcmc_mean_b': [],
@@ -138,9 +147,10 @@ def run_one_repeat(vector_mcmc, num_particles, num_mcmc_samples,
         row_dict['smcpy_mean_b'].append(outputs[0]['b'])
         row_dict['smcpy_mll'].append(outputs[1])
 
-        outputs = run_and_time_mcmc(priors, num_particles, num_smc_steps,
-                                    num_mcmc_samples, init_cov,
-                                    adapt_interval, burnin_ratio, plot=False)
+        #outputs = run_and_time_mcmc(priors, num_particles, num_smc_steps,
+        #                            num_mcmc_samples, init_cov,
+        #                            adapt_interval, burnin_ratio, plot=False)
+        outputs = [(np.nan, np.nan), np.nan]
 
         row_dict['mcmc_mean_a'].append(outputs[0][0])
         row_dict['mcmc_mean_b'].append(outputs[0][1])
@@ -172,13 +182,13 @@ if __name__ == '__main__':
     noisy_data = generate_data(eval_model, std_dev, plot=False)
 
     # set analysis params
-    num_repeats = 500
+    num_repeats = 20
     n_processors = 10
 
     # set smc params
     num_particles = 500
     num_mcmc_samples = 10
-    ess_threshold = 1.
+    ess_threshold = 0.75
     priors = [uniform(0., 6.), uniform(0., 6.)]
 
     # set mcmc params
@@ -192,12 +202,14 @@ if __name__ == '__main__':
     pymc3_model = generate_pymc3_model(priors, std_dev)
 
     # run samplers in parallel varying smc steps
-    pool = Pool(n_processors)
+    #pool = Pool(n_processors)
     args = (vector_mcmc, num_particles, num_mcmc_samples, ess_threshold, priors,
             init_cov, adapt_interval, burnin_ratio, pymc3_model)
-    res = [pool.apply_async(run_one_repeat, args) for i in range(num_repeats)]
-    pool.close()
-    pool.join()
-
-    df = pandas.concat([r.get() for r in res]).reset_index(drop=True)
+    #res = [pool.apply_async(run_one_repeat, args) for i in range(num_repeats)]
+    res = [run_one_repeat(*args) for i in range(num_repeats)]
+    #res = [pool.apply_async(run_one_repeat, args) for i in range(num_repeats)]
+    #pool.close()
+    #pool.join()
+    #df = pandas.concat([r.get() for r in res]).reset_index(drop=True)
+    df = pandas.concat([r for r in res]).reset_index(drop=True)
     df.to_hdf('sampling_data.h5', key='data')
