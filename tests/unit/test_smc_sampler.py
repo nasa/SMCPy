@@ -22,8 +22,9 @@ def step_list(phi_sequence, mocker):
     return step_list
 
 
+@pytest.mark.parametrize('rank', [0, 1, 2])
 @pytest.mark.parametrize('prog_bar', [True, False])
-def test_sample(mocker, prog_bar):
+def test_sample(mocker, rank, prog_bar):
     init = mocker.patch('smcpy.smc_sampler.Initializer', autospec=True)
     upd = mocker.patch('smcpy.smc_sampler.Updater', autospec=True)
     mut = mocker.patch('smcpy.smc_sampler.Mutator', autospec=True)
@@ -37,13 +38,17 @@ def test_sample(mocker, prog_bar):
                                 return_value=phi_sequence[2:])
 
     mcmc_kernel = mocker.Mock()
+    mcmc_kernel._mcmc = mocker.Mock()
+    mcmc_kernel._mcmc._rank = rank
+    comm = mcmc_kernel._mcmc._comm = mocker.Mock()
+    mocker.patch.object(comm, 'bcast', new=lambda x, root: x)
     ess_threshold = 0.2
 
-    smc = SMCSampler(mocker.Mock())
+    smc = SMCSampler(mcmc_kernel)
     mut_ratio = mocker.patch.object(smc, '_compute_mutation_ratio')
     mll_est = mocker.patch.object(smc, '_estimate_marginal_log_likelihood')
-    step_list, _ = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
-                              ess_threshold, prog_bar)
+    step_list, mll = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
+                                ess_threshold, prog_bar)
 
     init.assert_called_once_with(smc._mcmc_kernel)
     upd.assert_called_once_with(ess_threshold)
@@ -53,7 +58,7 @@ def test_sample(mocker, prog_bar):
     mll_est.assert_called_once()
 
     assert len(step_list) == len(phi_sequence) - 1
-
+    assert mll is not None
     iterable = zip(mut_ratio.call_args_list, step_list[1:], step_list[:-1])
     for call, new_particles, old_particles in iterable:
         assert call[0][0] == old_particles

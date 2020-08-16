@@ -38,12 +38,16 @@ from .smc.initializer import Initializer
 from .smc.updater import Updater
 from .smc.mutator import Mutator
 from .utils.progress_bar import set_bar
+from .utils.mpi_utils import rank_zero_output_only
+
+
 
 class SMCSampler:
 
     def __init__(self, mcmc_kernel):
         self._mcmc_kernel = mcmc_kernel
 
+    @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
                ess_threshold, progress_bar=False):
 
