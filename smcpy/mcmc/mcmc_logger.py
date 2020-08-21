@@ -11,7 +11,8 @@ class MCMCLogger:
         if debug:
             self._logger.setLevel(10)
 
-    def _log_sample(self, inputs, log_likes, log_priors, iter_, proposed):
+    def _write_sample_to_log(self, inputs, log_likes, log_priors, iter_,
+                             proposed):
         if self._logger.isEnabledFor(logging.DEBUG):
             self._logger.debug('{:*^30}'.format(' iteration {} '.format(iter_)))
             self._logger.debug('proposed = {}'.format(proposed))
@@ -19,12 +20,12 @@ class MCMCLogger:
             self._logger.debug('log_likes = {}'.format(log_likes))
             self._logger.debug('log_priors = {}\n'.format(log_priors))
 
-    def _log_acceptance(self, accpt_ratio, u):
+    def _write_accpt_to_log(self, accpt_ratio, u):
         if self._logger.isEnabledFor(logging.DEBUG):
             self._logger.debug('acceptance ratio = {}'.format(accpt_ratio))
             self._logger.debug('u = {}'.format(u))
             self._logger.debug('accepted = {}'.format(accpt_ratio > u))
 
-    def _log_cov(self, cov):
+    def _write_cov_to_log(self, cov):
         if self._logger.isEnabledFor(logging.DEBUG):
             self._logger.debug('cov = {}'.format(cov))
