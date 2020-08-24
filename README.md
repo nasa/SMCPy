@@ -5,15 +5,9 @@ SMCPy - **S**equential **M**onte **C**arlo **S**ampling with **Py**thon
 Python module for uncertainty quantification using a parallel sequential Monte
 Carlo sampler.
 
-To operate the code, the user supplies a computational model built in Python
-2.7, defines prior distributions for each of the model parameters to be
-estimated, and provides data to be used for calibration. SMC sampling can then
-be conducted with ease through instantiation of the SMC class and a call to the
-sample() method. The output of this process is an approximation of the parameter
-posterior probability distribution conditional on the data provided.
+To use the code, the user provides a complex model built into Python 2.7, defines the previous distribution of each model column to be measured, and provides data to be used for measurement. The SMC sample can be easily processed by the SMC class exposure and by calling the sample method (). The result of this process is the specification of the parameter distribution parameters of the given data.
 
-The primary sampling algorithm implemented in this package is an MPI-enabled
-version of that presented in the following IEEE article by Nguyen et al.:
+The basic sample algorithm used in this package is the MPI-enabled version of that presentation in the next IEEE text by Nguyen et al
 
 > Nguyen, Thi Le Thu, et al. "Efficient sequential Monte-Carlo samplers for Bayesian
 > inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
