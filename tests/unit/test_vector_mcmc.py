@@ -171,9 +171,6 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
-    vector_mcmc._priors = [mocker.Mock(DummyPrior, autospec=True),
-                           mocker.Mock(DummyPrior, autospec=True),
-                           mocker.Mock(DummyPrior, autospec=True)]
 
     mocker.patch('numpy.random.uniform')
     mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
@@ -182,19 +179,18 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     mocker.patch.object(vector_mcmc, 'selection',
                         new=lambda new_log_like, x, y, z: new_log_like)
     log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
-                                   return_value = inputs * 2)
+                                   return_value=inputs[:, 0].reshape(-1, 1) * 2)
 
     new_inputs, new_log_likes = vector_mcmc.smc_metropolis(inputs, num_samples,
                                                            cov, phi)
 
     expected_new_inputs = inputs + num_samples
-    expected_new_log_likes = inputs * 2
+    expected_new_log_likes = inputs[:, 0].reshape(-1, 1) * 2
 
     np.testing.assert_array_equal(new_inputs, expected_new_inputs)
     np.testing.assert_array_equal(new_log_likes, expected_new_log_likes)
 
     assert log_like.call_count == num_samples + 1
-    assert vector_mcmc._priors[0].pdf.call_count == num_samples + 1
 
 
 @pytest.mark.parametrize('adapt_delay', (0, 2, 4))
@@ -205,9 +201,6 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
     inputs = np.ones([10, 3])
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
-    vector_mcmc._priors = [mocker.Mock(DummyPrior, autospec=True),
-                           mocker.Mock(DummyPrior, autospec=True),
-                           mocker.Mock(DummyPrior, autospec=True)]
 
     mocker.patch('numpy.random.uniform')
 
@@ -216,7 +209,8 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
                     side_effect=[inputs + i for i in range(1, num_samples + 1)])
     mocker.patch.object(vector_mcmc, 'selection',
                         new=lambda new_log_like, x, y, z: new_log_like)
-    log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood')
+    log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
+                                   return_value=np.zeros((inputs.shape[0], 1)))
     adapt = mocker.patch.object(vector_mcmc, 'adapt_proposal_cov')
 
     expected_chain = np.zeros([10, 3, num_samples + 1])
@@ -234,5 +228,48 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
         num_expected_adapt_calls = num_samples - adapt_delay
 
     assert log_like.call_count == num_samples + 1
-    assert vector_mcmc._priors[0].pdf.call_count == num_samples + 1
     assert adapt.call_count == num_expected_adapt_calls
+
+
+@pytest.mark.parametrize('num_chains', (1, 3, 5))
+@pytest.mark.parametrize('method', ('smc_metropolis', 'metropolis'))
+def test_metropolis_inputs_out_of_bounds(mocker, stub_model, data, num_chains,
+                                         method):
+    vmcmc = VectorMCMC(stub_model, data, priors, std_dev=1)
+    mocker.patch.object(vmcmc, 'evaluate_log_priors',
+                        return_value=np.ones((num_chains, 1)) * -np.inf)
+
+    with pytest.raises(ValueError):
+        vmcmc.__getattribute__(method)(np.ones((1, 3)), num_samples=0, cov=None,
+                                       phi=None)
+
+
+def test_metropolis_no_like_calc_if_zero_prior_prob(mocker, data):
+    mocked_model = mocker.Mock(side_effect=[np.ones((5, 3)),
+                                            np.tile(data, (3, 1))])
+    input_params = np.ones((5,3)) * 0.1
+    
+    some_zero_priors = np.ones((5, 3)) * 2
+    some_zero_priors[1, 0] = -np.inf
+    some_zero_priors[4, 2] = -np.inf
+
+    mocked_proposal = np.ones((5, 3)) * 0.2
+    mocked_proposal[2, 0] = 0.3
+
+    vmcmc = VectorMCMC(mocked_model, data, priors=None, std_dev=1)
+    mocker.patch.object(vmcmc, '_check_log_priors_for_zero_probability')
+    mocker.patch.object(vmcmc, 'proposal', return_value=mocked_proposal)
+    mocker.patch.object(vmcmc, 'evaluate_log_priors',
+                        side_effect=[np.ones((5, 3)), some_zero_priors])
+
+    expected_chain = np.zeros((5, 3, 2))
+    expected_chain[:, :, 0] = input_params
+    expected_chain[:, :, 1] = mocked_proposal
+    expected_chain[1, :, 1] = expected_chain[1, :, 0]
+    expected_chain[4, :, 1] = expected_chain[1, :, 0]
+
+    chain = vmcmc.metropolis(input_params, num_samples=1, cov=np.eye(3))
+
+    np.testing.assert_array_equal(mocked_model.call_args[0][0],
+                                  mocked_proposal[[0, 2, 3]])
+    np.testing.assert_array_equal(chain, expected_chain)

@@ -31,9 +31,12 @@ class MCMCBase(ABC, MCMCLogger):
         return np.hstack(samples)
 
     def evaluate_log_priors(self, inputs):
-        log_priors = [np.log(p.pdf(inputs.T[i]).reshape(-1, 1)) \
-                      for i, p in enumerate(self._priors)]
-        return np.hstack(log_priors)
+        priors = np.hstack([p.pdf(inputs.T[i]).reshape(-1, 1) \
+                            for i, p in enumerate(self._priors)])
+        nonzero_priors = priors != 0
+        log_priors = np.ones(priors.shape) * -np.inf
+        log_priors = np.log(priors, where=nonzero_priors, out=log_priors)
+        return log_priors
 
     @abstractmethod
     def evaluate_model(self, inputs):
@@ -87,15 +90,17 @@ class MCMCBase(ABC, MCMCLogger):
         return cov
 
     def smc_metropolis(self, inputs, num_samples, cov, phi):
-        log_like = self.evaluate_log_likelihood(inputs)
         log_priors = self.evaluate_log_priors(inputs)
+        self._check_log_priors_for_zero_probability(log_priors)
+        log_like = self.evaluate_log_likelihood(inputs)
     
         for i in range(num_samples):
 
             new_inputs = self.proposal(inputs, cov)
-            new_log_like = self.evaluate_log_likelihood(new_inputs)
             new_log_priors = self.evaluate_log_priors(new_inputs)
-    
+            new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors,
+                                                                new_inputs)
+
             accpt_ratio = self.acceptance_ratio(new_log_like * phi,
                                                 log_like * phi,
                                                 new_log_priors, log_priors)
@@ -110,22 +115,25 @@ class MCMCBase(ABC, MCMCLogger):
         return inputs, log_like
 
     def metropolis(self, inputs, num_samples, cov, adapt_interval=None,
-                   adapt_delay=0):
+                   adapt_delay=0, **kwargs):
         chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
         chain[:, :, 0] = inputs
 
-        log_like = self.evaluate_log_likelihood(inputs)
         log_priors = self.evaluate_log_priors(inputs)
+        self._check_log_priors_for_zero_probability(log_priors)
+        log_like = self.evaluate_log_likelihood(inputs)
 
-        self._log_sample(inputs, log_like, log_priors, 0, False)
+        self._write_sample_to_log(inputs, log_like, log_priors, 0, False)
     
         for i in range(num_samples):
     
             new_inputs = self.proposal(inputs, cov)
-            new_log_like = self.evaluate_log_likelihood(new_inputs)
             new_log_priors = self.evaluate_log_priors(new_inputs)
-    
-            self._log_sample(new_inputs, new_log_like, new_log_priors,i, True)
+            new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors,
+                                                                new_inputs)
+
+            self._write_sample_to_log(new_inputs, new_log_like, new_log_priors,
+                                      i, True)
 
             accpt_ratio = self.acceptance_ratio(new_log_like, log_like,
                                                 new_log_priors, log_priors)
@@ -137,13 +145,24 @@ class MCMCBase(ABC, MCMCLogger):
             log_priors = self.selection(new_log_priors, log_priors,
                                         accpt_ratio, u)
 
-            self._log_acceptance(accpt_ratio, u)
+            self._write_accpt_to_log(accpt_ratio, u)
 
             chain[:, :, i + 1] = inputs
 
             if adapt_interval is not None and i > adapt_delay - 1:
                 cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval)
 
-            self._log_cov(cov)
+            self._write_cov_to_log(cov)
 
         return chain
+
+    def _check_log_priors_for_zero_probability(self, log_priors):
+        if (log_priors == -np.inf).any():
+            raise ValueError('Initial inputs are out of bounds; '
+                              f'prior log prob = {log_priors}')
+
+    def _eval_log_like_if_prior_nonzero(self, log_priors, inputs):
+        pos_rows = ~(log_priors == -np.inf).any(axis=1)
+        log_likes = np.zeros((log_priors.shape[0], 1))
+        log_likes[pos_rows] = self.evaluate_log_likelihood(inputs[pos_rows])
+        return log_likes
