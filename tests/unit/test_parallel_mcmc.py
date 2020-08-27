@@ -46,14 +46,14 @@ def test_mpi_eval_model(mocker, mock_comm):
 
     mock_model = lambda x: x[:, :2]
 
-    pmcmc = ParallelMCMC(mock_model, data=None, priors=None, std_dev=None,
-                         mpi_comm=mock_comm)
+    pmcmc = ParallelMCMC(mock_model, data=inputs[0, :2].flatten(), priors=None,
+                         std_dev=None, mpi_comm=mock_comm)
     output = pmcmc.evaluate_model(inputs)
 
     np.testing.assert_array_equal(
                               np.concatenate(mock_comm.scatter.call_args[0][0]),
                               np.concatenate(expected_scatter_input))
-    assert mock_comm.scatter.call_args[1] == {'root': 0}
     np.testing.assert_array_equal(mock_comm.allgather.call_args[0][0],
                                   expected_gather_input)
+    assert mock_comm.scatter.call_args[1] == {'root': 0}
     np.testing.assert_array_equal(output, inputs[:, :2])

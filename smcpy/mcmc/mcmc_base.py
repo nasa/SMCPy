@@ -159,7 +159,7 @@ class MCMCBase(ABC, MCMCLogger):
     def _check_log_priors_for_zero_probability(self, log_priors):
         if (log_priors == -np.inf).any():
             raise ValueError('Initial inputs are out of bounds; '
-                              f'prior log prob = {log_priors}')
+                             f'prior log prob = {log_priors}')
 
     def _eval_log_like_if_prior_nonzero(self, log_priors, inputs):
         pos_rows = ~(log_priors == -np.inf).any(axis=1)
