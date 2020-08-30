@@ -57,3 +57,37 @@ def test_mpi_eval_model(mocker, mock_comm):
                                   expected_gather_input)
     assert mock_comm.scatter.call_args[1] == {'root': 0}
     np.testing.assert_array_equal(output, inputs[:, :2])
+
+
+def test_mismatch_input_and_gathered_shape(mock_comm, mocker):
+    '''
+    This can happen when positive ranks have more or less zero prior probability
+    inputs (i.e., inputs.shape is different) than rank 0.
+    '''
+    pmcmc = ParallelMCMC(model=None, data=None, priors=None, std_dev=None,
+                         mpi_comm=mock_comm)
+
+    size = mock_comm.size
+    rank = mock_comm.rank
+
+    rank_0_inputs = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+
+    other_rank_inputs = np.array([[10, 11, 12]])
+    if rank == 0:
+        other_rank_inputs = rank_0_inputs
+
+    expected_scatter_input = np.array_split(rank_0_inputs, size)
+    expected_gather_input = expected_scatter_input[rank][:, :2]
+
+    mocker.patch.object(mock_comm, 'scatter',
+                        return_value=expected_scatter_input[rank])
+    mocker.patch.object(mock_comm, 'allgather', return_value=\
+                        [y[:, :2] for y in expected_scatter_input])
+
+    mock_model = lambda x: x[:, :2]
+
+    pmcmc = ParallelMCMC(mock_model, data=rank_0_inputs[0, :2].flatten(),
+                         priors=None, std_dev=None, mpi_comm=mock_comm)
+    output = pmcmc.evaluate_model(other_rank_inputs)
+
+    assert output.shape[0] == other_rank_inputs.shape[0]

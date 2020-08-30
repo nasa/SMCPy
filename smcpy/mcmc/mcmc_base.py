@@ -162,7 +162,11 @@ class MCMCBase(ABC, MCMCLogger):
                              f'prior log prob = {log_priors}')
 
     def _eval_log_like_if_prior_nonzero(self, log_priors, inputs):
-        pos_rows = ~(log_priors == -np.inf).any(axis=1)
+        pos_rows = self._row_has_nonzero_prior_probability(log_priors)
         log_likes = np.zeros((log_priors.shape[0], 1))
         log_likes[pos_rows] = self.evaluate_log_likelihood(inputs[pos_rows])
         return log_likes
+
+    @staticmethod
+    def _row_has_nonzero_prior_probability(log_priors):
+        return ~(log_priors == -np.inf).any(axis=1)
