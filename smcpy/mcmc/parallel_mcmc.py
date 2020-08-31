@@ -36,8 +36,7 @@ class ParallelMCMC(MCMCBase):
         outputs = self._match_output_and_input_shape(outputs, inputs)
         return outputs
 
-    @staticmethod
-    def _match_output_and_input_shape(outputs, inputs):
+    def _match_output_and_input_shape(self, outputs, inputs):
         '''
         Because inputs with zero prior probability are not passed to the
         evaluate_model function of an MCMCBase-derived class, there can be a
@@ -45,4 +44,6 @@ class ParallelMCMC(MCMCBase):
         rank 0. This method corrects for this shape mismatch on return. This is
         another example of why it is important to only use rank 0 outputs.
         '''
-        return outputs[:inputs.shape[0]]
+        if self._rank == 0:
+            return outputs
+        return np.zeros((inputs.shape[0], self._data.size))
