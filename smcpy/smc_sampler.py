@@ -72,12 +72,13 @@ class SMCSampler:
             mutation_ratio = self._compute_mutation_ratio(*step_list[-2:])
             set_bar(phi_iterator, i + 2, mutation_ratio, updater)
 
-        return step_list, self._estimate_marginal_log_likelihood(updater)
+        return step_list, self._estimate_marginal_log_likelihoods(updater)
 
-    def _estimate_marginal_log_likelihood(self, updater):
-        summed_un_log_wts = [self._logsum(ulw) \
-                             for ulw in updater._unnorm_log_weights]
-        return np.sum(summed_un_log_wts)
+    def _estimate_marginal_log_likelihoods(self, updater):
+        sum_un_log_wts = [self._logsum(ulw) \
+                          for ulw in updater._unnorm_log_weights]
+        num_updates = len(sum_un_log_wts)
+        return [0] + [np.sum(sum_un_log_wts[:i+1]) for i in range(num_updates)]
 
     @staticmethod
     def _logsum(Z):

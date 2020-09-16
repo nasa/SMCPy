@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 from scipy.stats import uniform
 
@@ -8,8 +9,7 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import SMCSampler
 
 def eval_model(theta):
-    import time
-    time.sleep(0.1)
+    time.sleep(0.1) # artificial slowdown to show off progress bar
     a = theta[:, 0, None]
     b = theta[:, 1, None]
     return a * np.arange(100) + b
@@ -45,9 +45,9 @@ if __name__ == '__main__':
 
     smc = SMCSampler(mcmc_kernel)
     phi_sequence = np.linspace(0, 1, 20)
-    step_list, mll = smc.sample(num_particles=500, num_mcmc_samples=5,
-                                phi_sequence=phi_sequence, ess_threshold=1.0,
-                                progress_bar=True)
+    step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
+                                     phi_sequence=phi_sequence,
+                                     ess_threshold=1.0, progress_bar=True)
 
-    print('marginal log likelihood = {}'.format(mll))
+    print('marginal log likelihood = {}'.format(mll_list[-1]))
     print('parameter means = {}'.format(step_list[-1].compute_mean()))

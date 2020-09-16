@@ -46,7 +46,7 @@ def test_sample(mocker, rank, prog_bar):
 
     smc = SMCSampler(mcmc_kernel)
     mut_ratio = mocker.patch.object(smc, '_compute_mutation_ratio')
-    mll_est = mocker.patch.object(smc, '_estimate_marginal_log_likelihood')
+    mll_est = mocker.patch.object(smc, '_estimate_marginal_log_likelihoods')
     step_list, mll = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
                                 ess_threshold, prog_bar)
 
@@ -65,12 +65,14 @@ def test_sample(mocker, rank, prog_bar):
         assert call[0][1] == new_particles
 
 
-def test_marginal_likelihood_estimator(mocker):
+@pytest.mark.parametrize('steps', [2, 3, 4, 10])
+def test_marginal_likelihood_estimator(mocker, steps):
     updater = mocker.Mock()
-    updater._unnorm_log_weights = [np.ones((5, 1)) for _ in range(5)]
-    Z_exp = np.prod([np.sum(np.exp(uw)) for uw in updater._unnorm_log_weights])
-    Z = SMCSampler(None)._estimate_marginal_log_likelihood(updater)
-    assert Z == np.log(Z_exp)
+    unnorm_weights = np.ones((5, 1))
+    updater._unnorm_log_weights = [np.log(unnorm_weights) for _ in range(steps)]
+    expected_Z = [1] + [5 ** (i + 1) for i in range(steps)]
+    Z = SMCSampler(None)._estimate_marginal_log_likelihoods(updater)
+    np.testing.assert_array_almost_equal(Z, np.log(expected_Z))
 
 
 @pytest.mark.parametrize('new_param_array, expected_ratio',
