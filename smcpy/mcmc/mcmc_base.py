@@ -1,5 +1,7 @@
-from abc import ABC, abstractmethod
 import numpy as np
+
+from abc import ABC, abstractmethod
+from tqdm import tqdm
 
 from .mcmc_logger import MCMCLogger
 
@@ -115,7 +117,7 @@ class MCMCBase(ABC, MCMCLogger):
         return inputs, log_like
 
     def metropolis(self, inputs, num_samples, cov, adapt_interval=None,
-                   adapt_delay=0, **kwargs):
+                   adapt_delay=0, progress_bar=False, **kwargs):
         chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
         chain[:, :, 0] = inputs
 
@@ -125,7 +127,7 @@ class MCMCBase(ABC, MCMCLogger):
 
         self._write_sample_to_log(inputs, log_like, log_priors, 0, False)
     
-        for i in range(num_samples):
+        for i in tqdm(range(num_samples), disable=not progress_bar):
     
             new_inputs = self.proposal(inputs, cov)
             new_log_priors = self.evaluate_log_priors(new_inputs)
