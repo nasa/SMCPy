@@ -136,7 +136,9 @@ class Particles(Checks):
         '''
         shifted_weights = np.exp(log_weights - max(log_weights))
         normalized_weights = shifted_weights / sum(shifted_weights)
-        return np.log(normalized_weights)
+        log_zero_weights = np.ones(normalized_weights.shape) * -np.inf
+        return np.log(normalized_weights, out=log_zero_weights,
+                      where=normalized_weights > 0)
 
     def copy(self):
         '''
