@@ -34,6 +34,7 @@ import imp
 import numpy as np
 import matplotlib.pyplot as plt
 
+from scipy.stats import gaussian_kde
 
 def _mpi_decorator(func):
     def wrapper(self, *args, **kwargs):
@@ -87,14 +88,39 @@ def _mpi_decorator(func):
 #    return None
 
 def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
-                    prefix='mcmc_chain'):
-    fig, ax = plt.subplots(chain.shape[1])
+                    include_kde=False, prefix='mcmc_chain'):
+    n_columns = 1
+    gridspec = None
+    if include_kde:
+        n_columns += 1
+        gridspec = {'width_ratios': [0.85, 0.15], 'wspace': 0.0}
+
+    fig, ax = plt.subplots(chain.shape[1], n_columns, sharey='row',
+                           gridspec_kw=gridspec)
+
     chain = chain[:, :, burnin:]
     for i, name in enumerate(param_labels):
         for parallel_chain in chain:
-            ax[i].plot(parallel_chain[i], '-')
-        ax[i].set_ylabel(name)
-    ax[-1].set_xlabel('sample #')
+            ax[i, 0].plot(parallel_chain[i], '-')
+
+            if include_kde:
+                ylims = ax[i, 0].get_ylim()
+                x = np.linspace(ylims[0], ylims[1], 1000)
+                kde = gaussian_kde(parallel_chain[i])
+                ax[i, 1].plot(kde.pdf(x), x, '-')
+                ax[i, 1].fill_betweenx(x, kde.pdf(x), np.zeros(x.shape),
+                                      alpha=0.3)
+
+        if include_kde:
+            ax[i, 1].set_xlim(0, None)
+            ax[i, 1].axis('off')
+
+
+        ax[i, 0].set_ylabel(name)
+        ax[i, 0].set_xlim(0, chain.shape[2]) 
+
+    ax[chain.shape[1] - 1, 0].set_xlabel('sample #')
+    ax[chain.shape[1] - 1, 1].set_xlabel('probability density')
 
     plt.tight_layout()
 
@@ -110,7 +136,8 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
 def plot_pairwise(samples, weights=None, param_names=None,
                   param_labels=None, save=False, show=True,
                   param_limits=None, label_size=None, tick_size=None,
-                  num_xbins=None, prefix='pairwise'):  # pragma no cover
+                  num_xbins=None, true_params=None,
+                  prefix='pairwise'):  # pragma no cover
     '''
     Plots pairwise distributions of all parameter combos. Color codes each
     by weight if provided.
@@ -183,6 +210,10 @@ def plot_pairwise(samples, weights=None, param_names=None,
                                       linestyle='--')
         ax[key1 + '+' + key2].axhline(means[ikey2], color='C1',
                                       linestyle='--')
+
+        if true_params is not None:
+            truth = (true_params[ikey1], true_params[ikey2])
+            ax[key1 + '+' + key2].plot(truth[0], truth[1], '*y')
 
         ax[key1 + '+' + key2].set_xlabel(label_dict[key1])
         ax[key1 + '+' + key2].set_ylabel(label_dict[key2])
