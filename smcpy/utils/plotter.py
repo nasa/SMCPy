@@ -95,7 +95,7 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
         n_columns += 1
         gridspec = {'width_ratios': [0.85, 0.15], 'wspace': 0.0}
 
-    fig, ax = plt.subplots(chain.shape[1], n_columns, sharey='row',
+    fig, ax = plt.subplots(len(param_labels), n_columns, sharey='row',
                            gridspec_kw=gridspec)
 
     chain = chain[:, :, burnin:]
@@ -119,8 +119,8 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
         ax[i, 0].set_ylabel(name)
         ax[i, 0].set_xlim(0, chain.shape[2]) 
 
-    ax[chain.shape[1] - 1, 0].set_xlabel('sample #')
-    ax[chain.shape[1] - 1, 1].set_xlabel('probability density')
+    ax[len(param_labels) - 1, 0].set_xlabel('sample #')
+    ax[len(param_labels) - 1, 1].set_xlabel('probability density')
 
     plt.tight_layout()
 
