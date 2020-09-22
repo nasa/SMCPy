@@ -118,7 +118,9 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
 
         ax[i, 0].set_ylabel(name)
         ax[i, 0].set_xlim(0, chain.shape[2]) 
+        ax[i, 0].get_xaxis().set_visible(False)
 
+    ax[len(param_labels) - 1, 0].get_xaxis().set_visible(True)
     ax[len(param_labels) - 1, 0].set_xlabel('sample #')
     ax[len(param_labels) - 1, 1].set_xlabel('probability density')
 
