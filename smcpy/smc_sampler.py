@@ -50,6 +50,26 @@ class SMCSampler:
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
                ess_threshold, progress_bar=False):
+        '''
+        :param num_particles: number of particles
+        :type num_particles: int
+        :param num_mcmc_samples: number of MCMC samples to draw from the
+            MCMC kernel per iteration per particle
+        :type num_mcmc_samples: int
+        :param phi_sequence: increasing monotonic sequence of floats starting
+            at 0 and ending at 1; sometimes referred to as tempering schedule
+        :type phi_sequence: list or array
+        :param ess_threshold: the effective sample size at which resampling
+            should be conducted; given as a fraction of num_particles and must
+            be in the range [0, 1]
+        :type ess_threshold: float
+        :param proposal_array: samples from a proposal distribution used to
+            initialize the SMC sampler; first column is proposal probabilities
+            and remaining columns are parameters
+        :type proposal_array: 2D array
+        :param progress_bar: display progress bar during sampling
+        :type progress_bar: bool
+        '''
 
         initializer = Initializer(self._mcmc_kernel)
         updater = Updater(ess_threshold)
