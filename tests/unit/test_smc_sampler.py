@@ -48,7 +48,7 @@ def test_sample(mocker, rank, prog_bar):
     mut_ratio = mocker.patch.object(smc, '_compute_mutation_ratio')
     mll_est = mocker.patch.object(smc, '_estimate_marginal_log_likelihoods')
     step_list, mll = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
-                                ess_threshold, prog_bar)
+                                ess_threshold, progress_bar=prog_bar)
 
     init.assert_called_once_with(smc._mcmc_kernel)
     upd.assert_called_once_with(ess_threshold)
@@ -63,6 +63,39 @@ def test_sample(mocker, rank, prog_bar):
     for call, new_particles, old_particles in iterable:
         assert call[0][0] == old_particles
         assert call[0][1] == new_particles
+
+
+def test_sample_with_proposal(mocker):
+    mocked_init = mocker.Mock()
+    mocker.patch('smcpy.smc_sampler.Initializer', return_value=mocked_init)
+    mocker.patch('smcpy.smc_sampler.Updater')
+    mocker.patch('smcpy.smc_sampler.Mutator')
+    mcmc_kernel = mocker.Mock()
+
+    proposal_dist = mocker.Mock()
+
+    num_particles = 100
+    num_steps = 10
+    num_mcmc_samples = 2
+    ess_threshold = 0.2
+    phi_sequence = np.ones(num_steps)
+    prog_bar = False
+    proposal = ({'x1': np.array([1, 2]), 'x2': np.array([3, 3])},
+                np.array([0.1, 0.1]))
+
+    smc = SMCSampler(mcmc_kernel)
+    mocker.patch.object(smc, '_compute_mutation_ratio')
+    mocker.patch.object(smc, '_estimate_marginal_log_likelihoods')
+
+    _ = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
+                   ess_threshold, proposal, prog_bar)
+
+    mocked_init.init_particles_from_prior.assert_not_called()
+    mocked_init.init_particles_from_samples.assert_called_once()
+
+    call_args = mocked_init.init_particles_from_samples.call_args[0]
+    for args in zip(call_args, proposal):
+        np.testing.assert_array_equal(*args)
 
 
 @pytest.mark.parametrize('steps', [2, 3, 4, 10])

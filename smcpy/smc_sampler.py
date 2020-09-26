@@ -49,7 +49,7 @@ class SMCSampler:
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
-               ess_threshold, progress_bar=False):
+               ess_threshold, proposal=None, progress_bar=False):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -63,19 +63,19 @@ class SMCSampler:
             should be conducted; given as a fraction of num_particles and must
             be in the range [0, 1]
         :type ess_threshold: float
-        :param proposal_array: samples from a proposal distribution used to
-            initialize the SMC sampler; first column is proposal probabilities
-            and remaining columns are parameters
-        :type proposal_array: 2D array
+        :param proposal: tuple of samples from a proposal distribution used to
+            initialize the SMC sampler; first element is a dictionary with keys
+            equal to parameter names and values equal to corresponding samples;
+            second element is array of corresponding proposal PDF values
+        :type proposal: tuple(dict, array)
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         '''
-
         initializer = Initializer(self._mcmc_kernel)
         updater = Updater(ess_threshold)
         mutator = Mutator(self._mcmc_kernel)
 
-        particles = initializer.init_particles_from_prior(num_particles)
+        particles = self._initialize(initializer, num_particles, proposal)
         particles = updater.resample_if_needed(particles)
         step_list = [particles]
 
@@ -93,6 +93,13 @@ class SMCSampler:
             set_bar(phi_iterator, i + 2, mutation_ratio, updater)
 
         return step_list, self._estimate_marginal_log_likelihoods(updater)
+
+    def _initialize(self, initializer, num_particles, proposal):
+        if proposal is None:
+            particles = initializer.init_particles_from_prior(num_particles)
+        else:
+            particles = initializer.init_particles_from_samples(*proposal)
+        return particles
 
     def _estimate_marginal_log_likelihoods(self, updater):
         sum_un_log_wts = [self._logsum(ulw) \
