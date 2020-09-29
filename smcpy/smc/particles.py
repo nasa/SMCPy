@@ -104,7 +104,8 @@ class Particles(Checks):
     def _set_log_likes(self, log_likes):
         log_likes = np.array(log_likes).reshape(-1, 1)
         if log_likes.shape[0] != self._num_particles:
-            raise ValueError('"log_likes.shape[0]" must match param arrays')
+            raise ValueError('log_likes.shape[0] != number particles: '
+                             f'{log_likes.shape[0]} != {self._num_particles}')
         self._log_likes = log_likes
 
     @property
@@ -118,7 +119,8 @@ class Particles(Checks):
     def _set_and_norm_log_weights(self, log_weights):
         log_weights = np.array(log_weights).reshape(-1, 1)
         if log_weights.shape[0] != self._num_particles:
-            raise ValueError('"log_weights.shape[0]" must match param arrays')
+            raise ValueError('log_weights.shape[0] != number particles: '
+                             f'{log_weights.shape[0]} != {self._num_particles}')
         self._log_weights = self._normalize_log_weights(log_weights)
         self._weights = np.exp(self._log_weights)
 
