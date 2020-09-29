@@ -85,6 +85,7 @@ class Initializer:
             values; must be aligned with samples
         :type proposal_pdensities: list or nd.array
         '''
+        proposal_pdensities = np.array(proposal_pdensities).reshape(-1, 1)
         log_likes = self.mcmc_kernel.get_log_likelihoods(samples)
         log_priors = self.mcmc_kernel.get_log_priors(samples)
         log_weights = log_priors - np.log(proposal_pdensities)
