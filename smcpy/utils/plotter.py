@@ -89,10 +89,9 @@ def _mpi_decorator(func):
 
 def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
                     include_kde=False, prefix='mcmc_chain'):
-    n_columns = 1
-    gridspec = None
+    n_columns = 2
+    gridspec = {'width_ratios': [1., 0.], 'wspace': 0.0}
     if include_kde:
-        n_columns += 1
         gridspec = {'width_ratios': [0.85, 0.15], 'wspace': 0.0}
 
     fig, ax = plt.subplots(len(param_labels), n_columns, sharey='row',
@@ -111,9 +110,9 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
                 ax[i, 1].fill_betweenx(x, kde.pdf(x), np.zeros(x.shape),
                                       alpha=0.3)
 
+        ax[i, 1].axis('off')
         if include_kde:
             ax[i, 1].set_xlim(0, None)
-            ax[i, 1].axis('off')
 
 
         ax[i, 0].set_ylabel(name)
