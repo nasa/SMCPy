@@ -47,7 +47,7 @@ class Updater:
         :type ess_threshold: float
         '''
         self.ess_threshold = ess_threshold
-        self._ess = None
+        self._ess = np.nan
         self._resampled = False
         self._unnorm_log_weights = []
 
