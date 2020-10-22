@@ -49,19 +49,19 @@ def test_initialize_particles_from_samples(initializer, dataframe, mocker):
 
     expected_a_params = [3, 3, 3, 4, 4]
     expected_b_params = [1, 1, 1, 2, 2]
-    expected_log_like = [0.1, 0.1, 0.1, 0.2, 0.2]
-    expected_log_prior = [0.2, 0.2, 0.2, 0.3, 0.3]
+    expected_log_like = np.array([[0.1, 0.1, 0.1, 0.2, 0.2]]).T
+    expected_log_prior = np.array([[0.2, 0.2, 0.2, 0.3, 0.3]]).T
+    expected_log_weight = np.array([[-0.1, -0.1, -0.1, -0.1, -0.1]]).T
 
     samples = {'a': np.array(expected_a_params),
                'b': np.array(expected_b_params)}
 
-    proposal_pdensities = np.array(samples['a']) * 0.1
-    expected_log_weight = expected_log_prior - np.log(proposal_pdensities)
+    proposal_pdensities = np.exp(np.array(samples['a']) * 0.1)
 
     mocker.patch.object(initializer.mcmc_kernel, 'get_log_likelihoods',
-                        return_value=np.array([0.1, 0.1, 0.1, 0.2, 0.2]))
+                        return_value=np.array([[0.1, 0.1, 0.1, 0.2, 0.2]]).T)
     mocker.patch.object(initializer.mcmc_kernel, 'get_log_priors',
-                        return_value=np.array([0.2, 0.2, 0.2, 0.3, 0.3]))
+                        return_value=np.array([[0.2, 0.2, 0.2, 0.3, 0.3]]).T)
 
     if dataframe:
         samples = pandas.DataFrame(samples)
@@ -71,4 +71,4 @@ def test_initialize_particles_from_samples(initializer, dataframe, mocker):
     np.testing.assert_array_equal(particles.params['a'], expected_a_params)
     np.testing.assert_array_equal(particles.params['b'], expected_b_params)
     np.testing.assert_array_equal(particles.log_likes, expected_log_like)
-    np.testing.assert_array_equal(particles.log_weights, expected_log_weight)
+    np.testing.assert_array_almost_equal(particles.log_weights, expected_log_weight)
