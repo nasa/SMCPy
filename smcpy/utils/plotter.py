@@ -100,7 +100,7 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
     chain = chain[:, :, burnin:]
     for i, name in enumerate(param_labels):
         for parallel_chain in chain:
-            ax[i, 0].plot(parallel_chain[i], '-')
+            ax[i, 0].plot(parallel_chain[i], '-', linewidth=0.5)
 
             if include_kde:
                 ylims = ax[i, 0].get_ylim()
