@@ -276,3 +276,27 @@ def plot_pairwise(samples, weights=None, param_names=None,
     plt.close(fig)
 
     return None
+
+
+def plot_geweke(burnin, z, param_labels=None):
+
+    n_params = z[0].shape[0]
+    if param_labels is None:
+        param_labels = [f"Param{i}" for i in range(n_params)]
+
+    xlim = (0, int(burnin[-1] * 1.1))
+    y = np.ones(2)
+
+    fig, ax = plt.subplots(n_params)
+    for i in range(n_params):
+        ax[i].fill_between([0, xlim[1]], y*2, y*-2, alpha=0.5, color="0.4")
+        ax[i].fill_between([0, xlim[1]], y*1, y*-1, alpha=0.5, color="0.4")
+        ax[i].axhline(2, linestyle="--", color="k")
+        ax[i].axhline(-2, linestyle="--", color="k")
+        ax[i].plot(burnin, z[:, i], "o")
+        ax[i].set_xlim(xlim)
+        ax[i].set_ylabel(param_labels[i])
+
+    ax[0].set_title("Geweke Scores")
+    ax[-1].set_xlabel("Burnin")
+    plt.show()
