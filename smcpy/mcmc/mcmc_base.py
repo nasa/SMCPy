@@ -84,11 +84,19 @@ class MCMCBase(ABC, MCMCLogger):
         return np.where(reject, old_values, new_values)
 
     @staticmethod
-    def adapt_proposal_cov(cov, chain, sample_idx, adapt_interval):
+    def adapt_proposal_cov(cov, chain, sample_idx, adapt_interval, adapt_delay):
+        if adapt_interval is None or sample_idx < adapt_delay - 1:
+            return cov
+
+        start = 0
+        if sample_idx > adapt_delay + adapt_interval:
+            start = adapt_delay
+
         if adapt_interval <= sample_idx and sample_idx % adapt_interval == 0:
-            flat_chain = [chain[:, i, :sample_idx + 2].flatten() \
+            flat_chain = [chain[:, i, start:sample_idx + 2].flatten() \
                           for i in range(chain.shape[1])]
             cov = np.cov(flat_chain)
+
         return cov
 
     def smc_metropolis(self, inputs, num_samples, cov, phi):
@@ -151,8 +159,8 @@ class MCMCBase(ABC, MCMCLogger):
 
             chain[:, :, i + 1] = inputs
 
-            if adapt_interval is not None and i > adapt_delay - 1:
-                cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval)
+            cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval,
+                                          adapt_delay)
 
             self._write_cov_to_log(cov)
 
