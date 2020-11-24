@@ -80,21 +80,30 @@ class MCMCBase(ABC, MCMCLogger):
         reject = acceptance_ratios < u
         return np.where(reject, old_values, new_values)
 
-    @staticmethod
-    def adapt_proposal_cov(cov, chain, sample_idx, adapt_interval, adapt_delay):
-        if adapt_interval is None or sample_idx < adapt_delay - 1:
-            return cov
+    def adapt_proposal_cov(self, cov, chain, idx, adapt_interval, adapt_delay):
 
-        start = 0
-        if sample_idx > adapt_delay + adapt_interval:
-            start = adapt_delay
-
-        if adapt_interval <= sample_idx and sample_idx % adapt_interval == 0:
-            flat_chain = [chain[:, i, start:sample_idx + 2].flatten() \
-                          for i in range(chain.shape[1])]
-            cov = np.cov(flat_chain)
-
+        if self._is_adapt_iteration(adapt_interval, idx, adapt_delay):
+            start = self._get_window_start(idx, adapt_delay, adapt_interval)
+            n_param = chain.shape[1]
+            flat_chain = [chain[:, i, start:].flatten() for i in range(n_param)]
+            return np.cov(flat_chain)
         return cov
+
+    @staticmethod
+    def _is_adapt_iteration(adapt_interval, idx, adapt_delay):
+        if adapt_interval is None:
+            return False
+        surpassed_delay = idx > adapt_delay - 1
+        is_adapt_iteration = adapt_interval <= idx and \
+                             (idx - adapt_delay) % adapt_interval == 0
+        return surpassed_delay and is_adapt_iteration
+
+    @staticmethod
+    def _get_window_start(idx, adapt_delay, adapt_interval):
+        if idx > adapt_delay + adapt_interval:
+            return adapt_delay
+        return 0
+
 
     def smc_metropolis(self, inputs, num_samples, cov, phi):
         log_priors = self.evaluate_log_priors(inputs)

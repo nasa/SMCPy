@@ -144,24 +144,30 @@ def test_vectorized_selection(vector_mcmc, new_inputs, old_inputs, mocker):
                                   expected[:new_inputs.shape[0]])
 
 
-@pytest.mark.parametrize('adapt_interval,adapt', [(3, False), (4, True),
-                                                  (8, True), (11, False)])
+@pytest.mark.parametrize('adapt_interval,adapt_delay,adapt',
+                    [(3, 0, False), (4, 0, True), (8, 0, True), (11, 0, False),
+                     (3, 5, True), (4, 5, False), (8, 5, False), (2, 1, False),
+                     (3, 2, True), (None, 1, False)])
 def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
-                                        mocker):
-    num_parallel_chains = 3
-    current_sample_count = 8
+                                        adapt_delay, mocker):
+    parallel_chains = 3
+    sample_count = 8
     old_cov = np.eye(2)
-    chain = np.zeros([num_parallel_chains, 2, current_sample_count])
-    flat_chain = np.zeros((2, num_parallel_chains * current_sample_count))
+    chain = np.zeros([parallel_chains, 2, sample_count])
+    flat_chain = np.zeros((2, parallel_chains * sample_count))
+    cov_mock = mocker.patch('numpy.cov', return_value=np.eye(2) * 2)
 
+    cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, sample_count,
+                                         adapt_interval, adapt_delay)
     expected_cov = old_cov
+
     if adapt:
-        expected_cov = flat_chain
-        mocker.patch('numpy.cov', return_value=flat_chain)
+        expected_cov = np.eye(2) * 2
+        expected_call = flat_chain
+        if sample_count > adapt_interval + adapt_delay:
+            expected_call = flat_chain[:, 3 * adapt_delay:]
 
-    cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, current_sample_count,
-                                         adapt_interval)
-
+        np.testing.assert_array_equal(cov_mock.call_args[0][0], expected_call)
     np.testing.assert_array_equal(cov, expected_cov)
 
 
