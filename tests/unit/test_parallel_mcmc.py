@@ -18,15 +18,15 @@ def mock_comm(mocker, request):
     return comm
 
 def test_comm_set(mock_comm):
-    pmcmc = ParallelMCMC(model=None, data=None, priors=None, std_dev=None,
-                         mpi_comm=mock_comm)
+    pmcmc = ParallelMCMC(model=None, data=None, priors=None, mpi_comm=mock_comm,
+                         log_like_args=None)
     assert pmcmc._size == mock_comm.size
     assert pmcmc._rank == mock_comm.rank
 
 
 def test_inherit(mock_comm):
-    pmcmc = ParallelMCMC(model=None, data=None, priors=None, std_dev=None,
-                         mpi_comm=mock_comm)
+    pmcmc = ParallelMCMC(model=None, data=None, priors=None, mpi_comm=mock_comm,
+                         log_like_args=None)
     assert isinstance(pmcmc, MCMCBase)
 
 
@@ -47,7 +47,7 @@ def test_mpi_eval_model(mocker, mock_comm):
     mock_model = lambda x: x[:, :2]
 
     pmcmc = ParallelMCMC(mock_model, data=inputs[0, :2].flatten(), priors=None,
-                         std_dev=None, mpi_comm=mock_comm)
+                         mpi_comm=mock_comm, log_like_args=None)
     output = pmcmc.evaluate_model(inputs)
 
     np.testing.assert_array_equal(
@@ -68,8 +68,8 @@ def test_mismatch_input_and_gathered_shape(mock_comm, other_rnk_inputs, mocker):
     This can happen when positive ranks have more or less zero prior probability
     inputs (i.e., inputs.shape is different) than rank 0.
     '''
-    pmcmc = ParallelMCMC(model=None, data=None, priors=None, std_dev=None,
-                         mpi_comm=mock_comm)
+    pmcmc = ParallelMCMC(model=None, data=None, priors=None, mpi_comm=mock_comm,
+                         log_like_args=None)
 
     size = mock_comm.size
     rank = mock_comm.rank
@@ -90,7 +90,7 @@ def test_mismatch_input_and_gathered_shape(mock_comm, other_rnk_inputs, mocker):
     mock_model = lambda x: x[:, :2]
 
     pmcmc = ParallelMCMC(mock_model, data=rank_0_inputs[0, :2].flatten(),
-                         priors=None, std_dev=None, mpi_comm=mock_comm)
+                         priors=None, mpi_comm=mock_comm, log_like_args=None)
     output = pmcmc.evaluate_model(other_rnk_inputs)
 
     assert output.shape[0] == other_rnk_inputs.shape[0]
