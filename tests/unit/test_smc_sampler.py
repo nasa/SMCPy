@@ -25,17 +25,28 @@ def step_list(phi_sequence, mocker):
 @pytest.mark.parametrize('rank', [0, 1, 2])
 @pytest.mark.parametrize('prog_bar', [True, False])
 def test_sample(mocker, rank, prog_bar):
-    init = mocker.patch('smcpy.smc_sampler.Initializer', autospec=True)
-    upd = mocker.patch('smcpy.smc_sampler.Updater', autospec=True)
-    mut = mocker.patch('smcpy.smc_sampler.Mutator', autospec=True)
-    update_bar = mocker.patch('smcpy.smc_sampler.set_bar')
-
     num_particles = 100
     num_steps = 10
     num_mcmc_samples = 2
     phi_sequence = np.ones(num_steps)
     prog_bar = mocker.patch('smcpy.smc_sampler.tqdm',
                                 return_value=phi_sequence[2:])
+    expected_step_list = np.ones((num_steps - 1, num_particles))
+    expected_step_list[1:] = expected_step_list[1:] + 2
+
+    init_particles = np.array([1] * num_particles)
+    mocked_initializer = mocker.Mock()
+    mocked_initializer.init_particles_from_prior.return_value = init_particles
+    init = mocker.patch('smcpy.smc_sampler.Initializer',
+                        return_value=mocked_initializer)
+
+    upd = mocker.patch('smcpy.smc_sampler.Updater', autospec=True)
+
+    mocked_mutator = mocker.Mock()
+    mocked_mutator.mutate.return_value = np.array([3] * num_particles)
+    mut = mocker.patch('smcpy.smc_sampler.Mutator', return_value=mocked_mutator)
+
+    update_bar = mocker.patch('smcpy.smc_sampler.set_bar')
 
     mcmc_kernel = mocker.Mock()
     mcmc_kernel._mcmc = mocker.Mock()
@@ -53,16 +64,14 @@ def test_sample(mocker, rank, prog_bar):
     init.assert_called_once_with(smc._mcmc_kernel)
     upd.assert_called_once_with(ess_threshold)
     mut.assert_called_once_with(smc._mcmc_kernel)
+
     np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[1:])
     update_bar.assert_called()
     mll_est.assert_called_once()
 
     assert len(step_list) == len(phi_sequence) - 1
     assert mll is not None
-    iterable = zip(mut_ratio.call_args_list, step_list[1:], step_list[:-1])
-    for call, new_particles, old_particles in iterable:
-        assert call[0][0] == old_particles
-        assert call[0][1] == new_particles
+    np.testing.assert_array_equal(step_list, expected_step_list)
 
 
 def test_sample_with_proposal(mocker):

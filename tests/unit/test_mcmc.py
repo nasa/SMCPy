@@ -58,7 +58,7 @@ def priors(prior_pdfs, prior_samplers):
 
 @pytest.fixture
 def vector_mcmc(stub_model, data, priors):
-    return VectorMCMC(stub_model, data, priors, std_dev=None)
+    return VectorMCMC(stub_model, data, priors, log_like_args=None)
 
 
 def test_vectorized_prior_sampling(vector_mcmc):
@@ -72,8 +72,8 @@ def test_vectorized_prior_sampling(vector_mcmc):
                        (np.array([[0, 1, 0.5]] * 4), 1/np.sqrt(2 * np.pi)),
                        (np.array([[0, 1, 0.5, 1/np.sqrt(2 * np.pi)]] * 4), None)
                       )))
-def test_vectorized_likelihood(vector_mcmc, inputs, std_dev):
-    vector_mcmc._fixed_std_dev = std_dev
+def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
+    vector_mcmc._log_like_args = std_dev
 
     expected_like = np.array(inputs.shape[0] * [[np.exp(-8 * np.pi)]])
     expected_log_like = np.log(expected_like)
@@ -235,7 +235,7 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
 @pytest.mark.parametrize('method', ('smc_metropolis', 'metropolis'))
 def test_metropolis_inputs_out_of_bounds(mocker, stub_model, data, num_chains,
                                          method):
-    vmcmc = VectorMCMC(stub_model, data, priors, std_dev=1)
+    vmcmc = VectorMCMC(stub_model, data, priors, log_like_args=1)
     mocker.patch.object(vmcmc, 'evaluate_log_priors',
                         return_value=np.ones((num_chains, 1)) * -np.inf)
 
@@ -256,7 +256,7 @@ def test_metropolis_no_like_calc_if_zero_prior_prob(mocker, data):
     mocked_proposal = np.ones((5, 3)) * 0.2
     mocked_proposal[2, 0] = 0.3
 
-    vmcmc = VectorMCMC(mocked_model, data, priors=None, std_dev=1)
+    vmcmc = VectorMCMC(mocked_model, data, priors=None, log_like_args=1)
     mocker.patch.object(vmcmc, '_check_log_priors_for_zero_probability')
     mocker.patch.object(vmcmc, 'proposal', return_value=mocked_proposal)
     mocker.patch.object(vmcmc, 'evaluate_log_priors',

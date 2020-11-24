@@ -8,7 +8,8 @@ from .mcmc_logger import MCMCLogger
 
 class MCMCBase(ABC, MCMCLogger):
     
-    def __init__(self, model, data, priors, std_dev=None, debug=False):
+    def __init__(self, model, data, priors, log_like_args, log_like_func,
+                 debug):
         '''
         :param model: maps inputs to outputs
         :type model: callable
@@ -17,13 +18,18 @@ class MCMCBase(ABC, MCMCLogger):
         :param priors: random variable objects with a pdf and rvs method (e.g.
             scipy stats random variable objects)
         :type priors: list of objects
-        :param std_dev: Gaussian additive noise standard deviation
-        :type std_dev: float
+        :param log_like_args: any fixed parameters that define the likelihood
+            function (e.g., standard deviation for a Gaussian likelihood).
+        :type log_like_args: 1D array or None
+        :param log_like_func: log likelihood function that takes inputs, model,
+            data, and hyperparameters and returns log likelihoods
+        :type log_like_func: callable
         '''
         self._eval_model = model
         self._data = data
         self._priors = priors
-        self._fixed_std_dev = std_dev
+        self._log_like_args = log_like_args
+        self._log_like_func = log_like_func
 
         super().__init__(__name__, debug)
 
@@ -47,18 +53,9 @@ class MCMCBase(ABC, MCMCLogger):
         '''
 
     def evaluate_log_likelihood(self, inputs):
-        std_dev = self._fixed_std_dev
-        if std_dev is None:
-            std_dev = inputs[:, -1]
-            inputs = inputs[:, :-1]
-        var = std_dev ** 2
-
-        output = self.evaluate_model(inputs)
-        ssqe = np.sum((output - self._data) ** 2, axis=1)
-
-        term1 = -np.log(2 * np.pi * var) * (output.shape[1] / 2.) 
-        term2 = -1 / 2. * ssqe / var
-        return (term1 + term2).reshape(-1, 1)
+        log_like = self._log_like_func(inputs, self.evaluate_model, self._data,
+                                       self._log_like_args)
+        return log_like.reshape(-1, 1)
 
     @staticmethod
     def evaluate_log_posterior(log_likelihood, log_priors):

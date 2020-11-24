@@ -1,6 +1,8 @@
 import numpy as np
 
 from .mcmc_base import MCMCBase
+from ..log_likelihoods import normal
+
 
 class ParallelMCMC(MCMCBase):
     '''
@@ -15,12 +17,14 @@ class ParallelMCMC(MCMCBase):
     should be discarded and ONLY the output from rank 0 should be used.
     '''
 
-    def __init__(self, model, data, priors, std_dev, mpi_comm):
+    def __init__(self, model, data, priors, mpi_comm, log_like_args=None,
+                 log_like_func=normal, debug=False):
         self._comm = mpi_comm
         self._size = mpi_comm.Get_size()
         self._rank = mpi_comm.Get_rank()
 
-        super().__init__(model, data, priors, std_dev)
+        super().__init__(model, data, priors, log_like_args, log_like_func,
+                         debug)
 
     def evaluate_model(self, inputs):
         partitioned_inputs = np.array_split(inputs, self._size)
