@@ -84,8 +84,10 @@ class MCMCBase(ABC, MCMCLogger):
 
         if self._is_adapt_iteration(adapt_interval, idx, adapt_delay):
             start = self._get_window_start(idx, adapt_delay, adapt_interval)
+            end = idx + 1
             n_param = chain.shape[1]
-            flat_chain = [chain[:, i, start:].flatten() for i in range(n_param)]
+            flat_chain = [chain[:, i, start:end].flatten() \
+                          for i in range(n_param)]
             return np.cov(flat_chain)
         return cov
 
@@ -93,16 +95,15 @@ class MCMCBase(ABC, MCMCLogger):
     def _is_adapt_iteration(adapt_interval, idx, adapt_delay):
         if adapt_interval is None:
             return False
-        surpassed_delay = idx > adapt_delay - 1
-        is_adapt_iteration = adapt_interval <= idx and \
-                             (idx - adapt_delay) % adapt_interval == 0
+        surpassed_delay = idx >= adapt_delay
+        is_adapt_iteration = (idx - adapt_delay) % adapt_interval == 0
         return surpassed_delay and is_adapt_iteration
 
     @staticmethod
     def _get_window_start(idx, adapt_delay, adapt_interval):
-        if idx > adapt_delay + adapt_interval:
-            return adapt_delay
-        return 0
+        if idx >= adapt_delay + adapt_interval:
+            return adapt_delay + 1
+        return max(adapt_delay - adapt_interval + 1, 1)
 
 
     def smc_metropolis(self, inputs, num_samples, cov, phi):
@@ -141,7 +142,7 @@ class MCMCBase(ABC, MCMCLogger):
 
         self._write_sample_to_log(inputs, log_like, log_priors, 0, False)
     
-        for i in tqdm(range(num_samples), disable=not progress_bar):
+        for i in tqdm(range(1, num_samples + 1), disable=not progress_bar):
     
             new_inputs = self.proposal(inputs, cov)
             new_log_priors = self.evaluate_log_priors(new_inputs)
@@ -163,7 +164,7 @@ class MCMCBase(ABC, MCMCLogger):
 
             self._write_accpt_to_log(accpt_ratio, u)
 
-            chain[:, :, i + 1] = inputs
+            chain[:, :, i] = inputs
 
             cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval,
                                           adapt_delay)

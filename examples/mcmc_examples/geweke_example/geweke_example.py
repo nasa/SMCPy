@@ -15,7 +15,7 @@ if __name__ == "__main__":
     true_mean = 1
     true_std = 2
     n_data_pts = 100
-    n_samples = 5000
+    n_samples = 6000
     burnin = 0
     param_names = ['mean', 'std']
 
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     vmcmc = VectorMCMC(model, data, priors)
     chain = vmcmc.metropolis(x0, n_samples, cov, adapt_interval=100,
-                             adapt_delay=500, progress_bar=True)
+                             adapt_delay=1000, progress_bar=True)
 
     burnin, z = compute_geweke(chain[0], window_pct=10, step_pct=1)
 

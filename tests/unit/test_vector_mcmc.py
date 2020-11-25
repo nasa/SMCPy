@@ -72,7 +72,7 @@ def test_vectorized_prior_sampling(vector_mcmc):
                        (np.array([[0, 1, 0.5]] * 4), 1/np.sqrt(2 * np.pi)),
                        (np.array([[0, 1, 0.5, 1/np.sqrt(2 * np.pi)]] * 4), None)
                       )))
-def test_vectorized_likelihood(vector_mcmc, inputs, std_dev):
+def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
     vector_mcmc._log_like_args = std_dev
 
     expected_like = np.array(inputs.shape[0] * [[np.exp(-8 * np.pi)]])
@@ -144,24 +144,32 @@ def test_vectorized_selection(vector_mcmc, new_inputs, old_inputs, mocker):
                                   expected[:new_inputs.shape[0]])
 
 
-@pytest.mark.parametrize('adapt_interval,adapt', [(3, False), (4, True),
-                                                  (8, True), (11, False)])
+@pytest.mark.parametrize('adapt_interval,adapt_delay,adapt',
+                    [(3, 0, False), (4, 0, True), (8, 0, True), (11, 0, False),
+                     (3, 5, True), (4, 5, False), (8, 5, False), (2, 1, False),
+                     (3, 2, True), (None, 1, False), (2, 8, True)])
 def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
-                                        mocker):
-    num_parallel_chains = 3
-    current_sample_count = 8
+                                        adapt_delay, mocker):
+    parallel_chains = 3
+    sample_count = 8
+    total_samples = sample_count + 1
     old_cov = np.eye(2)
-    chain = np.zeros([num_parallel_chains, 2, current_sample_count])
-    flat_chain = np.zeros((2, num_parallel_chains * current_sample_count))
+    chain = np.zeros([parallel_chains, 2, total_samples])
+    cov_mock = mocker.patch('numpy.cov', return_value=np.eye(2) * 2)
 
+    cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, sample_count,
+                                         adapt_interval, adapt_delay)
     expected_cov = old_cov
+
     if adapt:
-        expected_cov = flat_chain
-        mocker.patch('numpy.cov', return_value=flat_chain)
+        expected_cov = np.eye(2) * 2
+        if sample_count > adapt_delay:
+            n_samples_for_cov_calc = (sample_count - adapt_delay)
+        else:
+            n_samples_for_cov_calc = adapt_interval
+        expected_call = np.zeros((2, parallel_chains * n_samples_for_cov_calc))
 
-    cov = vector_mcmc.adapt_proposal_cov(old_cov, chain, current_sample_count,
-                                         adapt_interval)
-
+        np.testing.assert_array_equal(cov_mock.call_args[0][0], expected_call)
     np.testing.assert_array_equal(cov, expected_cov)
 
 
@@ -170,7 +178,7 @@ def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
 def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
-    vector_mcmc._log_like_args = 1
+    vector_mcmc._std_dev = 1
 
     mocker.patch('numpy.random.uniform')
     mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
@@ -193,14 +201,13 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     assert log_like.call_count == num_samples + 1
 
 
-@pytest.mark.parametrize('adapt_delay', (0, 2, 4))
-@pytest.mark.parametrize('adapt_interval', (None, 1, 2))
-@pytest.mark.parametrize('num_samples', (1, 5, 5))
-def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
-                               adapt_delay, mocker):
+@pytest.mark.parametrize('num_samples', (1, 5, 50))
+def test_vectorized_metropolis(vector_mcmc, num_samples, mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
-    vector_mcmc._log_like_args = 1
+    vector_mcmc._std_dev = 1
+    adapt_delay = 0
+    adapt_interval = 1
 
     mocker.patch('numpy.random.uniform')
 
@@ -222,13 +229,8 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, adapt_interval,
                                    adapt_delay)
 
     np.testing.assert_array_equal(chain, expected_chain)
-
-    num_expected_adapt_calls = 0
-    if num_samples > adapt_delay and adapt_interval is not None:
-        num_expected_adapt_calls = num_samples - adapt_delay
-
     assert log_like.call_count == num_samples + 1
-    assert adapt.call_count == num_expected_adapt_calls
+    assert adapt.call_count == num_samples
 
 
 @pytest.mark.parametrize('num_chains', (1, 3, 5))
