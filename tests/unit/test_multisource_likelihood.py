@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy.log_likelihoods import multisource_normal
+from smcpy import MultiSourceNormal
 
 
 def test_multisource_normal_bad_data_segments():
@@ -11,7 +11,7 @@ def test_multisource_normal_bad_data_segments():
     args = [(4, 3), (None, None)]
 
     with pytest.raises(ValueError):
-        multisource_normal(inputs, model, data, args)
+        MultiSourceNormal(inputs, data, args)
 
 
 @pytest.mark.parametrize("args_0,args_1", [((1, 7), (1, 1)),
@@ -38,7 +38,8 @@ def test_multisource_normal_fixed_std(args_0, args_1):
                          np.sum(np.log(std_array) * -segment_array)) + \
                          -1 / (2 * np.product(std_array ** 2)) * exp_term
 
-    log_like = multisource_normal(inputs, model, data, args)
+    msn = MultiSourceNormal(model, data, args)
+    log_like = msn(inputs)
 
     np.testing.assert_array_almost_equal(log_like, expected_log_like)
 
@@ -59,6 +60,7 @@ def test_multisource_normal_variable_std(args_1):
 
     expected_log_like = np.ones(inputs.shape[0]) * -14.604474003651934
 
-    log_like = multisource_normal(inputs, model, data, args)
+    msn = MultiSourceNormal(model, data, args)
+    log_like = msn(inputs)
 
     np.testing.assert_array_almost_equal(log_like, expected_log_like)
