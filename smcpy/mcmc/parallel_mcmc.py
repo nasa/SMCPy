@@ -1,7 +1,7 @@
 import numpy as np
 
 from .mcmc_base import MCMCBase
-from ..log_likelihoods import normal
+from ..log_likelihoods import Normal
 
 
 class ParallelMCMC(MCMCBase):
@@ -18,7 +18,7 @@ class ParallelMCMC(MCMCBase):
     '''
 
     def __init__(self, model, data, priors, mpi_comm, log_like_args=None,
-                 log_like_func=normal, debug=False):
+                 log_like_func=Normal, debug=False):
         self._comm = mpi_comm
         self._size = mpi_comm.Get_size()
         self._rank = mpi_comm.Get_rank()

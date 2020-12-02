@@ -13,7 +13,7 @@ class Normal:
         self._data = data
         self._args = args
 
-    def __call__(self):
+    def __call__(self, inputs):
         std_dev = self._args
         if std_dev is None:
             std_dev = inputs[:, -1]

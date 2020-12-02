@@ -1,13 +1,13 @@
 import numpy as np
 
 from .mcmc_base import MCMCBase
-from ..log_likelihoods import normal
+from ..log_likelihoods import Normal
 
 
 class VectorMCMC(MCMCBase):
     
     def __init__(self, model, data, priors, log_like_args=None,
-                 log_like_func=normal, debug=False):
+                 log_like_func=Normal, debug=False):
         '''
         :param model: maps inputs to outputs
         :type model: callable

@@ -28,8 +28,7 @@ class MCMCBase(ABC, MCMCLogger):
         self._eval_model = model
         self._data = data
         self._priors = priors
-        self._log_like_args = log_like_args
-        self._log_like_func = log_like_func
+        self._log_like_func = log_like_func(model, data, log_like_args)
 
         super().__init__(__name__, debug)
 
@@ -39,6 +38,9 @@ class MCMCBase(ABC, MCMCLogger):
         return np.hstack(samples)
 
     def evaluate_log_priors(self, inputs):
+        if inputs.shape[1] != len(self._priors):
+            raise ValueError("Num prior distributions != num input params")
+
         priors = np.hstack([p.pdf(inputs.T[i]).reshape(-1, 1) \
                             for i, p in enumerate(self._priors)])
         nonzero_priors = priors != 0
@@ -53,8 +55,7 @@ class MCMCBase(ABC, MCMCLogger):
         '''
 
     def evaluate_log_likelihood(self, inputs):
-        log_like = self._log_like_func(inputs, self.evaluate_model, self._data,
-                                       self._log_like_args)
+        log_like = self._log_like_func(inputs)
         return log_like.reshape(-1, 1)
 
     @staticmethod
