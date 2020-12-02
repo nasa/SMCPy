@@ -73,7 +73,7 @@ def test_vectorized_prior_sampling(vector_mcmc):
                        (np.array([[0, 1, 0.5, 1/np.sqrt(2 * np.pi)]] * 4), None)
                       )))
 def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
-    vector_mcmc._log_like_args = std_dev
+    vector_mcmc._log_like_func._args = std_dev
 
     expected_like = np.array(inputs.shape[0] * [[np.exp(-8 * np.pi)]])
     expected_log_like = np.log(expected_like)
@@ -90,6 +90,13 @@ def test_vectorized_prior(vector_mcmc, inputs):
 
     expected_log_prior = np.log(np.array([[0.1, 2, 1]] * inputs.shape[0]))
     np.testing.assert_array_almost_equal(log_prior, expected_log_prior)
+
+
+@pytest.mark.parametrize('inputs', (np.array([[0.1, 0.5]]),
+                                    np.array([[0.1, 1, 1, 0.5]] * 4)))
+def test_prior_input_mismatch_throws_error(vector_mcmc, inputs):
+    with pytest.raises(ValueError):
+        vector_mcmc.evaluate_log_priors(inputs)
 
 
 @pytest.mark.parametrize('inputs', (np.array([[0, 1, 0.5]]),
