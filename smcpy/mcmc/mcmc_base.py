@@ -28,7 +28,8 @@ class MCMCBase(ABC, MCMCLogger):
         self._eval_model = model
         self._data = data
         self._priors = priors
-        self._log_like_func = log_like_func(model, data, log_like_args)
+        self._log_like_func = log_like_func(self.evaluate_model, data,
+                                            log_like_args)
 
         super().__init__(__name__, debug)
 

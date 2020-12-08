@@ -1,21 +1,21 @@
 import numpy as np
-
-from mpi4py import MPI
+import pytest
 
 from smcpy.mcmc.parallel_mcmc import ParallelMCMC
 
-def test_parallel_evaluate():
-    comm = MPI.COMM_WORLD.Clone()
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
-    model = lambda x: x
+def test_parallel_likelihood(mocker):
+    inputs = np.ones((100, 5))
+    expected_call = np.ones((1, 100, 5))
 
-    inputs = [[i + rank for _ in range(5)] for i in range(size)]
-    inputs = np.array(inputs).reshape(-1, 1)
-    expected_output = inputs - rank
+    mock_comm = mocker.Mock()
+    mocked_model_eval = mocker.Mock(return_value=np.array([[1]]))
+    mocker.patch("smcpy.mcmc.parallel_mcmc.ParallelMCMC.evaluate_model",
+                 new=mocked_model_eval)
 
-    pmcmc = ParallelMCMC(model, data=None, priors=None, std_dev=None,
-                         mpi_comm=comm)
+    mcmc = ParallelMCMC(model=None, data=np.array([1]), priors=None,
+                        log_like_args=1, mpi_comm=mock_comm)
+    _ = mcmc.evaluate_log_likelihood(inputs)
 
-    np.testing.assert_array_equal(pmcmc.evaluate_model(inputs), expected_output)
+    np.testing.assert_array_equal(mocked_model_eval.call_args_list[0][0],
+                                  expected_call)
