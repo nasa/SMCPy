@@ -47,7 +47,7 @@ if __name__ == '__main__':
     priors = [uniform(0., 6.), uniform(0., 6.)]
 
     comm = MPI.COMM_WORLD.Clone()
-    parallel_mcmc = ParallelMCMC(comm, eval_model, noisy_data, priors, std_dev)
+    parallel_mcmc = ParallelMCMC(eval_model, noisy_data, priors, comm, std_dev)
 
     phi_sequence = np.linspace(0, 1, num_smc_steps)
 
