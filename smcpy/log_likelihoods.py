@@ -63,9 +63,10 @@ class MultiSourceNormal(Normal):
             raise ValueError("data segments in args[0] must sum to dim of data")
 
     def __call__(self, inputs):
-        output = self._model(inputs)
 
         std_devs, inputs = self._process_fixed_and_variable_std(inputs)
+
+        output = self._model(inputs)
 
         log_likes = []
         start_idx = 0
@@ -91,12 +92,16 @@ class MultiSourceNormal(Normal):
         '''
         std_devs = self._args[1]
         new_std_devs = []
+        j = 0
         for i, std in enumerate(std_devs):
             if std is None:
-                new_std_devs.append(inputs[:, -self._num_nones + i])
+                new_std_devs.append(inputs[:, -self._num_nones + j])
+                j += 1
             else:
                 new_std_devs.append(std)
     
-        new_inputs = inputs[:, :self._num_nones]
+        new_inputs = inputs.copy()
+        if self._num_nones > 0:
+            new_inputs = new_inputs[:, :-self._num_nones]
     
         return tuple(new_std_devs), new_inputs

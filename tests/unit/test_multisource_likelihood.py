@@ -47,20 +47,28 @@ def test_multisource_normal_fixed_std(args_0, args_1):
 @pytest.mark.parametrize("args_1", [(None, None, None), (None, 2, 3),
                                     (1, None, 3), (1, 2, None),
                                     (None, 2, None), (None, None, 3)])
-def test_multisource_normal_variable_std(args_1):
-    inputs = np.ones((5, 6))
+def test_multisource_normal_variable_std(mocker, args_1):
+    num_samples = 5
+    inputs = [1, 1, 1]
     data = np.ones(8)
-    model = lambda x: np.ones((x.shape[0], data.shape[0])) * 2
+    model = mocker.Mock(return_value=np.ones((num_samples, 8)) * 2)
     args = [(2, 2, 4), args_1]
+
+    expected_model_inputs = [1, 1, 1]
 
     none_count = args_1.count(None)
     for i, std in enumerate(args_1):
         if std is None:
-            inputs[:, -none_count + i] = i + 1
+            inputs.append(i + 1)
+
+    inputs = np.tile(inputs, (num_samples, 1))
 
     expected_log_like = np.ones(inputs.shape[0]) * -14.604474003651934
+    expected_model_inputs = np.ones((5, 3))
 
     msn = MultiSourceNormal(model, data, args)
     log_like = msn(inputs)
 
     np.testing.assert_array_almost_equal(log_like, expected_log_like)
+    np.testing.assert_array_equal(model.call_args_list[0][0][0],
+                                  expected_model_inputs)
