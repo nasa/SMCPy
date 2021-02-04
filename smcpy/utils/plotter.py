@@ -130,9 +130,7 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
     if show:
         plt.show()
 
-    plt.close(fig)
-
-    return None
+    return fig
 
 def plot_pairwise(samples, weights=None, param_names=None,
                   param_labels=None, save=False, show=True,
@@ -185,7 +183,8 @@ def plot_pairwise(samples, weights=None, param_names=None,
         ikey2 = i[1][0]  # key index for yparam
         key1 = param_names[ikey1]
         key2 = param_names[ikey2]
-        ax = {key1 + '+' + key2: fig.add_subplot(L - 1, L - 1, iplt)}
+        ax_key = key1 + '+' + key2
+        ax = {ax_key: fig.add_subplot(L - 1, L - 1, iplt)}
 
         # get list of all particle params for key1, key2 combinations
         pkey1 = samples[:, ikey1]
@@ -204,46 +203,46 @@ def plot_pairwise(samples, weights=None, param_names=None,
             colors = weights.flatten()
             vmax = rnd_to_sig(max(weights))
 
-        sc = ax[key1 + '+' + key2].scatter(pkey1, pkey2, c=colors, vmin=0.0,
-                                           vmax=vmax, alpha=alpha)
+        sc = ax[ax_key].scatter(pkey1, pkey2, c=colors, vmin=0.0,
+                                vmax=vmax, alpha=alpha)
 
-        ax[key1 + '+' + key2].axvline(means[ikey1], color='C1',
-                                      linestyle='--')
-        ax[key1 + '+' + key2].axhline(means[ikey2], color='C1',
-                                      linestyle='--')
+        ax[ax_key].axvline(means[ikey1], color='C1', linestyle='--')
+        ax[ax_key].axhline(means[ikey2], color='C1', linestyle='--')
 
         if true_params is not None:
             truth = (true_params[ikey1], true_params[ikey2])
-            ax[key1 + '+' + key2].plot(truth[0], truth[1], '*y')
+            ax[ax_key].plot(truth[0], truth[1], '*y')
 
-        ax[key1 + '+' + key2].set_xlabel(label_dict[key1])
-        ax[key1 + '+' + key2].set_ylabel(label_dict[key2])
+        ax[ax_key].set_xlabel(label_dict[key1])
+        ax[ax_key].set_ylabel(label_dict[key2])
 
         # if provided, set x y lims
         if param_limits is not None:
-            ax[key1 + '+' + key2].set_xlim(lim_dict[key1])
-            ax[key1 + '+' + key2].set_ylim(lim_dict[key2])
+            ax[ax_key].set_xlim(lim_dict[key1])
+            ax[ax_key].set_ylim(lim_dict[key2])
         else:
             deltax = abs(pkey1.max() - pkey1.min())
             deltay = abs(pkey2.max() - pkey2.min())
-            ax[key1 + '+' + key2].set_xlim(pkey1.min() - 0.05 * deltax,
-                                           pkey1.max() + 0.05 * deltax)
-            ax[key1 + '+' + key2].set_ylim(pkey2.min() - 0.05 * deltay,
-                                           pkey2.max() + 0.05 * deltay)
+            ax[ax_key].set_xlim(pkey1.min() - 0.05 * deltax,
+                                pkey1.max() + 0.05 * deltax)
+            ax[ax_key].set_ylim(pkey2.min() - 0.05 * deltay,
+                                pkey2.max() + 0.05 * deltay)
 
         # if provided set font sizes
         if tick_size is not None:
-            ax[key1 + '+' + key2].tick_params(labelsize=tick_size)
+            ax[ax_key].tick_params(labelsize=tick_size)
         if label_size is not None:
-            ax[key1 + '+' + key2].xaxis.label.set_size(label_size)
-            ax[key1 + '+' + key2].yaxis.label.set_size(label_size)
+            ax[ax_key].xaxis.label.set_size(label_size)
+            ax[ax_key].yaxis.label.set_size(label_size)
 
         # if provided, set x ticks
         if num_xbins is not None:
-            ax[key1 + '+' + key2].locator_params(axis='x',
-                                                 num_xbins=bin_dict[key1])
-            ax[key1 + '+' + key2].locator_params(axis='y',
-                                                 num_xbins=bin_dict[key2])
+            ax[ax_key].locator_params(axis='x', num_xbins=bin_dict[key1])
+            ax[ax_key].locator_params(axis='y', num_xbins=bin_dict[key2])
+
+        # turn off offset for concentrated posterior
+        ax[ax_key].get_xaxis().get_major_formatter().set_useOffset(False)
+        ax[ax_key].get_yaxis().get_major_formatter().set_useOffset(False)
 
     fig.tight_layout()
 
@@ -273,9 +272,7 @@ def plot_pairwise(samples, weights=None, param_names=None,
     if show:
         plt.show()
 
-    plt.close(fig)
-
-    return None
+    return fig
 
 
 def plot_geweke(burnin, z, param_labels=None):
