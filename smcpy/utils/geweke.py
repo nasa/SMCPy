@@ -1,6 +1,6 @@
 import numpy as np
 
-from statsmodels.regression.linear_model import yule_walker
+from scipy.signal import welch
 
 
 def compute_geweke(x, window_pct=10, step_pct=1):
@@ -44,9 +44,6 @@ def compute_geweke(x, window_pct=10, step_pct=1):
     return burnin, np.array(z)
 
 
-def _spec_density(x, order=2):
-    psd = np.zeros(x.shape[0])
-    for i, xi in enumerate(x):
-        rho, sigma = yule_walker(xi, order=order)
-        psd[i] = sigma ** 2 / (1 - np.sum(rho)) ** 2
+def _spec_density(x):
+    psd = welch(x, detrend=False, axis=1, scaling='spectrum')[1][:, 0]
     return psd

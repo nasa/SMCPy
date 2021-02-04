@@ -17,10 +17,10 @@ def test_compute_geweke(mocker):
 
     chain = np.ones((n_params, n_samples)) * 2
     chain[:, :int(n_samples / 2)] += 1
-    last_x1 = chain[1, 40:int(n_samples / 2)]
+    last_x1 = chain[:, 40:int(n_samples / 2)]
 
-    mocked_yw = mocker.Mock(return_value=([1., 1.], np.sqrt(50)))
-    mocker.patch("smcpy.utils.geweke.yule_walker", new=mocked_yw)
+    welch_mock = mocker.patch("smcpy.utils.geweke.welch",
+                              return_value=[None, np.ones((2, 2)) * 50])
 
     expected_burnin = [0, 5, 10, 15, 20, 25, 30, 35, 40]
     expected_z = np.tile(1/np.sqrt(6), (len(expected_burnin), n_params))
@@ -29,5 +29,5 @@ def test_compute_geweke(mocker):
 
     np.testing.assert_array_equal(burnin, expected_burnin)
     np.testing.assert_array_almost_equal(z, expected_z)
-    assert len(mocked_yw.call_args_list) == (len(z) + 1) * n_params
-    np.testing.assert_array_equal(mocked_yw.call_args_list[-1][0][0], last_x1)
+    assert len(welch_mock.call_args_list) == (len(z) + 1)
+    np.testing.assert_array_equal(welch_mock.call_args_list[-1][0][0], last_x1)
