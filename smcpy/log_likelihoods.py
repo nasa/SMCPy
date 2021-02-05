@@ -1,7 +1,14 @@
 import numpy as np
 
+class BaseLogLike:
 
-class Normal:
+    def __init__(self, model, data, args):
+        self._model = model
+        self._data = data
+        self._args = args
+
+
+class Normal(BaseLogLike):
 
     def __init__(self, model, data, args):
         '''
@@ -9,9 +16,7 @@ class Normal:
         normal distribution with mean = 0 and std_dev = args. If args is None,
         assumes that the last column of inputs contains the std_dev value.
         '''
-        self._model = model
-        self._data = data
-        self._args = args
+        super().__init__(model, data, args)
 
     def __call__(self, inputs):
         std_dev = self._args
@@ -54,9 +59,7 @@ class MultiSourceNormal(Normal):
             N from Gaussian distribution
         :type args: list of two tuples, each of length N
         '''
-        self._model = model
-        self._data = data
-        self._args = args
+        super().__init__(model, data, args)
         self._num_nones = self._args[1].count(None)
 
         if sum(args[0]) != data.shape[0]:
@@ -105,3 +108,26 @@ class MultiSourceNormal(Normal):
             new_inputs = new_inputs[:, :-self._num_nones]
     
         return tuple(new_std_devs), new_inputs
+
+
+class MVNormal(BaseLogLike):
+
+    def __init__(self, model, data, args):
+        super().__init__(model, data, args)
+
+    def __call__(self, inputs):
+        cov_matrix = self._get_cov()
+        error = self._model(inputs) - self._data
+        term1 = - cov_matrix.shape[0] / 2 * np.log(2 * np.pi)
+        term2 = - 1 / 2 * np.log(np.linalg.det(cov_matrix))
+        term3 = np.matmul(np.matmul(error, np.linalg.inv(cov_matrix)), error.T)
+        return term1 + term2 + -(1 / 2) * term3
+
+    def _get_cov(self):
+        x = self._args
+        d = int((np.sqrt(1 + 8 * len(x)) - 1) / 2)
+        cov = np.zeros((d, d))
+        p, q = np.triu_indices(d)
+        cov[p, q] = x
+        return cov + np.triu(cov, 1).T
+
