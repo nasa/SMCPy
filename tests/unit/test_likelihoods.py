@@ -93,17 +93,17 @@ def test_mvn_likelihood_single_dimension(mocker):
 #TODO: multiple samples (ie vectorize)
 #TODO: consider different arg format; right now its cov (variance) not std
 def test_mvn_likelihood_fixed_std(mocker):
-    n_data_pts = 4
+    n_data_pts = 3
     n_samples = 1
     n_cov_terms = n_data_pts * (n_data_pts + 1) / 2
     inputs = mocker.Mock()
     model_output = np.ones((n_samples, n_data_pts))
 
     model = mocker.Mock(return_value=model_output)
-    data = np.ones(4) * 2
-    args = np.arange(n_cov_terms) + 1
-
-    cov = np.array([[1, 2, 3, 4], [2, 5, 6, 7], [3, 6, 8, 9], [4, 7, 9, 10]])
+    data = np.ones(n_data_pts) * 2
+    args = np.array([1, 2, 3, -1, 0, -2])
+    
+    cov = np.array([[1, 2, 3], [2, -1, 0], [3, 0, -2]])
     error = model_output - data
     expected_like = 1 / (2 * np.pi) ** (n_data_pts / 2) * \
                     np.linalg.det(cov) ** (-1 / 2) * np.exp(-1 / 2 * \
@@ -111,5 +111,5 @@ def test_mvn_likelihood_fixed_std(mocker):
 
     mvn = MVNormal(model, data, args)
 
-    np.testing.assert_array_equal(mvn(inputs), np.log(expected_like))
+    np.testing.assert_array_almost_equal(mvn(inputs), np.log(expected_like))
     model.assert_called_once_with(inputs)
