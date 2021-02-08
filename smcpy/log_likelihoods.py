@@ -118,23 +118,39 @@ class MVNormal(BaseLogLike):
         of covariance matrix left to right, top to bottom (upper triangle).
         '''
         super().__init__(model, data, args)
+        self._num_nones = self._args.count(None)
 
     def __call__(self, inputs):
+        cov_arg_array, inputs = self._process_fixed_and_variable_covar(inputs)
+        cov_matrices = self._get_cov(cov_arg_array)
+
         error = np.expand_dims((self._model(inputs) - self._data), 1)
         errorT = np.transpose(error, axes=(0, 2, 1))
-        cov_matrix = self._get_cov(error.shape[0])
+
         term1 = - len(self._data) / 2 * np.log(2 * np.pi)
-        term2 = - 1 / 2 * np.log(np.linalg.det(cov_matrix))
-        term3 = np.matmul(np.matmul(error, np.linalg.inv(cov_matrix)), errorT)
-        log_like = term1 + term2 + -(1 / 2) * term3
-        return log_like[:, :, 0]
+        term2 = - 1 / 2 * np.log(np.linalg.det(cov_matrices))
+        term3 = np.matmul(np.matmul(error, np.linalg.inv(cov_matrices)), errorT)
 
-    def _get_cov(self, n_samples):
-        x = self._args
-        d = int((np.sqrt(1 + 8 * len(x)) - 1) / 2)
-        cov = np.zeros((d, d))
+        return (term1 + term2 + -(1 / 2) * term3)[:, :, 0]
+
+    def _get_cov(self, cov_args):
+        d = int((np.sqrt(1 + 8 * cov_args.shape[1]) - 1) / 2)
+        covs = np.zeros((cov_args.shape[0], d, d))
         p, q = np.triu_indices(d)
-        cov[p, q] = x
-        cov = cov + np.triu(cov, 1).T
-        return np.tile(cov, (n_samples, 1, 1))
+        covs[:, p, q] = cov_args
+        covs += np.transpose(np.triu(covs, 1), axes=[0, 2, 1])
+        return covs
 
+    def _process_fixed_and_variable_covar(self, inputs):
+        covars = np.tile(self._args, (inputs.shape[0], 1))
+        j = 0
+        for i, arg in enumerate(self._args):
+            if arg is None:
+                covars[:, i] = inputs[:, -self._num_nones + j]
+                j += 1
+
+        new_inputs = inputs.copy()
+        if self._num_nones > 0:
+            new_inputs = new_inputs[:, :-self._num_nones]
+ 
+        return covars, new_inputs

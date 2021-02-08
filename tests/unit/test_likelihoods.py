@@ -79,26 +79,36 @@ def test_mvn_likelihood_single_dimension(mocker, n_samples):
     model = mocker.Mock(return_value=np.ones((n_samples, 1)))
     data = np.array([3])
     args = [np.sqrt(1 / (2 * np.pi))**2]
-    inputs = mocker.Mock()
+    inputs = np.ones((n_samples, 2))
 
     expected_log_like = np.array([[-4 * np.pi]] * n_samples)
 
     mvn = MVNormal(model, data, args)
 
     np.testing.assert_array_equal(mvn(inputs), expected_log_like)
-    model.assert_called_once_with(inputs)
+    np.testing.assert_array_equal(model.call_args[0][0], inputs)
 
 
-@pytest.mark.parametrize('n_samples', [1, 2, 5, 10])
-def test_mvn_likelihood_fixed_var(mocker, n_samples):
+@pytest.mark.parametrize("args", [(1, 2, 3, -1, 0, -2),
+                                  (None, 2, 3, -1, 0, None),
+                                  (1, None, None, None, 0, None),
+                                  (None, None, None, None, None, None)])
+@pytest.mark.parametrize('n_samples', [1, 5, 10])
+def test_mvn_likelihood_fixed_var(mocker, n_samples, args):
     n_data_pts = 3
     n_cov_terms = n_data_pts * (n_data_pts + 1) / 2
-    inputs = mocker.Mock()
+    input_vector = [1, 2]
     model_output = np.ones((n_samples, n_data_pts))
+
+    base_args = (1, 2, 3, -1, 0, -2)
+    for i, arg in enumerate(args):
+        if arg is None:
+            input_vector.append(base_args[i])
+
+    inputs = np.tile(input_vector, (n_samples, 1))
 
     model = mocker.Mock(return_value=model_output)
     data = np.ones(n_data_pts) * 2
-    args = np.array([1, 2, 3, -1, 0, -2])
     
     cov = np.array([[1, 2, 3], [2, -1, 0], [3, 0, -2]])
     error = model_output - data
@@ -107,4 +117,4 @@ def test_mvn_likelihood_fixed_var(mocker, n_samples):
     mvn = MVNormal(model, data, args)
 
     np.testing.assert_array_almost_equal(mvn(inputs), expected_log_like)
-    model.assert_called_once_with(inputs)
+    np.testing.assert_array_equal(model.call_args[0][0], inputs[:, :2])
