@@ -74,15 +74,14 @@ def test_multisource_normal_variable_std(mocker, args_1):
                                   expected_model_inputs)
 
 
-#TODO: multiple samples (ie vectorize)
-#TODO: consider different arg format; right now its cov (variance) not std
-def test_mvn_likelihood_single_dimension(mocker):
-    model = mocker.Mock(return_value=np.ones((1, 1)))
+@pytest.mark.parametrize('n_samples', [1, 2, 5, 10])
+def test_mvn_likelihood_single_dimension(mocker, n_samples):
+    model = mocker.Mock(return_value=np.ones((n_samples, 1)))
     data = np.array([3])
     args = [np.sqrt(1 / (2 * np.pi))**2]
     inputs = mocker.Mock()
 
-    expected_log_like = np.array([[-4 * np.pi]])
+    expected_log_like = np.array([[-4 * np.pi]] * n_samples)
 
     mvn = MVNormal(model, data, args)
 
@@ -90,11 +89,9 @@ def test_mvn_likelihood_single_dimension(mocker):
     model.assert_called_once_with(inputs)
 
 
-#TODO: multiple samples (ie vectorize)
-#TODO: consider different arg format; right now its cov (variance) not std
-def test_mvn_likelihood_fixed_std(mocker):
+@pytest.mark.parametrize('n_samples', [1, 2, 5, 10])
+def test_mvn_likelihood_fixed_var(mocker, n_samples):
     n_data_pts = 3
-    n_samples = 1
     n_cov_terms = n_data_pts * (n_data_pts + 1) / 2
     inputs = mocker.Mock()
     model_output = np.ones((n_samples, n_data_pts))
@@ -105,11 +102,9 @@ def test_mvn_likelihood_fixed_std(mocker):
     
     cov = np.array([[1, 2, 3], [2, -1, 0], [3, 0, -2]])
     error = model_output - data
-    expected_like = 1 / (2 * np.pi) ** (n_data_pts / 2) * \
-                    np.linalg.det(cov) ** (-1 / 2) * np.exp(-1 / 2 * \
-                    np.matmul(np.matmul(error, np.linalg.inv(cov)), error.T))
+    expected_log_like = np.array([[-4.54482456]] * n_samples)
 
     mvn = MVNormal(model, data, args)
 
-    np.testing.assert_array_almost_equal(mvn(inputs), np.log(expected_like))
+    np.testing.assert_array_almost_equal(mvn(inputs), expected_log_like)
     model.assert_called_once_with(inputs)

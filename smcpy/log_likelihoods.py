@@ -113,21 +113,28 @@ class MultiSourceNormal(Normal):
 class MVNormal(BaseLogLike):
 
     def __init__(self, model, data, args):
+        '''
+        Multivariate Normal log likehood function; args are the unique terms
+        of covariance matrix left to right, top to bottom (upper triangle).
+        '''
         super().__init__(model, data, args)
 
     def __call__(self, inputs):
-        cov_matrix = self._get_cov()
-        error = self._model(inputs) - self._data
-        term1 = - cov_matrix.shape[0] / 2 * np.log(2 * np.pi)
+        error = np.expand_dims((self._model(inputs) - self._data), 1)
+        errorT = np.transpose(error, axes=(0, 2, 1))
+        cov_matrix = self._get_cov(error.shape[0])
+        term1 = - len(self._data) / 2 * np.log(2 * np.pi)
         term2 = - 1 / 2 * np.log(np.linalg.det(cov_matrix))
-        term3 = np.matmul(np.matmul(error, np.linalg.inv(cov_matrix)), error.T)
-        return term1 + term2 + -(1 / 2) * term3
+        term3 = np.matmul(np.matmul(error, np.linalg.inv(cov_matrix)), errorT)
+        log_like = term1 + term2 + -(1 / 2) * term3
+        return log_like[:, :, 0]
 
-    def _get_cov(self):
+    def _get_cov(self, n_samples):
         x = self._args
         d = int((np.sqrt(1 + 8 * len(x)) - 1) / 2)
         cov = np.zeros((d, d))
         p, q = np.triu_indices(d)
         cov[p, q] = x
-        return cov + np.triu(cov, 1).T
+        cov = cov + np.triu(cov, 1).T
+        return np.tile(cov, (n_samples, 1, 1))
 
