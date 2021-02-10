@@ -116,26 +116,26 @@ class MVNormal(BaseLogLike):
         '''
         Likelihood function for data with additive, iid errors sampled from N-D
         multivariate normal distribution with mean = [0] * N and covariances = 
-        args[1][n] for n = 1, ..., N where, for example, a 4-D covariance
+        args[n] for n = 1, ..., N where, for example, a 4-D covariance
         matrix is defined as:
 
                       [0 1 2 3]
-                cov = [1 4 5 6]  where 0, ..., 7 represent entries in args[1]
+                cov = [1 4 5 6]  where 0, ..., 7 represent entries in args
                       [2 3 6 7]
         
-        The number of data points sampled from each respective dimension
-        should be provided in args[1]. That is, if there are four measurements
-        of data feature 1, five of data feature 2, one of data features 3, and
-        four for data feature 4, args[1] = [4, 5, 1, 4] and len(data) = 14.
-        
-        If args[1][n] is None, assumes that the last M columns of inputs
+        If args[n] is None, assumes that the last M columns of inputs
         contains covariance samples, where M is the total number of Nones in
-        args[1].
+        args.
+
+        Data array should have shape (number of snapshots, number of features)
+        where snapshots are independent simultaneous measurements of all the
+        data features. Features, for example, might be sensor readings at
+        different locations.
 
         :param args: data segment lengths and corresponding covariances of the
             N-D multivariate normal
-        :type args: list of two tuples, len(args[0]) = len(data) and
-            len(args[1]) = N * (N + 1) / 2
+        :type args: list of two tuples, len(args) = len(data) and
+            len(args) = N * (N + 1) / 2
         '''
         super().__init__(model, data, args)
         self._num_nones = self._args.count(None)
