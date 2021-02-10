@@ -74,14 +74,15 @@ def test_multisource_normal_variable_std(mocker, args_1):
                                   expected_model_inputs)
 
 
-@pytest.mark.parametrize('n_samples', [1, 2, 5, 10])
-def test_mvn_likelihood_single_dimension(mocker, n_samples):
+@pytest.mark.parametrize('n_snapshots', [1, 5, 10])
+@pytest.mark.parametrize('n_samples', [1, 5, 10])
+def test_mvn_likelihood_single_dimension(mocker, n_samples, n_snapshots):
     model = mocker.Mock(return_value=np.ones((n_samples, 1)))
-    data = np.array([3])
+    data = np.array([[3]] * n_snapshots)
     args = [np.sqrt(1 / (2 * np.pi))**2]
     inputs = np.ones((n_samples, 2))
 
-    expected_log_like = np.array([[-4 * np.pi]] * n_samples)
+    expected_log_like = np.array([[-4 * np.pi]] * n_samples) * n_snapshots
 
     mvn = MVNormal(model, data, args)
 
@@ -89,12 +90,13 @@ def test_mvn_likelihood_single_dimension(mocker, n_samples):
     np.testing.assert_array_equal(model.call_args[0][0], inputs)
 
 
-@pytest.mark.parametrize("args", [(1, 2, 3, -1, 0, -2),
+@pytest.mark.parametrize('n_snapshots', [1, 2, 5])
+@pytest.mark.parametrize('args', [(1, 2, 3, -1, 0, -2),
                                   (None, 2, 3, -1, 0, None),
                                   (1, None, None, None, 0, None),
                                   (None, None, None, None, None, None)])
 @pytest.mark.parametrize('n_samples', [1, 5, 10])
-def test_mvn_likelihood_fixed_var(mocker, n_samples, args):
+def test_mvn_likelihood_ndim(mocker, n_samples, n_snapshots, args):
     n_data_pts = 3
     n_cov_terms = n_data_pts * (n_data_pts + 1) / 2
     input_vector = [1, 2]
@@ -108,11 +110,9 @@ def test_mvn_likelihood_fixed_var(mocker, n_samples, args):
     inputs = np.tile(input_vector, (n_samples, 1))
 
     model = mocker.Mock(return_value=model_output)
-    data = np.ones(n_data_pts) * 2
+    data = np.ones((n_snapshots, n_data_pts)) * 2
     
-    cov = np.array([[1, 2, 3], [2, -1, 0], [3, 0, -2]])
-    error = model_output - data
-    expected_log_like = np.array([[-4.54482456]] * n_samples)
+    expected_log_like = np.array([[-4.54482456]] * n_samples) * n_snapshots
 
     mvn = MVNormal(model, data, args)
 
