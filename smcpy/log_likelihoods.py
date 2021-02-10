@@ -116,22 +116,25 @@ class MVNormal(BaseLogLike):
         '''
         Likelihood function for data with additive, iid errors sampled from N-D
         multivariate normal distribution with mean = [0] * N and covariances = 
-        args[1][n] for n = 1, ..., N where, for example, a 4-D covariance
+        args[n] for n = 1, ..., N where, for example, a 4-D covariance
         matrix is defined as:
 
                       [0 1 2 3]
                 cov = [1 4 5 6]  where 0, ..., 7 represent entries in args[1]
                       [2 3 6 7]
         
-        The number of data points sampled from each respective dimension
-        should be provided in args[1]. That is, if there are four measurements
-        of data feature 1, five of data feature 2, one of data features 3, and
-        four for data feature 4, args[1] = [4, 5, 1, 4] and len(data) = 14.
-        
-        If args[1][n] is None, assumes that the last M columns of inputs
+        If args[n] is None, assumes that the last M columns of model inputs
         contains covariance samples, where M is the total number of Nones in
-        args[1].
+        args. The covariance dimension is equal to data.shape[0] x data.shape[0]
+        and the number of snapshots is given by data.shape[1]. Here, snapshots
+        are considered independent observations of the N-D features sampled
+        from the multivariate normal.
 
+        :param model: model for which parameter estimation is being performed;
+                      return shape must be (inputs.shape[0], data.shape[1])
+        :type model: callable
+        :param data: data used for parameter estimation
+        :type data: 2D array with shape (num_snapshots, num_data_features)
         :param args: data segment lengths and corresponding covariances of the
             N-D multivariate normal
         :type args: list of two tuples, len(args[0]) = len(data) and
@@ -143,14 +146,14 @@ class MVNormal(BaseLogLike):
     def __call__(self, inputs):
         cov_arg_array, inputs = self._process_fixed_and_variable_covar(inputs)
         cov_matrices = np.tile(self._get_cov(cov_arg_array),
-                               (self._data.shape[0], 1, 1, 1))
+                               (self._data.shape[1], 1, 1, 1))
 
-        data = np.expand_dims(self._data, 1)
+        data = np.expand_dims(self._data, 1).T
         error = self._model(inputs) - data
         error = np.expand_dims(error, 2)
         errorT = np.transpose(error, axes=(0, 1, 3, 2))
 
-        term1 = - self._data.shape[1] / 2 * np.log(2 * np.pi)
+        term1 = - self._data.shape[0] / 2 * np.log(2 * np.pi)
         term2 = - 1 / 2 * np.log(np.linalg.det(cov_matrices))
         term2 = np.expand_dims(term2, (2, 3))
         term3 = np.matmul(np.matmul(error, np.linalg.inv(cov_matrices)), errorT)
@@ -158,6 +161,7 @@ class MVNormal(BaseLogLike):
         log_likes = term1 + term2 + -(1 / 2) * term3
         log_likes = np.sum(log_likes, axis=0)
 
+        print(log_likes.shape, data.shape, error.shape, errorT.shape, term2.shape, term3.shape, cov_arg_array.shape)
         return log_likes[:, :, 0]
 
     def _get_cov(self, cov_args):
