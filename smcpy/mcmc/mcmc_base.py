@@ -42,11 +42,11 @@ class MCMCBase(ABC, MCMCLogger):
         if inputs.shape[1] != len(self._priors):
             raise ValueError("Num prior distributions != num input params")
 
-        priors = np.hstack([p.pdf(inputs.T[i]).reshape(-1, 1) \
-                            for i, p in enumerate(self._priors)])
-        nonzero_priors = priors != 0
-        log_priors = np.ones(priors.shape) * -np.inf
-        log_priors = np.log(priors, where=nonzero_priors, out=log_priors)
+        prior_probs = np.hstack([p.pdf(inputs.T[i]).reshape(-1, 1) \
+                                for i, p in enumerate(self._priors)])
+        nonzero_priors = prior_probs != 0
+        log_priors = np.ones(prior_probs.shape) * -np.inf
+        log_priors = np.log(prior_probs, where=nonzero_priors, out=log_priors)
         return log_priors
 
     @abstractmethod
@@ -176,7 +176,7 @@ class MCMCBase(ABC, MCMCLogger):
         return chain
 
     def _check_log_priors_for_zero_probability(self, log_priors):
-        if (log_priors == -np.inf).any():
+        if any(~self._row_has_nonzero_prior_probability(log_priors)):
             raise ValueError('Initial inputs are out of bounds; '
                              f'prior log prob = {log_priors}')
 
