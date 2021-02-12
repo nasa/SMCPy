@@ -77,3 +77,17 @@ def test_invwishart_pdf(mocker, num_samples):
 
     np.testing.assert_array_equal(iw.pdf(samples), expected_prior_probs)
     np.testing.assert_array_equal(mock_invwis.pdf.call_args[0][0], expected_cov)
+
+
+@pytest.mark.parametrize('num_samples', [1, 5])
+def test_invwishart_zero_prob(mocker, num_samples):
+    samples = np.tile(np.arange(6), (num_samples, 1))
+
+    mock_invwis = mocker.Mock()
+    mock_invwis.pdf.side_effect = np.linalg.LinAlgError
+    mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
+                                     return_value=mock_invwis)
+
+    iw = InvWishart(3)
+
+    np.testing.assert_array_equal(iw.pdf(samples), np.zeros((num_samples, 1)))

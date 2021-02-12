@@ -35,7 +35,7 @@ class InvWishart:
 
     def __init__(self, cov_dim):
         self._cov_dim = cov_dim
-        self._dim = cov_dim * (cov_dim + 1) / 2
+        self._dim = int(cov_dim * (cov_dim + 1) / 2)
         self._invwishart = invwishart(cov_dim, np.eye(cov_dim))
 
     @property
@@ -43,6 +43,10 @@ class InvWishart:
         return self._dim
 
     def rvs(self, num_samples):
+        '''
+        :param num_samples: number of samples to return
+        :type num_samples: int
+        '''
         cov = self._invwishart.rvs(num_samples)
         idx1, idx2 = np.triu_indices(self._cov_dim)
         return cov[:, idx1, idx2]
@@ -53,7 +57,10 @@ class InvWishart:
         :type x: 2D array (# samples, # unique covariances)
         '''
         covs = self._assemble_covs(x)
-        return self._invwishart.pdf(covs)
+        try:
+            return self._invwishart.pdf(covs)
+        except np.linalg.LinAlgError:
+            return np.zeros((x.shape[0], 1))
 
     def _assemble_covs(self, samples):
         covs = np.zeros((samples.shape[0], self._cov_dim, self._cov_dim))
