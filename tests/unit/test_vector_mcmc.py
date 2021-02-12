@@ -5,22 +5,6 @@ import sys
 from smcpy.mcmc.vector_mcmc import *
 
 
-
-class DummyPrior:
-
-    def __init__(self, pdf_func, sample_func):
-        self._pdf = pdf_func
-        self._rvs = sample_func
-
-    @property
-    def pdf(self):
-        return self._pdf
-
-    @property
-    def rvs(self):
-        return self._rvs
-
-
 @pytest.fixture
 def stub_model():
     x = np.array([1, 2, 3])
@@ -38,21 +22,11 @@ def data():
 
 
 @pytest.fixture
-def prior_pdfs():
-    return [lambda x: x, lambda x: x + 1, lambda x: x *2]
-
-
-@pytest.fixture
-def prior_samplers():
-    return [lambda x: np.array([1] * x), lambda x: np.array([2] * x),
-            lambda x: np.array([3] * x)]
-
-
-@pytest.fixture
-def priors(prior_pdfs, prior_samplers):
-    priors = []
-    for i, funcs in enumerate(zip(prior_pdfs, prior_samplers)):
-        priors.append(DummyPrior(*funcs))
+def priors(mocker):
+    priors = [mocker.Mock() for _ in range(3)]
+    for i, p in enumerate(priors):
+        p.rvs = lambda x, i=i: np.array([1 + i] * x)
+        p.pdf = lambda x, i=i: x + i
     return priors
 
 
@@ -61,10 +35,26 @@ def vector_mcmc(stub_model, data, priors):
     return VectorMCMC(stub_model, data, priors, log_like_args=None)
 
 
-def test_vectorized_prior_sampling(vector_mcmc):
-    prior_samples = vector_mcmc.sample_from_priors(num_samples=4)
+@pytest.mark.parametrize('num_samples', [1, 2, 4])
+def test_vectorized_prior_sampling(vector_mcmc, num_samples):
+    prior_samples = vector_mcmc.sample_from_priors(num_samples=num_samples)
+    expected_samples = np.tile([1, 2, 3], (num_samples, 1))
+    np.testing.assert_array_equal(prior_samples, expected_samples)
 
-    np.testing.assert_array_equal(prior_samples, np.tile([1, 2, 3], (4, 1)))
+
+@pytest.mark.parametrize('inputs', (np.array([[0.1, 1, 0.5]]),
+                                    np.array([[0.1, 1, 0.5]] * 4)))
+def test_vectorized_prior(vector_mcmc, inputs):
+    log_prior = vector_mcmc.evaluate_log_priors(inputs)
+    expected_log_prior = np.log(np.array([[0.1, 2, 2.5]] * inputs.shape[0]))
+    np.testing.assert_array_almost_equal(log_prior, expected_log_prior)
+
+
+@pytest.mark.parametrize('inputs', (np.array([[0.1, 0.5]]),
+                                    np.array([[0.1, 1, 1, 0.5]] * 4)))
+def test_prior_input_mismatch_throws_error(vector_mcmc, inputs):
+    with pytest.raises(ValueError):
+        vector_mcmc.evaluate_log_priors(inputs)
 
 
 @pytest.mark.parametrize('inputs, std_dev', (
@@ -81,22 +71,6 @@ def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
     log_like = vector_mcmc.evaluate_log_likelihood(inputs)
 
     np.testing.assert_array_almost_equal(log_like, expected_log_like)
-
-
-@pytest.mark.parametrize('inputs', (np.array([[0.1, 1, 0.5]]),
-                                    np.array([[0.1, 1, 0.5]] * 4)))
-def test_vectorized_prior(vector_mcmc, inputs):
-    log_prior = vector_mcmc.evaluate_log_priors(inputs)
-
-    expected_log_prior = np.log(np.array([[0.1, 2, 1]] * inputs.shape[0]))
-    np.testing.assert_array_almost_equal(log_prior, expected_log_prior)
-
-
-@pytest.mark.parametrize('inputs', (np.array([[0.1, 0.5]]),
-                                    np.array([[0.1, 1, 1, 0.5]] * 4)))
-def test_prior_input_mismatch_throws_error(vector_mcmc, inputs):
-    with pytest.raises(ValueError):
-        vector_mcmc.evaluate_log_priors(inputs)
 
 
 @pytest.mark.parametrize('inputs', (np.array([[0, 1, 0.5]]),

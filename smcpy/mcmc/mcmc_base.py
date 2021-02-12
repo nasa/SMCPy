@@ -34,16 +34,20 @@ class MCMCBase(ABC, MCMCLogger):
         super().__init__(__name__, debug)
 
     def sample_from_priors(self, num_samples):
-        samples = [p.rvs(num_samples).reshape(-1, 1) \
-                   for i, p in enumerate(self._priors)]
+        samples = []
+        for i, p in enumerate(self._priors):
+            samples.append(p.rvs(num_samples).reshape(-1, 1))
         return np.hstack(samples)
 
     def evaluate_log_priors(self, inputs):
         if inputs.shape[1] != len(self._priors):
             raise ValueError("Num prior distributions != num input params")
 
-        prior_probs = np.hstack([p.pdf(inputs.T[i]).reshape(-1, 1) \
-                                for i, p in enumerate(self._priors)])
+        prior_probs = []
+        for i, p in enumerate(self._priors):
+            prior_probs.append(p.pdf(inputs.T[i]).reshape(-1, 1))
+        prior_probs = np.hstack(prior_probs)
+
         nonzero_priors = prior_probs != 0
         log_priors = np.ones(prior_probs.shape) * -np.inf
         log_priors = np.log(prior_probs, where=nonzero_priors, out=log_priors)
