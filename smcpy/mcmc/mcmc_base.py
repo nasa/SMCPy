@@ -36,22 +36,28 @@ class MCMCBase(ABC, MCMCLogger):
     def sample_from_priors(self, num_samples):
         samples = []
         for i, p in enumerate(self._priors):
-            samples.append(p.rvs(num_samples).reshape(-1, 1))
-        return np.hstack(samples)
+            samples.append(p.rvs(num_samples).T)
+        return np.vstack(samples).T
 
     def evaluate_log_priors(self, inputs):
-        if inputs.shape[1] != len(self._priors):
+        prior_dims = self._get_prior_dims()
+
+        if inputs.shape[1] != sum(prior_dims):
             raise ValueError("Num prior distributions != num input params")
 
         prior_probs = []
         for i, p in enumerate(self._priors):
-            prior_probs.append(p.pdf(inputs.T[i]).reshape(-1, 1))
+            in_ = inputs.T[i:i+prior_dims[i]]
+            prior_probs.append(p.pdf(in_.T).reshape(-1, 1))
         prior_probs = np.hstack(prior_probs)
 
         nonzero_priors = prior_probs != 0
         log_priors = np.ones(prior_probs.shape) * -np.inf
         log_priors = np.log(prior_probs, where=nonzero_priors, out=log_priors)
         return log_priors
+
+    def _get_prior_dims(self):
+        return [p.dim if hasattr(p, 'dim') else 1 for p in self._priors]
 
     @abstractmethod
     def evaluate_model(self, inputs):

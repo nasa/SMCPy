@@ -27,6 +27,14 @@ def priors(mocker):
     for i, p in enumerate(priors):
         p.rvs = lambda x, i=i: np.array([1 + i] * x)
         p.pdf = lambda x, i=i: x + i
+        delattr(p, 'dim')
+
+    multivar_prior = mocker.Mock()
+    multivar_prior.rvs = lambda x: np.tile([4, 5, 6], (x, 1))
+    multivar_prior.pdf = lambda x: np.sum(x - 0.5, axis=1)
+    multivar_prior.dim = 3
+    priors.append(multivar_prior)
+
     return priors
 
 
@@ -38,16 +46,16 @@ def vector_mcmc(stub_model, data, priors):
 @pytest.mark.parametrize('num_samples', [1, 2, 4])
 def test_vectorized_prior_sampling(vector_mcmc, num_samples):
     prior_samples = vector_mcmc.sample_from_priors(num_samples=num_samples)
-    expected_samples = np.tile([1, 2, 3], (num_samples, 1))
+    expected_samples = np.tile([1, 2, 3, 4, 5, 6], (num_samples, 1))
     np.testing.assert_array_equal(prior_samples, expected_samples)
 
 
-@pytest.mark.parametrize('inputs', (np.array([[0.1, 1, 0.5]]),
-                                    np.array([[0.1, 1, 0.5]] * 4)))
+@pytest.mark.parametrize('inputs', (np.array([[0.1, 1, 0.5, 3, 2, 1]]),
+                                    np.array([[0.1, 1, 0.5, 3, 2, 1]] * 4)))
 def test_vectorized_prior(vector_mcmc, inputs):
     log_prior = vector_mcmc.evaluate_log_priors(inputs)
-    expected_log_prior = np.log(np.array([[0.1, 2, 2.5]] * inputs.shape[0]))
-    np.testing.assert_array_almost_equal(log_prior, expected_log_prior)
+    expected_prior = np.array([[0.1, 2, 2.5, 4.5]] * inputs.shape[0])
+    np.testing.assert_array_almost_equal(log_prior, np.log(expected_prior))
 
 
 @pytest.mark.parametrize('inputs', (np.array([[0.1, 0.5]]),
@@ -161,6 +169,8 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
 
+    vector_mcmc._priors = vector_mcmc._priors[:3] # drop mvn
+
     mocker.patch('numpy.random.uniform')
     mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
     mocker.patch.object(vector_mcmc, 'proposal',
@@ -190,6 +200,7 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, mocker):
     adapt_delay = 0
     adapt_interval = 1
 
+    vector_mcmc._priors = vector_mcmc._priors[:3] # drop mvn
     mocker.patch('numpy.random.uniform')
 
     mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
