@@ -76,6 +76,8 @@ class SMCSampler:
         mutator = Mutator(self._mcmc_kernel)
 
         particles = self._initialize(initializer, num_particles, proposal)
+        particles = updater.resample_if_needed(particles)
+
         step_list = [particles]
 
         phi_iterator = phi_sequence[1:]
