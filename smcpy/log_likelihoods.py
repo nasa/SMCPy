@@ -132,10 +132,8 @@ class MVNormal(BaseLogLike):
         data features. Features, for example, might be sensor readings at
         different locations.
 
-        :param args: data segment lengths and corresponding covariances of the
-            N-D multivariate normal
-        :type args: list of two tuples, len(args) = len(data) and
-            len(args) = N * (N + 1) / 2
+        :param args: covariances of the N-D multivariate normal
+        :type args: list, len(args) =  N * (N + 1) / 2
         '''
         super().__init__(model, data, args)
         self._num_nones = self._args.count(None)
@@ -181,3 +179,56 @@ class MVNormal(BaseLogLike):
             new_inputs = new_inputs[:, :-self._num_nones]
  
         return covars, new_inputs
+
+
+
+class MVNRandomEffects(BaseLogLike):
+
+    def __init__(self, model, data, args):
+        super().__init__(model, data, args)
+
+        self._norms = [Normal(model, data, arg_i) for arg_i in args[1]]
+
+        self._n_mvn_nones = self._args[0].count(None)
+        self._n_norm_nones = self._args[1].count(None)
+        self._n_nones = self._n_mvn_nones + self._n_norm_nones
+
+    def __call__(self, inputs):
+        num_randeff = len(self._args[1])
+
+        model_inputs = inputs
+        if self._n_nones > 0:
+            model_inputs = model_inputs[:, :-self._n_nones]
+            like_args = inputs[:, -self._n_nones:]
+            mvn_args = like_args[:, :self._n_mvn_nones]
+            norm_args = like_args[:, self._n_mvn_nones:]
+
+        split_inputs = np.array_split(model_inputs, num_randeff + 1, axis=1)
+        mvn_model_inputs = split_inputs[0]
+        norm_model_inputs = split_inputs[1:]
+
+        mvn_inputs = mvn_model_inputs.copy()
+        norm_inputs = norm_model_inputs.copy()
+
+        if self._n_mvn_nones > 0:
+            mvn_inputs = np.concatenate((mvn_model_inputs, mvn_args), axis=1)
+
+        if self._n_norm_nones > 0:
+            arg_idx = [i for i, val in enumerate(self._args[1]) if val == None]
+            for i, j in enumerate(arg_idx):
+                norm_inputs[j] = np.c_[norm_model_inputs[j], norm_args[:, i]]
+
+        mvn_log_like = np.ones((inputs.shape[0], 1)) * -np.inf
+        for i in range(inputs.shape[0]):
+
+            reff_array = np.array([ni[i] for ni in norm_model_inputs])
+            mvn = MVNormal(self._total_effects_model, reff_array, self._args[0])
+            mvn_log_like[i, 0] = mvn(mvn_inputs[i])
+
+        log_like = sum([n(in_) for in_, n in zip(norm_inputs, self._norms)])
+        log_like += mvn_log_like
+
+        return log_like
+
+    def _total_effects_model(inputs):
+        return inputs

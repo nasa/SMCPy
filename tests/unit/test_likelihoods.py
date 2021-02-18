@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy import MultiSourceNormal, MVNormal
+from smcpy import MultiSourceNormal, MVNormal, MVNRandomEffects
 
 
 def test_multisource_normal_bad_data_segments():
@@ -118,3 +118,69 @@ def test_mvn_likelihood_ndim(mocker, n_samples, n_snapshots, args):
 
     np.testing.assert_array_almost_equal(mvn(inputs), expected_log_like)
     np.testing.assert_array_equal(model.call_args[0][0], inputs[:, :2])
+
+
+@pytest.mark.parametrize('args', [([1, 2, 3], [2, 3, 4, 5, 6]),
+                                  ([None, 2, 3], [2, None, 4, 5, 6]),
+                                  ([1, None, 3], [2, None, 4, None, None]),
+                                  ([None, None, 3], [2, 3, None, 5, 6]),
+                                  ([None] * 3, [None] * 5)])
+def test_mvnrandeff_likelihood(mocker, args):
+    n_params = 2
+    n_samples = 4
+    n_randeff = len(args[1])
+    n_cov_args = len(args[0])
+    n_mvn_nones = args[0].count(None)
+    n_norm_nones = args[1].count(None)
+    n_nones = n_mvn_nones + n_norm_nones
+
+    model_inputs = np.tile(np.arange(n_params*(n_randeff + 1)), (n_samples, 1))
+    inputs = model_inputs.copy()
+    if n_nones > 0:
+        arg_inputs = np.ones((n_samples, n_nones))
+        inputs = np.concatenate((model_inputs, arg_inputs), axis=1)
+
+    data = mocker.Mock()
+    model = mocker.Mock()
+
+    norm_like = mocker.Mock(return_value=np.ones((n_samples, 1)) * 2)
+    norm_like_class = mocker.Mock(return_value=norm_like)
+    mocker.patch('smcpy.log_likelihoods.Normal', new=norm_like_class)
+
+    mvn_like = mocker.Mock(return_value=np.ones((1, 1)) * 3)
+    mvn_like_class = mocker.Mock(return_value=mvn_like)
+    mocker.patch('smcpy.log_likelihoods.MVNormal', new=mvn_like_class)
+
+    split_inputs = np.array_split(model_inputs, n_randeff + 1, axis=1)
+
+    exp_mvn_inputs = split_inputs[0]
+    exp_norm_inputs = split_inputs[1:]
+    if n_nones > 0:
+        mvn_args = np.ones((n_samples, n_mvn_nones))
+        norm_args = np.ones((n_samples, n_norm_nones))
+        exp_mvn_inputs = np.concatenate((exp_mvn_inputs, mvn_args), axis=1)
+        exp_norm_inputs = [np.c_[in_, np.ones(n_samples)] \
+                           if args[1][i] == None else in_ \
+                           for i, in_ in enumerate(exp_norm_inputs)]
+
+    expected_log_like = np.ones((n_samples, 1)) * (3 + 2 * n_randeff)
+
+    mvnre = MVNRandomEffects(model, data, args)
+
+    np.testing.assert_array_equal(mvnre(inputs), expected_log_like)
+
+    # total effects likelihood calls
+    for i in range(n_samples):
+        in_ = np.array([exp_mvn_inputs[i] for exp_mvn_in in exp_mvn_inputs])
+        np.testing.assert_array_equal(mvn_like.call_args_list[i][0][0],
+                                      exp_mvn_inputs[i])
+
+        te_data = [exp_norm_in[i] for exp_norm_in in exp_norm_inputs]
+        mvn_like_class.call_args_list[i][0][0] == \
+                (mvnre._total_effects_model, te_data, args[0])
+
+    # random effects likelihood calls
+    for i in range(n_randeff):
+        assert norm_like_class.call_args_list[i][0] == (model, data, args[1][i])
+        np.testing.assert_array_equal(norm_like.call_args_list[i][0][0],
+                                      exp_norm_inputs[i])
