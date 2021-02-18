@@ -40,7 +40,9 @@ def test_sample(mocker, rank, prog_bar):
     init = mocker.patch('smcpy.smc_sampler.Initializer',
                         return_value=mocked_initializer)
 
-    upd = mocker.patch('smcpy.smc_sampler.Updater', autospec=True)
+    upd_mock = mocker.Mock()
+    upd_mock.resample_if_needed = lambda x: x
+    upd = mocker.patch('smcpy.smc_sampler.Updater', return_value=upd_mock)
 
     mocked_mutator = mocker.Mock()
     mocked_mutator.mutate.return_value = np.array([3] * num_particles)
