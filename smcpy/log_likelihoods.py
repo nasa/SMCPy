@@ -185,50 +185,75 @@ class MVNormal(BaseLogLike):
 class MVNRandomEffects(BaseLogLike):
 
     def __init__(self, model, data, args):
+        '''
+        Likelihood function for random effects.
+
+        :param model: computational model
+        :type model: callable
+        :param data: data for the random effects with shape (num rand effects,
+            num data features)
+        :type data: 2D array
+        :param args: total and random effects covariances and standard devs
+        :type args: tuple (x, y)
+        '''
+
         super().__init__(model, data, args)
 
-        self._norms = [Normal(model, data, arg_i) for arg_i in args[1]]
+        self._randeffs = [Normal(model, data[i], arg_i) \
+                          for i, arg_i in enumerate(args[1])]
 
-        self._n_mvn_nones = self._args[0].count(None)
-        self._n_norm_nones = self._args[1].count(None)
-        self._n_nones = self._n_mvn_nones + self._n_norm_nones
+        self._n_total_eff_nones = self._args[0].count(None)
+        self._n_rand_eff_nones = self._args[1].count(None)
+        self._n_nones = self._n_total_eff_nones + self._n_rand_eff_nones
 
     def __call__(self, inputs):
+        processed_inputs = self._process_fixed_and_variable_std(inputs)
+
+        total_eff_inputs = processed_inputs[0]
+        rand_eff_inputs = processed_inputs[1]
+        rand_eff_model_inputs = processed_inputs[2]
+
+        total_eff_log_like = np.ones((inputs.shape[0], 1)) * -np.inf
+        for i in range(inputs.shape[0]):
+
+            reff_data_array = np.array([ni[i] for ni in rand_eff_model_inputs])
+            total_eff = MVNormal(self._total_effects_model, reff_data_array,
+                                 self._args[0])
+            total_eff_log_like[i, 0] = total_eff(total_eff_inputs[i])
+
+        log_like = [d(in_) for in_, d in zip(rand_eff_inputs, self._randeffs)]
+        log_like.append(total_eff_log_like)
+
+        return np.sum(log_like, axis=0)
+
+    def _process_fixed_and_variable_std(self, inputs):
         num_randeff = len(self._args[1])
 
         model_inputs = inputs
         if self._n_nones > 0:
             model_inputs = model_inputs[:, :-self._n_nones]
             like_args = inputs[:, -self._n_nones:]
-            mvn_args = like_args[:, :self._n_mvn_nones]
-            norm_args = like_args[:, self._n_mvn_nones:]
+            total_eff_args = like_args[:, :self._n_total_eff_nones]
+            rand_eff_args = like_args[:, self._n_total_eff_nones:]
 
         split_inputs = np.array_split(model_inputs, num_randeff + 1, axis=1)
-        mvn_model_inputs = split_inputs[0]
-        norm_model_inputs = split_inputs[1:]
+        total_eff_model_inputs = split_inputs[0]
+        rand_eff_model_inputs = split_inputs[1:]
 
-        mvn_inputs = mvn_model_inputs.copy()
-        norm_inputs = norm_model_inputs.copy()
+        total_eff_inputs = total_eff_model_inputs.copy()
+        rand_eff_inputs = rand_eff_model_inputs.copy()
 
-        if self._n_mvn_nones > 0:
-            mvn_inputs = np.concatenate((mvn_model_inputs, mvn_args), axis=1)
+        if self._n_total_eff_nones > 0:
+            total_eff_inputs = np.c_[total_eff_model_inputs, total_eff_args]
 
-        if self._n_norm_nones > 0:
+        if self._n_rand_eff_nones > 0:
             arg_idx = [i for i, val in enumerate(self._args[1]) if val == None]
             for i, j in enumerate(arg_idx):
-                norm_inputs[j] = np.c_[norm_model_inputs[j], norm_args[:, i]]
+                rand_eff_inputs[j] = np.c_[rand_eff_model_inputs[j],
+                                           rand_eff_args[:, i]]
 
-        mvn_log_like = np.ones((inputs.shape[0], 1)) * -np.inf
-        for i in range(inputs.shape[0]):
+        return (total_eff_inputs, rand_eff_inputs, rand_eff_model_inputs)
 
-            reff_array = np.array([ni[i] for ni in norm_model_inputs])
-            mvn = MVNormal(self._total_effects_model, reff_array, self._args[0])
-            mvn_log_like[i, 0] = mvn(mvn_inputs[i])
-
-        log_like = sum([n(in_) for in_, n in zip(norm_inputs, self._norms)])
-        log_like += mvn_log_like
-
-        return log_like
-
+    @staticmethod
     def _total_effects_model(inputs):
         return inputs

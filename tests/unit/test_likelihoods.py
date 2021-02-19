@@ -140,7 +140,7 @@ def test_mvnrandeff_likelihood(mocker, args):
         arg_inputs = np.ones((n_samples, n_nones))
         inputs = np.concatenate((model_inputs, arg_inputs), axis=1)
 
-    data = mocker.Mock()
+    data = np.ones((n_randeff, 1))
     model = mocker.Mock()
 
     norm_like = mocker.Mock(return_value=np.ones((n_samples, 1)) * 2)
@@ -175,12 +175,29 @@ def test_mvnrandeff_likelihood(mocker, args):
         np.testing.assert_array_equal(mvn_like.call_args_list[i][0][0],
                                       exp_mvn_inputs[i])
 
-        te_data = [exp_norm_in[i] for exp_norm_in in exp_norm_inputs]
-        mvn_like_class.call_args_list[i][0][0] == \
-                (mvnre._total_effects_model, te_data, args[0])
+        te_data = np.array([model_in[i] for model_in in split_inputs[1:]])
+
+        call = mvn_like_class.call_args_list[i][0]
+        assert call[0] == mvnre._total_effects_model
+        np.testing.assert_array_equal(call[1], te_data)
+        assert call[2] == args[0]
 
     # random effects likelihood calls
     for i in range(n_randeff):
-        assert norm_like_class.call_args_list[i][0] == (model, data, args[1][i])
+        call = norm_like_class.call_args_list[i][0]
+        assert call[0] == model
+        np.testing.assert_array_equal(call[1], data[i])
+        assert call[2] == args[1][i]
         np.testing.assert_array_equal(norm_like.call_args_list[i][0][0],
                                       exp_norm_inputs[i])
+
+
+def test_random_effects_dummy_model(mocker):
+    model = mocker.Mock()
+    data = [mocker.Mock()]
+    args = ([mocker.Mock()], [mocker.Mock()])
+
+    mvnre = MVNRandomEffects(model, data, args)
+
+    np.testing.assert_array_equal(mvnre._total_effects_model(np.ones((5, 5))), 
+                                  np.ones((5, 5)))
