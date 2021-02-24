@@ -7,6 +7,12 @@ class BaseLogLike:
         self._data = data
         self._args = args
 
+    def _get_output(self, inputs):
+        output = self._model(inputs)
+        if np.isnan(output).any():
+            raise ValueError
+        return output
+
 
 class Normal(BaseLogLike):
 
@@ -25,7 +31,7 @@ class Normal(BaseLogLike):
             inputs = inputs[:, :-1]
         var = std_dev ** 2
 
-        output = self._model(inputs)
+        output = self._get_output(inputs)
 
         return self._calc_normal_log_like(output, self._data, var)
 
@@ -69,7 +75,7 @@ class MultiSourceNormal(Normal):
 
         std_devs, inputs = self._process_fixed_and_variable_std(inputs)
 
-        output = self._model(inputs)
+        output = self._get_output(inputs)
 
         log_likes = []
         start_idx = 0
@@ -144,7 +150,8 @@ class MVNormal(BaseLogLike):
                                (self._data.shape[0], 1, 1, 1))
 
         data = np.expand_dims(self._data, 1)
-        error = self._model(inputs) - data
+        output = self._get_output(inputs)
+        error = output - data
         error = np.expand_dims(error, 2)
         errorT = np.transpose(error, axes=(0, 1, 3, 2))
 

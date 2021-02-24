@@ -4,6 +4,18 @@ import pytest
 from smcpy import MultiSourceNormal, MVNormal, MVNRandomEffects
 
 
+@pytest.mark.parametrize('class_, args',
+                         [(MultiSourceNormal, [(3,), (1,)]),
+                          (MVNormal, [0, 0, 0]), (Normal, 1)])
+def test_nan_in_model_raises_value_error(class_, args):
+    model = lambda x: np.array([[1, 2, np.nan], [np.nan, np.nan, 3]])
+    data = np.ones(3)
+    like = class_(model, data, args)
+
+    with pytest.raises(ValueError):
+        like(np.ones((1, 1)))
+
+
 def test_multisource_normal_bad_data_segments():
     inputs = np.ones((5, 6))
     data = np.ones(8)
