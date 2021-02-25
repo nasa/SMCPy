@@ -185,7 +185,7 @@ def test_mvnrandeff_likelihood(mocker, args):
     for i in range(n_samples):
         in_ = np.array([exp_mvn_inputs[i] for exp_mvn_in in exp_mvn_inputs])
         np.testing.assert_array_equal(mvn_like.call_args_list[i][0][0],
-                                      exp_mvn_inputs[i])
+                                      exp_mvn_inputs[i].reshape(1, -1))
 
         te_data = np.array([model_in[i] for model_in in split_inputs[1:]])
 

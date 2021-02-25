@@ -228,10 +228,11 @@ class MVNRandomEffects(BaseLogLike):
             total_eff = MVNormal(self._total_effects_model, reff_data_array,
                                  self._args[0])
 
-            import pdb; pdb.set_trace()
-            total_eff_log_like[i, 0] = total_eff(total_eff_inputs[i])
+            in_ = total_eff_inputs[i].reshape(1, -1)
+            total_eff_log_like[i, 0] = total_eff(in_)
 
-        log_like = [d(in_) for in_, d in zip(rand_eff_inputs, self._randeffs)]
+        iterable = zip(rand_eff_inputs, self._randeffs)
+        log_like = [np.c_[d(in_)] for in_, d in iterable]
         log_like.append(total_eff_log_like)
 
         return np.sum(log_like, axis=0)
