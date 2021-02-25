@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy import MultiSourceNormal, MVNormal, MVNRandomEffects
+from smcpy import MultiSourceNormal, MVNormal, MVNRandomEffects, Normal
 
 
 @pytest.mark.parametrize('class_, args',

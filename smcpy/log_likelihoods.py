@@ -126,12 +126,13 @@ class MVNormal(BaseLogLike):
         matrix is defined as:
 
                       [0 1 2 3]
-                cov = [1 4 5 6]  where 0, ..., 7 represent entries in args
-                      [2 3 6 7]
+                cov = [1 4 5 6]  where 0, ..., 9 represent entries in args
+                      [2 5 7 8]
+                      [3 6 8 9]
         
         If args[n] is None, assumes that the last M columns of inputs
         contains covariance samples, where M is the total number of Nones in
-        args.
+        args (Nones do not have to be contiguous).
 
         Data array should have shape (number of snapshots, number of features)
         where snapshots are independent simultaneous measurements of all the
@@ -226,6 +227,8 @@ class MVNRandomEffects(BaseLogLike):
             reff_data_array = np.array([ni[i] for ni in rand_eff_model_inputs])
             total_eff = MVNormal(self._total_effects_model, reff_data_array,
                                  self._args[0])
+
+            import pdb; pdb.set_trace()
             total_eff_log_like[i, 0] = total_eff(total_eff_inputs[i])
 
         log_like = [d(in_) for in_, d in zip(rand_eff_inputs, self._randeffs)]
