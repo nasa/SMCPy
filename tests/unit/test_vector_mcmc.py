@@ -238,6 +238,31 @@ def test_metropolis_inputs_out_of_bounds(mocker, stub_model, data, num_chains,
                                        phi=None)
 
 
+def test_multi_dim_priors(mocker):
+    n_priors = 5
+    n_input_params = 7
+    n_inputs = 3
+
+    inputs = np.tile(np.arange(n_input_params), (n_inputs, 1))
+    priors = [mocker.Mock() for i in range(n_priors)]
+    expected_priors = np.zeros((inputs.shape[0], n_priors))
+    expected_prior_calls = [inputs[:, 0], inputs[:, 1], inputs[:, 2],
+                            inputs[:, 3:6], inputs[:, 6]]
+
+    for p in priors:
+        p.pdf.return_value = np.array([[1] * inputs.shape[0]])
+        p.dim = 1
+    priors[3].dim = 3
+
+    mcmc = VectorMCMC(mocker.Mock(), mocker.Mock(), priors)
+
+    np.testing.assert_array_equal(mcmc.evaluate_log_priors(inputs),
+                                  expected_priors)
+    for i, exp_call in enumerate(expected_prior_calls):
+        np.testing.assert_array_equal(priors[i].pdf.call_args[0][0],
+                                      exp_call.reshape(n_inputs, -1))
+
+
 def test_metropolis_no_like_calc_if_zero_prior_prob(mocker, data):
     mocked_model = mocker.Mock(side_effect=[np.ones((5, 3)),
                                             np.tile(data, (3, 1))])
