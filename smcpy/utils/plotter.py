@@ -31,10 +31,13 @@ AGREEMENT.
 '''
 
 import imp
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import os
 
+from matplotlib.backends.backend_pdf import PdfPages
 from scipy.stats import gaussian_kde
+
 
 def _mpi_decorator(func):
     def wrapper(self, *args, **kwargs):
@@ -65,30 +68,10 @@ def _mpi_decorator(func):
     return wrapper
 
 
-#@_mpi_decorator
-#def plot_marginal(self, key, save=False, show=True,
-#                  prefix='marginal_'):  # pragma no cover
-#    '''
-#    Plots a single marginal approximation for param given by <key>.
-#    '''
-#    try:
-#        plt
-#    except:
-#        import matplotlib.pyplot as plt
-#    fig = plt.figure()
-#    ax = fig.add_subplot(111)
-#    for p in self.particles:
-#        ax.plot([p.params[key], p.params[key]], [0.0, np.exp(p.log_weight)])
-#        ax.plot(p.params[key], np.exp(p.log_weight), 'o')
-#    if save:
-#        plt.savefig(prefix + key + '.png')
-#    if show:
-#        plt.show()
-#    plt.close(fig)
-#    return None
-
 def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
-                    include_kde=False, prefix='mcmc_chain'):
+                    include_kde=False, filename='chain.png',
+                    report_style=False):
+
     n_columns = 2
     gridspec = {'width_ratios': [1., 0.], 'wspace': 0.0}
     if include_kde:
@@ -114,7 +97,6 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
         if include_kde:
             ax[i, 1].set_xlim(0, None)
 
-
         ax[i, 0].set_ylabel(name)
         ax[i, 0].set_xlim(0, chain.shape[2]) 
         ax[i, 0].get_xaxis().set_visible(False)
@@ -123,12 +105,30 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
     ax[len(param_labels) - 1, 0].set_xlabel('sample #')
     ax[len(param_labels) - 1, 1].set_xlabel('probability density')
 
-    plt.tight_layout()
-
     if save:
-        plt.savefig(prefix + '.png', dpi=150)
+        plt.tight_layout()
+        plt.savefig(filename, dpi=150)
     if show:
         plt.show()
+
+    if report_style:
+        fig.set_figheight(fig.get_figheight() * ax.shape[0])
+        rprt_filename = os.path.splitext(filename)[0] + '_report.pdf'
+        with PdfPages(rprt_filename) as pdf:
+            scale = fig.dpi_scale_trans.inverted()
+            extent1 = ax[0, 0].get_window_extent().transformed(scale)
+            extent2 = ax[1, 0].get_window_extent().transformed(scale)
+            ax_height = extent1.y1 - extent2.y1
+
+            for i in range(ax.shape[0]):
+                ax[i, 0].get_xaxis().set_visible(True)
+                ax[i, 0].set_xlabel('sample #')
+                ax[i, 1].set_xlabel('probability density')
+                extent = ax[i, 0].get_window_extent().transformed(scale)
+                extent.x0 = 0
+                extent.x1 = fig.get_figwidth()
+                extent.y0 = extent.y1 - ax_height
+                pdf.savefig(plt.gcf(), bbox_inches=extent)
 
     return fig
 
