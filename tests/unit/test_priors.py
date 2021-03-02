@@ -35,7 +35,7 @@ def test_improper_uniform_bounds(bounds, expected):
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_invwishart_dim(n):
-    iw = InvWishart(n)
+    iw = InvWishart(n, np.eye(n))
     assert iw.dim == (n + 1) * n / 2
 
 
@@ -50,7 +50,7 @@ def test_invwishart_sample(mocker, num_samples):
     mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
                                      return_value=mock_invwis)
 
-    iw = InvWishart(cov_dim)
+    iw = InvWishart(scale=np.eye(cov_dim), dof=cov_dim)
 
     np.testing.assert_array_equal(iw.rvs(num_samples), expected_sample)
     mock_invwis.rvs.assert_called_once_with(num_samples)
@@ -73,7 +73,7 @@ def test_invwishart_pdf(mocker, num_samples):
     mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
                                      return_value=mock_invwis)
 
-    iw = InvWishart(cov_dim)
+    iw = InvWishart(scale=np.eye(cov_dim), dof=cov_dim)
 
     np.testing.assert_array_equal(iw.pdf(samples), expected_prior_probs)
     np.testing.assert_array_equal(mock_invwis.pdf.call_args[0][0], expected_cov)
@@ -88,6 +88,6 @@ def test_invwishart_zero_prob(mocker, num_samples):
     mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
                                      return_value=mock_invwis)
 
-    iw = InvWishart(3)
+    iw = InvWishart(scale=np.eye(3), dof=3)
 
     np.testing.assert_array_equal(iw.pdf(samples), np.zeros((num_samples, 1)))

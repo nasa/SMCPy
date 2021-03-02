@@ -33,10 +33,14 @@ class ImproperUniform:
 
 class InvWishart:
 
-    def __init__(self, cov_dim):
-        self._cov_dim = cov_dim
-        self._dim = int(cov_dim * (cov_dim + 1) / 2)
-        self._invwishart = invwishart(cov_dim, np.eye(cov_dim))
+    def __init__(self, dof, scale):
+        '''
+        :param scale: scale matrix
+        :param dof: degrees of freedom (if == scale.shape[0], noninformative)
+        '''
+        self._cov_dim = scale.shape[0]
+        self._dim = int(self._cov_dim * (self._cov_dim + 1) / 2)
+        self._invwishart = invwishart(dof, scale)
 
     @property
     def dim(self):
