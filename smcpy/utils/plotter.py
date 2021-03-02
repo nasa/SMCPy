@@ -211,7 +211,7 @@ def plot_pairwise(samples, weights=None, param_names=None,
 
         if true_params is not None:
             truth = (true_params[ikey1], true_params[ikey2])
-            ax[ax_key].plot(truth[0], truth[1], '*y')
+            ax[ax_key].plot(truth[0], truth[1], '*k', zorder=10)
 
         ax[ax_key].set_xlabel(label_dict[key1])
         ax[ax_key].set_ylabel(label_dict[key2])
