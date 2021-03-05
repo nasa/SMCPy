@@ -138,10 +138,8 @@ class MVNormal(BaseLogLike):
         data features. Features, for example, might be sensor readings at
         different locations.
 
-        :param args: data segment lengths and corresponding covariances of the
-            N-D multivariate normal
-        :type args: list of two tuples, len(args) = len(data) and
-            len(args) = N * (N + 1) / 2
+        :param args: covariances of the N-D multivariate normal
+        :type args: list, len(args) = N * (N + 1) / 2
         '''
         super().__init__(model, data, args)
         self._num_nones = self._args.count(None)
