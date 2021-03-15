@@ -181,13 +181,11 @@ class Particles(Checks):
 
     def compute_covariance(self):
         '''
-        Estimates the covariance matrix. Uses weighted sample formula
-        https://en.wikipedia.org/wiki/Sample_mean_and_covariance 
+        Estimates the covariance matrix.
         '''
         means = self.compute_mean(package=False)
         diff = self.params - means
-        norm = 1 / (1 - np.sum(self.weights ** 2))
-        cov = np.dot(diff.T, diff * self.weights) * norm
+        cov = np.matmul(diff.T, diff * self.weights)
 
         if not self._is_positive_definite(cov):
             warnings.warn('Covariance matrix is not positive definite; setting '
