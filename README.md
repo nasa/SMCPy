@@ -6,11 +6,19 @@ Python module for uncertainty quantification using a parallel sequential Monte
 Carlo sampler.
 
 To operate the code, the user supplies a computational model built in Python
-3+, defines prior distributions for each of the model parameters to be
+3.6+, defines prior distributions for each of the model parameters to be
 estimated, and provides data to be used for calibration. SMC sampling can then
 be conducted with ease through instantiation of the SMCSampler class and a call
 to the sample() method. The output of this process is an approximation of the
 parameter posterior probability distribution conditional on the data provided.
+
+The primary sampling algorithm implemented in this package is an MPI-enabled
+version of that presented in the following IEEE article by Nguyen et al.:
+
+> Nguyen, Thi Le Thu, et al. "Efficient sequential Monte-Carlo samplers for Bayesian
+> inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
+
+[Link to Article](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7339702) | [BibTeX Reference](https://scholar.googleusercontent.com/scholar.bib?q=info:L7AZJvppx1MJ:scholar.google.com/&output=citation&scisdr=CgUT24-FENXorVVNYK0:AAGBfm0AAAAAXYJIeK1GJKW947imCXoXAkfc7yZjQ7Oo&scisig=AAGBfm0AAAAAXYJIeNYSGEVCrlauowP6jMwVMHB_blTp&scisf=4&ct=citation&cd=-1&hl=en)
 
 This software was funded by and developed under the High Performance Computing
 Incubator (HPCI) at NASA Langley Research Center.
@@ -27,11 +35,6 @@ from spring_mass_model import SpringMassModel
 from smcpy.utils.plotter import plot_pairwise
 from smcpy import SMCSampler, VectorMCMC, VectorMCMCKernel
 
-
-# Initialize model
-state0 = [0., 0.]  # initial conditions
-measure_t_grid = np.arange(0., 5., 0.2)  # time
-model = SpringMassModel(state0, measure_t_grid)
 
 # Load data
 std_dev = 0.5
@@ -70,8 +73,25 @@ VectorMCMC. More details can be found in the MPI example
 
 ![Pairwise](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/pairwise.png)
 
+Tests
+-----
+
+The tests can be performed by running "py.test" from the tests/ directory to ensure a proper installation.
+
+Developers
+-----------
+
+NASA Langley Research Center <br /> 
+Hampton, Virginia <br /> 
+
+This software was funded by and developed under the High Performance Computing Incubator (HPCI) at NASA Langley Research Center. <br /> 
+
+Contributors: Patrick Leser (patrick.e.leser@nasa.gov) and Michael Wang
+
 ------------------------------------------------------------------------------
 
+License
+-----------
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration. No copyright is claimed in
