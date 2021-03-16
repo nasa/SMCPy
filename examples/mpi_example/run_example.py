@@ -4,9 +4,7 @@ import numpy as np
 from mpi4py import MPI
 from scipy.stats import uniform
 
-from smcpy.mcmc.parallel_mcmc import ParallelMCMC
-from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy import SMCSampler
+from smcpy import SMCSampler, VectorMCMCKernel, ParallelMCMC
 
 
 def gen_noisy_data(eval_model, std_dev, plot=True):
