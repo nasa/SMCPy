@@ -183,9 +183,7 @@ class Particles(Checks):
         '''
         Estimates the covariance matrix.
         '''
-        means = self.compute_mean(package=False)
-        diff = self.params - means
-        cov = np.matmul(diff.T, diff * self.weights)
+        cov = np.cov(self.params.T, ddof=0, aweights=self.weights.flatten())
 
         if not self._is_positive_definite(cov):
             warnings.warn('Covariance matrix is not positive definite; setting '
