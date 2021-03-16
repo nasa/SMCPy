@@ -6,13 +6,13 @@ Python module for uncertainty quantification using a parallel sequential Monte
 Carlo sampler.
 
 To operate the code, the user supplies a computational model built in Python
-2.7, defines prior distributions for each of the model parameters to be
+3+, defines prior distributions for each of the model parameters to be
 estimated, and provides data to be used for calibration. SMC sampling can then
-be conducted with ease through instantiation of the SMC class and a call to the
-sample() method. The output of this process is an approximation of the parameter
-posterior probability distribution conditional on the data provided.
+be conducted with ease through instantiation of the SMCSampler class and a call
+to the sample() method. The output of this process is an approximation of the
+parameter posterior probability distribution conditional on the data provided.
 
-This software was funded by and developed under the High Performance Computing 
+This software was funded by and developed under the High Performance Computing
 Incubator (HPCI) at NASA Langley Research Center.
 
 ------------------------------------------------------------------------------
@@ -20,36 +20,47 @@ Incubator (HPCI) at NASA Langley Research Center.
 
 ```python
 import numpy as np
-from smcpy.examples.spring_mass.spring_mass_models import SpringMassModel
-from smcpy.smc.smc_sampler import SMCSampler
+
+from scipy.stats import uniform
+
+from spring_mass_model import SpringMassModel
+from smcpy.utils.plotter import plot_pairwise
+from smcpy import SMCSampler, VectorMCMC, VectorMCMCKernel
+
 
 # Initialize model
-state0 = [0., 0.]                        #initial conditions
-measure_t_grid = np.arange(0., 5., 0.2)  #time 
+state0 = [0., 0.]  # initial conditions
+measure_t_grid = np.arange(0., 5., 0.2)  # time
 model = SpringMassModel(state0, measure_t_grid)
 
 # Load data
-noise_stddev = 0.2
+std_dev = 0.5
 displacement_data = np.genfromtxt('noisy_data.txt')
 
-# Define prior distributions
-param_priors = {'K': ['Uniform', 0.0, 10.0],
-                'g': ['Uniform', 0.0, 10.0]}
+# Define prior distributions & MCMC kernel
+priors = [uniform(0, 10), uniform(0, 10)]
+vector_mcmc = VectorMCMC(model.evaluate, displacement_data, priors, std_dev)
+mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('K', 'g'))
 
 # SMC sampling
-num_particles = 5000
-num_time_steps = 20
-num_mcmc_steps = 1
-smc = SMCSampler(displacement_data, model, param_priors)
-pchain = smc.sample(num_particles, num_time_steps, num_mcmc_steps, noise_stddev,
-                    ess_threshold=num_particles*0.5)
-if smc._rank == 0:
-    pchain.plot_pairwise_weights(save=True)
+smc = SMCSampler(mcmc_kernel)
+step_list, mll_list = smc.sample(num_particles=500,
+                                 num_mcmc_samples=5,
+                                 phi_sequence=np.linspace(0, 1, 20),
+                                 ess_threshold=0.8,
+                                 progress_bar=True)
+
+# Display results
+print(f'parameter means = {step_list[-1].compute_mean()}')
+
+plot_pairwise(step_list[-1].params, step_list[-1].weights, save=True,
+              param_labels=['K', 'g'])
 ```
 
-The above code produces probabilistic estimates of K, the spring stiffness divided by mass, and g, the gravitational constant on an unknown planet. These estimates are in the form of weighted particles and can be visualized by plotting the pairwise weights as shown below. The mean of each parameter is marked by the dashed red line. The true values for this example were K = 1.67 and g = 4.62. More details can be found in the spring mass example (smcpy/examples/spring_mass/).
+The above code produces probabilistic estimates of K, the spring stiffness divided by mass, and g, the gravitational constant on an unknown planet. These estimates are in the form of weighted particles and can be visualized by plotting the pairwise weights as shown below. The mean of each parameter is marked by the dashed red line. The true values for this example were K = 1.67 and g = 4.62. More details can be found in the spring mass example (smcpy/examples/spring_mass/). To run this model in parallel using MPI, the MCMC kernel just needs to be built
+with the ParallelMCMC class in place of VectorMCMC. More details can be found in the mpi example (smcpy/examples/mpi_example/).
 
-![Pairwise](https://github.com/nasa/SMCPy/blob/master/examples/spring_mass/pairwise.png)
+![Pairwise](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/pairwise.png)
 
 ------------------------------------------------------------------------------
 
