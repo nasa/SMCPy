@@ -77,10 +77,17 @@ class MCMCBase(ABC, MCMCLogger):
 
     @staticmethod
     def proposal(inputs, cov):
-        scale_factor = 1 #2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
+        # HACK
+        scale_factor = 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
+        cov *= scale_factor
         mean = np.zeros(cov.shape[0])
-        delta = np.random.multivariate_normal(mean, scale_factor * cov,
-                                              inputs.shape[0])
+        #HACK gen proposed samples using cholesky
+        chol = np.linalg.cholesky(cov)
+        eye = np.eye(cov.shape[0])
+        z = np.random.multivariate_normal(mean, eye, inputs.shape[0])
+        delta = np.matmul(chol, z.T).T
+        #delta = np.random.multivariate_normal(mean, scale_factor * cov,
+        #                                      inputs.shape[0])
         return inputs + delta
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
@@ -138,6 +145,13 @@ class MCMCBase(ABC, MCMCLogger):
 
             u = np.random.uniform(0, 1, accpt_ratio.shape)
     
+            #HACK scale covariance based on acceptance per Nguyen
+            num_accepted = np.sum(accpt_ratio > u)
+            if num_accepted < inputs.shape[0] * 0.2:
+                cov *= 1/5
+            if num_accepted > inputs.shape[0] * 0.7:
+                cov *= 2
+
             inputs = self.selection(new_inputs, inputs, accpt_ratio, u)
             log_like = self.selection(new_log_like, log_like, accpt_ratio, u)
             log_priors = self.selection(new_log_priors, log_priors,
