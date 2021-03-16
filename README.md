@@ -76,7 +76,7 @@ VectorMCMC. More details can be found in the MPI example
 Tests
 -----
 
-The tests can be performed by running "py.test" from the tests/ directory to ensure a proper installation.
+The tests can be performed by running "pytest" from the tests/unit directory to ensure a proper installation.
 
 Developers
 -----------
