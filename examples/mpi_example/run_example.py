@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 from mpi4py import MPI
 from scipy.stats import uniform
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     noisy_data = gen_noisy_data(eval_model, std_dev, plot=False)
 
     # configure
-    num_particles = 1000
+    num_particles = 10000
     num_smc_steps = 20
     num_mcmc_samples = 10
     ess_threshold = 0.8
@@ -53,7 +54,9 @@ if __name__ == '__main__':
 
     mcmc_kernel = VectorMCMCKernel(parallel_mcmc, param_order=('a', 'b'))
     smc = SMCSampler(mcmc_kernel)
-    step_list, evidence = smc.sample(num_particles, num_mcmc_samples,
+    t0 = time.time()
+    step_list, mll_list = smc.sample(num_particles, num_mcmc_samples,
                                      phi_sequence, ess_threshold)
 
-    print('mean vector = {}'.format(step_list[-1].compute_mean()))
+    print(f'total time = {time.time() - t0}')
+    print('mean vector = {step_list[-1].compute_mean()}')
