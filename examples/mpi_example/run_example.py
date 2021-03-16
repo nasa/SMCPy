@@ -33,9 +33,12 @@ if __name__ == '__main__':
 
     x = np.linspace(1, 5, 100)
     def eval_model(theta):
-        a = theta[:, 0, None]
-        b = theta[:, 1, None]
-        return a * x + b
+        out = []
+        for theta_i in theta:
+            a = theta_i[0]
+            b = theta_i[1]
+            out.append(a * x + b)
+        return np.array(out)
 
     std_dev = 0.5
     noisy_data = gen_noisy_data(eval_model, std_dev, plot=False)
