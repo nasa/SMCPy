@@ -172,7 +172,8 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     vector_mcmc._priors = vector_mcmc._priors[:3] # drop mvn
 
     mocker.patch('numpy.random.uniform')
-    mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
+    mocker.patch.object(vector_mcmc, 'acceptance_ratio',
+                        return_value=inputs[:, 0])
     mocker.patch.object(vector_mcmc, 'proposal',
                         side_effect=[inputs + 1, inputs + 2])
     mocker.patch.object(vector_mcmc, 'selection',
