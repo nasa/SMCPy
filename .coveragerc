@@ -1,2 +1,2 @@
 [run]
-omit = smcpy/mcmc/*.py
+omit = smcpy/utils/p*.py
