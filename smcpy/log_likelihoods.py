@@ -138,6 +138,9 @@ class MVNormal(BaseLogLike):
         data features. Features, for example, might be sensor readings at
         different locations.
 
+        Model should output array with shape (number of samples/particles,
+        number of features).
+
         :param args: covariances of the N-D multivariate normal
         :type args: list, len(args) = N * (N + 1) / 2
         '''
