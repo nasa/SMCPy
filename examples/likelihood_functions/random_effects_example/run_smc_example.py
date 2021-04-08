@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 import time
 
 from numpy.random import multivariate_normal as MVN
@@ -8,7 +10,6 @@ from scipy.stats import uniform
 from smcpy import MVNRandomEffects, ImproperUniform, SMCSampler
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy.utils.plotter import plot_mcmc_chain, plot_pairwise
 from smcpy.priors import InvWishart
 
 NUM_RAND_EFF = 5
@@ -91,40 +92,28 @@ if __name__ == '__main__':
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
 
     smc = SMCSampler(mcmc_kernel)
-    n_parts = 5000
-    n_mcmc = 5
-    phi_exp = 4
-    x = np.linspace(0, 1, 20)
+    n_parts = 20000
+    n_mcmc = 10
+    n_steps = 50
+    phi_exp = 2
+    x = np.linspace(0, 1, n_steps)
     phi_sequence = (np.exp(phi_exp * x) - 1) / (np.exp(phi_exp) - 1)
-    #phi_sequence = x
     plt.plot(phi_sequence)
     plt.show()
     step_list, mll_list = smc.sample(num_particles=n_parts,
                                      num_mcmc_samples=n_mcmc,
                                      phi_sequence=phi_sequence,
-                                     ess_threshold=0.9, progress_bar=True)
+                                     ess_threshold=0.75, progress_bar=True)
 
-    # HACK to add parallel chains
-    #init_inputs = np.tile(init_inputs, (4, 1))
+    np.save('smc_samples.npy', step_list[-1].params)
+    np.save('smc_weights.npy', step_list[-1].weights)
 
-    #cov = np.eye(init_inputs.shape[1]) * 0.05
-    #chain = vector_mcmc.metropolis(init_inputs, num_samples, cov,
-    #                               adapt_interval=1000, adapt_delay=5000,
-    #                               progress_bar=True)
-
-    #np.save('chain.npy', chain)
-    #chain = np.load('chain.npy')
-    
     #plotting
     ground_truth = init_inputs.flatten()
-
     labels = param_order
-    #plot_mcmc_chain(chain, param_labels=labels, burnin=burnin, include_kde=True,
-    #                report_style=True, show=False)
-    #plot_pairwise(chain.squeeze().T[burnin+1:], param_labels=labels,
-    #              true_params=ground_truth)
-    #for sl in step_list:
-    #    plot_pairwise(sl.params[:, :3], sl.weights)
-    plot_pairwise(step_list[-1].params[:, :4], step_list[-1].weights,
-                  param_labels=labels[:4])
-    #plot_pairwise(sl.params, sl.weights)
+    df = pd.DataFrame(dict(zip(param_order, step_list[-1].params.T)))
+    df['weights'] = step_list[-1].weights
+    sns.pairplot(df, diag_kind='kde', corner=True, plot_kws={'alpha': 1.0},
+                 hue='weights')
+    plt.savefig('smc_pairwise.png')
+

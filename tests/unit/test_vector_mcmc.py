@@ -84,19 +84,24 @@ def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
 @pytest.mark.parametrize('inputs', (np.array([[0, 1, 0.5]]),
                                     np.array([[0, 1, 0.5]] * 4)))
 def test_vectorized_proposal(vector_mcmc, inputs, mocker):
+    chol_mock = mocker.patch('numpy.linalg.cholesky', return_value=2)
     mvn_mock = mocker.patch('numpy.random.multivariate_normal',
-                            return_value=np.ones(inputs.shape))
-    cov = np.eye(inputs.shape[1])
-    cov_scale = 1 #2.38 ** 2 / inputs.shape[1]
-    expected = inputs + 1
+                            return_value=np.array([1]))
+    matmul_mock = mocker.patch('numpy.matmul',
+                               return_value=np.ones(inputs.shape).T)
 
-    inputs_new = vector_mcmc.proposal(inputs, cov=cov)
+    n_param = inputs.shape[1]
+    cov = np.eye(n_param)
+    cov_scale = 2.38 ** 2 / inputs.shape[1]
+    expected_proposal = inputs + 1
 
-    calls = mvn_mock.call_args[0]
-    np.testing.assert_array_equal(inputs_new, expected)
-    np.testing.assert_array_equal(calls[0], np.zeros(cov.shape[0]))
-    np.testing.assert_array_equal(calls[1], cov_scale * cov)
-    np.testing.assert_array_equal(calls[2], inputs.shape[0])
+    proposal = vector_mcmc.proposal(inputs, cov=cov)
+
+    np.testing.assert_array_equal(proposal, expected_proposal)
+    exp_call = mocker.call(np.zeros(n_param), np.eye(n_param), inputs.shape[0])
+    assert mvn_mock.called_once_with(exp_call)
+    assert matmul_mock.called_once_with(1, 2)
+    assert chol_mock.called_once_with(cov * cov_scale)
 
 
 @pytest.mark.parametrize('new_inputs, old_inputs', (
@@ -164,18 +169,22 @@ def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
 
 @pytest.mark.parametrize('phi', (0.5, 1))
 @pytest.mark.parametrize('num_samples', (1, 2))
-def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
+@pytest.mark.parametrize('pct_accepted', (0, 0.5, 1))
+def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, pct_accepted,
+                                   mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
     vector_mcmc._std_dev = 1
 
     vector_mcmc._priors = vector_mcmc._priors[:3] # drop mvn
 
-    mocker.patch('numpy.random.uniform')
+    u_samples = np.ones(inputs.shape[0])
+    u_samples[:int(pct_accepted * inputs.shape[0])] = 0
+    mocker.patch('numpy.random.uniform', return_value=u_samples)
     mocker.patch.object(vector_mcmc, 'acceptance_ratio',
                         return_value=inputs[:, 0])
-    mocker.patch.object(vector_mcmc, 'proposal',
-                        side_effect=[inputs + 1, inputs + 2])
+    prop_mock = mocker.patch.object(vector_mcmc, 'proposal',
+                                    side_effect=[inputs + 1, inputs + 2])
     mocker.patch.object(vector_mcmc, 'selection',
                         new=lambda new_log_like, x, y, z: new_log_like)
     log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
@@ -191,6 +200,14 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, mocker):
     np.testing.assert_array_equal(new_log_likes, expected_new_log_likes)
 
     assert log_like.call_count == num_samples + 1
+
+    expected_cov = np.eye(3)
+    for i, call in enumerate(prop_mock.call_args_list):
+        np.testing.assert_array_equal(call[0][1], expected_cov)
+        if pct_accepted > 0.7:
+            expected_cov *= 2
+        if pct_accepted < 0.2:
+            expected_cov *= 1/5
 
 
 @pytest.mark.parametrize('num_samples', (1, 5, 50))

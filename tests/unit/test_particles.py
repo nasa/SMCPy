@@ -123,16 +123,18 @@ def test_get_std_dev(params, weights, expected_var):
 
 def test_compute_covariance(mocker):
     params = {'a': [1.1, 1.0, 0.8], 'b': [2.2, 2.1, 1.9]}
+    param_array = np.array(list(params.values()))
     log_likes = np.ones(3)
-    log_weights = np.log([0.1, 0.7, 0.2])
+    weights = np.array([0.1, 0.7, 0.2])
+    log_weights = np.log(weights)
 
     particles = Particles(params, log_likes, log_weights)
-    mocker.patch.object(particles, 'compute_mean',
-                        return_value=np.array([0.97, 2.06]))
+    cov_mock = mocker.patch('smcpy.smc.particles.np.cov', return_value=1)
+    mocker.patch.object(particles, '_is_positive_definite', return_value=True)
 
-    expected_cov = np.array([[0.0081, 0.0081], [0.0081, 0.0082]])
-    np.testing.assert_array_almost_equal(particles.compute_covariance(),
-                                         expected_cov)
+    expected_call = mocker.call(param_array, ddof=0, aweights=weights)
+    assert particles.compute_covariance() == 1
+    assert cov_mock.called_once_with(expected_call)
 
 
 @pytest.mark.filterwarnings('ignore: Covariance matrix is')
