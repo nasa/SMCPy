@@ -1,6 +1,3 @@
-h5py
-scipy
 numpy
 matplotlib
 tqdm
-pandas

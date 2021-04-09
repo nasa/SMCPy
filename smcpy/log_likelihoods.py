@@ -137,10 +137,11 @@ class MVNormal(BaseLogLike):
         Data array should have shape (number of snapshots, number of features)
         where snapshots are independent simultaneous measurements of all the
         data features. Features, for example, might be sensor readings at
-        different locations.
+        different locations. Model should output array with shape (number of
+        samples/particles, number of features).
 
         :param args: covariances of the N-D multivariate normal
-        :type args: list, len(args) =  N * (N + 1) / 2
+        :type args: list, len(args) = N * (N + 1) / 2
         '''
         super().__init__(model, data, args)
         self._num_nones = self._args.count(None)
