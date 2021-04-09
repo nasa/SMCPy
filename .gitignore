@@ -3,6 +3,7 @@
 *.png
 *.h5
 *.sh
+*.npy
 *pytest_cache*
 .coverage
 *.cache
