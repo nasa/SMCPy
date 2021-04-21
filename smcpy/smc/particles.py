@@ -185,6 +185,9 @@ class Particles(Checks):
         '''
         cov = np.cov(self.params.T, ddof=0, aweights=self.weights.flatten())
 
+        if cov.shape == ():
+            cov = cov.reshape(1, 1)
+
         if not self._is_positive_definite(cov):
             warnings.warn('Covariance matrix is not positive definite; setting '
                           'off-diagonal terms to zero.')

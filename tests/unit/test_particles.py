@@ -129,11 +129,15 @@ def test_compute_covariance(mocker):
     log_weights = np.log(weights)
 
     particles = Particles(params, log_likes, log_weights)
-    cov_mock = mocker.patch('smcpy.smc.particles.np.cov', return_value=1)
     mocker.patch.object(particles, '_is_positive_definite', return_value=True)
+    cov_mock = mocker.patch('smcpy.smc.particles.np.cov',
+                            return_value=np.array(1))
+
+    cov = particles.compute_covariance()
 
     expected_call = mocker.call(param_array, ddof=0, aweights=weights)
-    assert particles.compute_covariance() == 1
+    assert cov == np.array([[1]])
+    assert cov.shape == (1, 1)
     assert cov_mock.called_once_with(expected_call)
 
 
