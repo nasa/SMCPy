@@ -81,10 +81,7 @@ class Updater:
         eff_sample_size = new_particles.compute_ess()
         self._ess = eff_sample_size
         self._resampled = False
-        print(f'{eff_sample_size}, {self.ess_threshold * new_particles.num_particles}')
         if eff_sample_size < self.ess_threshold * new_particles.num_particles:
-            #HACK
-            print('resampled')
             self._resampled = True
             return self._resample(new_particles)
         return new_particles
