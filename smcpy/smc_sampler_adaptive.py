@@ -128,7 +128,6 @@ class SMCSampler:
             return 1
         else:
             phi = bisect(self._compute_ess, phi_old, 1)
-            print(phi)
             return phi
 
     def _compute_ess(self, phi):
