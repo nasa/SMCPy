@@ -9,6 +9,7 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 # HACK
 from smcpy.smc_sampler_adaptive import SMCSampler
 #from smcpy import SMCSampler
+from smcpy.utils.plotter import *
 
 def eval_model(theta):
     time.sleep(0.1) # artificial slowdown to show off progress bar
@@ -46,11 +47,12 @@ if __name__ == '__main__':
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b'))
 
     smc = SMCSampler(mcmc_kernel)
-    phi_sequence = np.linspace(0, 1, 20)
     step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
                                      #phi_sequence=phi_sequence,
-                                     ess_threshold=0.7, progress_bar=True)
-
+                                     ess_threshold=0.7, progress_bar=True,
+                                     normalization_phi=0.2)
+    print(f'phi_sequence={smc.phi_sequence}')
+    print(f'fbf norm index={smc.norm_phi_idx}')
     print('marginal log likelihood = {}'.format(mll_list[-1]))
     print('parameter means = {}'.format(step_list[-1].compute_mean()))
 

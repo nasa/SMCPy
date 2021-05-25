@@ -49,7 +49,8 @@ class SMCSampler:
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples,
-               ess_threshold, proposal=None, progress_bar=False):
+               ess_threshold, proposal=None, progress_bar=False,
+               normalization_phi=1.0):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -71,6 +72,10 @@ class SMCSampler:
         # HACK
         self._ess_threshold = ess_threshold
 
+        # HACK for Bayes factor normalization
+        self._normalization_phi = normalization_phi
+        self._norm_added = False
+
         initializer = Initializer(self._mcmc_kernel)
         updater = Updater(ess_threshold)
         mutator = Mutator(self._mcmc_kernel)
@@ -90,6 +95,11 @@ class SMCSampler:
 
             mutation_ratio = self._compute_mutation_ratio(particles,
                                                           mut_particles)
+
+        # HACK for Bayes factor normalization
+        self.phi_sequence = np.array(phi_sequence)
+        self.norm_phi_idx = [i for i, phi in enumerate(phi_sequence) \
+                             if phi == self._normalization_phi][0]
 
         return step_list, self._estimate_marginal_log_likelihoods(updater)
 
@@ -128,6 +138,10 @@ class SMCSampler:
             return 1
         else:
             phi = bisect(self._compute_ess, phi_old, 1)
+            # HACK for Bayes factor normalization
+            if phi > self._normalization_phi and not self._norm_added:
+                self._norm_added = True
+                return self._normalization_phi
             return phi
 
     def _compute_ess(self, phi):
