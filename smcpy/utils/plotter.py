@@ -158,11 +158,11 @@ def plot_pairwise(samples, weights=None, param_names=None,
 
     ax = sns.pairplot(df, diag_kind='kde', corner=True,
                       hue='weights_', palette='viridis',
-                      diag_kws={'weights': weights.flatten()})
+                      diag_kws={'weights': weights.flatten(), 'hue': None})
 
     ax.legend.remove()
-    if weights is not None:
-        plt.gcf().colorbar(sm)
+    cbar = plt.gcf().colorbar(sm)
+    cbar.ax.set_ylabel('Particle Weight')
 
     plt.show()
 
