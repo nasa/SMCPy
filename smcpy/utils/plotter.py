@@ -143,7 +143,7 @@ def plot_pairwise(samples, weights=None, param_names=None,
     by weight if provided.
     '''
     if param_names is None:
-        param_names = ['p{i}' for i in range(samples.shape[1])]
+        param_names = [f'p{i}' for i in range(samples.shape[1])]
 
     if weights is None:
         weights = np.ones((samples.shape[0], 1))
@@ -164,8 +164,6 @@ def plot_pairwise(samples, weights=None, param_names=None,
     cbar = plt.gcf().colorbar(sm)
     cbar.ax.set_ylabel('Particle Weight')
 
-    plt.show()
-
     # compute means TODO plot means
     if weights is None:
         means = np.mean(samples, axis=0)
@@ -177,7 +175,7 @@ def plot_pairwise(samples, weights=None, param_names=None,
     if show:
         plt.show()
 
-    return plt.gcf()
+    return ax
 
 
 def plot_geweke(burnin, z, param_labels=None):
