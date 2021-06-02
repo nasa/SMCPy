@@ -75,6 +75,10 @@ class SMCSampler:
         # HACK for Bayes factor normalization
         self._normalization_phi = normalization_phi
         self._norm_added = False
+        # HACK for case where algo jumps straight to phi=1 and skips adding
+        # normalization phi, but also needs to account for default = 1
+        if self._normalization_phi == 1:
+            self._norm_added = True
 
         initializer = Initializer(self._mcmc_kernel)
         updater = Updater(ess_threshold)
@@ -134,7 +138,7 @@ class SMCSampler:
         self._phi_old = phi_old
         self._temp_particles = particles
         ESS_1 = self._compute_ess(1)
-        if ESS_1 > 0:
+        if ESS_1 > 0 and self._norm_added:
             return 1
         else:
             phi = bisect(self._compute_ess, phi_old, 1)
