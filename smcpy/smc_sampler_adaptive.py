@@ -81,7 +81,7 @@ class SMCSampler:
             self._norm_added = True
 
         initializer = Initializer(self._mcmc_kernel)
-        updater = Updater(ess_threshold)
+        updater = Updater(ess_threshold=1) # ensure always resampling
         mutator = Mutator(self._mcmc_kernel)
 
         particles = self._initialize(initializer, num_particles, proposal)
