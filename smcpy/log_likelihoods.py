@@ -1,4 +1,5 @@
 import numpy as np
+import smcpy.utils.global_imports as gi
 
 class BaseLogLike:
 
@@ -8,8 +9,11 @@ class BaseLogLike:
         self._args = args
 
     def _get_output(self, inputs):
+        if gi.USING_GPU:
+            inputs = gi.num_lib.asarray(inputs)
+
         output = self._model(inputs)
-        if np.isnan(output).any():
+        if gi.num_lib.isnan(output).any():
             raise ValueError
         return output
 
@@ -37,12 +41,12 @@ class Normal(BaseLogLike):
 
     @staticmethod
     def _calc_normal_log_like(output, data, var):
-        ssqe = np.sum((output - data) ** 2, axis=1)
+        ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
     
-        term1 = -np.log(2 * np.pi * var) * (output.shape[1] / 2.) 
+        term1 = -gi.num_lib.log(2 * np.pi * var) * (output.shape[1] / 2.)
         term2 = -1 / 2. * ssqe / var
     
-        return (term1 + term2)
+        return (term1 + term2) if not gi.USING_GPU else (term1 + term2).get()
 
 
 class MultiSourceNormal(Normal):
