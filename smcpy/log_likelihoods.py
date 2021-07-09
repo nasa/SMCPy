@@ -36,9 +36,9 @@ class Normal(BaseLogLike):
         var = std_dev ** 2
 
         output = self._get_output(inputs)
-        print(f"output type {type(output)}")
-        print(f"data type {type(self._data)}")
-        print(f"var type {type(var)}")
+
+        if gi.USING_GPU:
+            var = gi.num_lib.asarray(var)
         return self._calc_normal_log_like(output, self._data, var)
 
     @staticmethod
