@@ -12,6 +12,7 @@ class BaseLogLike:
         if gi.USING_GPU:
             inputs = gi.num_lib.asarray(inputs)
 
+        print(type(inputs))
         output = self._model(inputs)
         if gi.num_lib.isnan(output).any():
             raise ValueError
