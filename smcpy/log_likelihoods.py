@@ -9,12 +9,12 @@ class BaseLogLike:
         self._args = args
 
     def _get_output(self, inputs):
-        if gi.USING_GPU:
-            inputs = gi.num_lib.asarray(inputs)
+        #if gi.USING_GPU:
+        #    inputs = gi.num_lib.asarray(inputs)
 
         output = self._model(inputs)
-        if gi.num_lib.isnan(output).any():
-            raise ValueError
+        #if gi.num_lib.isnan(output).any():
+        #    raise ValueError
         return output
 
 
