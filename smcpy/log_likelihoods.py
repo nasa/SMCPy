@@ -37,8 +37,8 @@ class Normal(BaseLogLike):
 
         output = self._get_output(inputs)
 
-        if gi.USING_GPU:
-            var = gi.num_lib.asarray(var)
+        #if gi.USING_GPU:
+        #    var = gi.num_lib.asarray(var)
         return self._calc_normal_log_like(output, self._data, var)
 
     @staticmethod
