@@ -44,6 +44,9 @@ class Normal(BaseLogLike):
 
     @staticmethod
     def _calc_normal_log_like(output, data, var):
+        print(f"output is cupy {isinstance(output, gi.num_lib.ndarray)}")
+        print(f"data is cupy {isinstance(data, gi.num_lib.ndarray)}")
+
         ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
     
         term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * (output.shape[1] / 2.)
