@@ -13,6 +13,9 @@ class BaseLogLike:
             inputs = gi.num_lib.asarray(inputs)
 
         output = self._model(inputs)
+        print(f"class of output is numpy {isinstance(output, np.ndarray)}")
+        print(f"class of output is cupy {isinstance(output, gi.num_lib.ndarray)}")
+
         if gi.num_lib.isnan(output).any():
             raise ValueError
         return output
