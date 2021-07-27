@@ -44,9 +44,9 @@ class Normal(BaseLogLike):
 
     @staticmethod
     def _calc_normal_log_like(output, data, var):
-        ssqe = np.sum((output - data) ** 2, axis=1)
+        ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
     
-        term1 = -np.log(2 * np.pi * var) * (output.shape[1] / 2.)
+        term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * (output.shape[1] / 2.)
         term2 = -1 / 2. * ssqe / var
     
         return (term1 + term2) if not gi.USING_GPU else (term1 + term2).get()
