@@ -9,12 +9,12 @@ class BaseLogLike:
         self._args = args
 
     def _get_output(self, inputs):
-        #if gi.USING_GPU:
-        #    inputs = gi.num_lib.asarray(inputs)
+        if gi.USING_GPU:
+            inputs = gi.num_lib.asarray(inputs)
 
         output = self._model(inputs)
-        #if gi.num_lib.isnan(output).any():
-        #    raise ValueError
+        if gi.num_lib.isnan(output).any():
+            raise ValueError
         return output
 
 
@@ -37,8 +37,8 @@ class Normal(BaseLogLike):
 
         output = self._get_output(inputs)
 
-        #if gi.USING_GPU:
-        #    var = gi.num_lib.asarray(var)
+        if gi.USING_GPU:
+            var = gi.num_lib.asarray(var)
         return self._calc_normal_log_like(output, self._data, var)
 
     @staticmethod
@@ -48,7 +48,7 @@ class Normal(BaseLogLike):
         term1 = -np.log(2 * np.pi * var) * (output.shape[1] / 2.)
         term2 = -1 / 2. * ssqe / var
     
-        return (term1 + term2) #if not gi.USING_GPU else (term1 + term2).get()
+        return (term1 + term2) if not gi.USING_GPU else (term1 + term2).get()
 
 
 class MultiSourceNormal(Normal):
