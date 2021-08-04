@@ -47,8 +47,7 @@ class MCMCBase(ABC, MCMCLogger):
 
         prior_probs = []
         for i, p in enumerate(self._priors):
-            in_ = inputs.T[i:i+prior_dims[i]]
-            prior_probs.append(p.pdf(in_.T).reshape(-1, 1))
+            prior_probs.append(p.pdf(inputs[:, i:i+prior_dims[i]]).reshape(-1, 1))
         prior_probs = np.hstack(prior_probs)
 
         nonzero_priors = prior_probs != 0
