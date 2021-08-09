@@ -45,11 +45,17 @@ class MCMCBase(ABC, MCMCLogger):
         if inputs.shape[1] != sum(prior_dims):
             raise ValueError("Num prior distributions != num input params")
 
+        prior_probs = np.zeros((inputs.shape[0], len(self._priors)))
+        for i, p in enumerate(self._priors):
+            prior_probs[:, i] = p.pdf(inputs[:, i:i+prior_dims[i]]).flatten()
+
+        """
         prior_probs = []
         for i, p in enumerate(self._priors):
             in_ = inputs.T[i:i+prior_dims[i]]
             prior_probs.append(p.pdf(in_.T).reshape(-1, 1))
         prior_probs = np.hstack(prior_probs)
+        """
 
         nonzero_priors = prior_probs != 0
         log_priors = np.ones(prior_probs.shape) * -np.inf
