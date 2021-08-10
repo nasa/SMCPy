@@ -119,4 +119,4 @@ class SMCSampler:
     @staticmethod
     def _compute_mutation_ratio(old_particles, new_particles):
         mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
-        return np.sum(mutated) / new_particles.params.shape[0]
+        return sum(mutated) / new_particles.params.shape[0]
