@@ -80,9 +80,7 @@ class MCMCBase(ABC, MCMCLogger):
         scale_factor = 1#2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         cov *= scale_factor
         chol = np.linalg.cholesky(cov)
-        mean = np.zeros(cov.shape[0])
-        eye = np.eye(cov.shape[0])
-        z = np.random.multivariate_normal(mean, eye, inputs.shape[0])
+        z = np.random.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
         return inputs + delta
 
