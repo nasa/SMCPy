@@ -82,13 +82,13 @@ class MCMCBase(ABC, MCMCLogger):
     @staticmethod
     def proposal(inputs, cov):
         scale_factor = 1 #2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
-        mean = gi.num_lib.zeros(cov.shape[0])
-        if gi.USING_GPU:
-            inputs = gi.num_lib.asarray(inputs)
-            cov = gi.num_lib.asarray(cov)
-        delta = gi.num_lib.random.multivariate_normal(mean, scale_factor * cov,
+        mean = np.zeros(cov.shape[0])#gi.num_lib.zeros(cov.shape[0])
+        #if gi.USING_GPU:
+        #    inputs = gi.num_lib.asarray(inputs)
+        #    cov = gi.num_lib.asarray(cov)
+        delta = np.random.multivariate_normal(mean, scale_factor * cov,
                                               inputs.shape[0])
-        return inputs + delta if not gi.USING_GPU else (inputs + delta).get()
+        return inputs + delta #if not gi.USING_GPU else (inputs + delta).get()
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
                          old_log_priors):
