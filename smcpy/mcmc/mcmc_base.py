@@ -85,6 +85,9 @@ class MCMCBase(ABC, MCMCLogger):
         scale_factor = 1 #2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         mean = np.zeros(cov.shape[0]) #gi.num_lib.zeros(cov.shape[0])
         print(cov)
+        if np.allclose(cov, np.zeros(cov.shape)):
+            raise RuntimeError
+        
         #if gi.USING_GPU:
         #    inputs = gi.num_lib.asarray(inputs)
         delta = np.random.multivariate_normal(mean, scale_factor * cov, #gi.num_lib.
