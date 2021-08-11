@@ -91,7 +91,7 @@ class MCMCBase(ABC, MCMCLogger):
                                               inputs.shape[0])
         return inputs + delta #if not gi.USING_GPU else (inputs + delta).get()
 
-
+    """
     @staticmethod
     def proposal(inputs, cov):
         scale_factor = 1  # 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
