@@ -81,11 +81,10 @@ class MCMCBase(ABC, MCMCLogger):
 
     @staticmethod
     def proposal(inputs, cov):
-        scale_factor = 1  # 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
-        cov *= scale_factor
-        chol = np.linalg.cholesky(cov)
-        z = np.random.normal(0, 1, inputs.shape)
-        delta = np.matmul(chol, z.T).T
+        scale_factor = 1 #2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
+        mean = np.zeros(cov.shape[0])
+        delta = np.random.multivariate_normal(mean, scale_factor * cov,
+                                              inputs.shape[0])
         return inputs + delta
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
