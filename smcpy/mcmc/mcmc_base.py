@@ -85,7 +85,6 @@ class MCMCBase(ABC, MCMCLogger):
         mean = gi.num_lib.zeros(cov.shape[0])
         if gi.USING_GPU:
             inputs = gi.num_lib.asarray(inputs)
-            cov = gi.num_lib.asarray(cov)
         delta = gi.num_lib.random.multivariate_normal(mean, scale_factor * cov,
                                               inputs.shape[0])
         return inputs + delta if not gi.USING_GPU else (inputs + delta).get()
@@ -131,7 +130,10 @@ class MCMCBase(ABC, MCMCLogger):
         log_priors = self.evaluate_log_priors(inputs)
         self._check_log_priors_for_zero_probability(log_priors)
         log_like = self.evaluate_log_likelihood(inputs)
-    
+
+        if gi.USING_GPU:
+            cov = gi.num_lib.asarray(cov)
+
         for i in range(num_samples):
 
             new_inputs = self.proposal(inputs, cov)
