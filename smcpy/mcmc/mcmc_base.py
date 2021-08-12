@@ -79,7 +79,7 @@ class MCMCBase(ABC, MCMCLogger):
     def evaluate_log_posterior(log_likelihood, log_priors):
         return np.sum(np.hstack((log_likelihood, log_priors)), axis=1)
 
-
+    """
     @staticmethod
     def proposal(inputs, cov):
         scale_factor = 1 #2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
@@ -99,17 +99,11 @@ class MCMCBase(ABC, MCMCLogger):
     def proposal(inputs, cov):
         scale_factor = 1  # 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         cov *= scale_factor
-        try:
-            print(cov)
-            chol = np.linalg.cholesky(cov)
-        except:
-            print("previous")
-            raise
+        chol = np.linalg.cholesky(cov)
         z = np.random.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
         return inputs + delta
 
-    """
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
                          old_log_priors):
         old_log_post = self.evaluate_log_posterior(old_log_like, old_log_priors)
