@@ -99,9 +99,11 @@ class MCMCBase(ABC, MCMCLogger):
     def proposal(inputs, cov):
         scale_factor = 1  # 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         cov *= scale_factor
-        chol = np.linalg.cholesky(cov)
-        z = np.random.normal(0, 1, inputs.shape)
-        delta = np.matmul(chol, z.T).T
+        chol = gi.num_lib.linalg.cholesky(cov)
+        z = gi.num_lib.random.normal(0, 1, inputs.shape)
+        delta = gi.num_lib.matmul(chol, z.T).T
+        if gi.USING_GPU:
+            delta = delta.get()
         return inputs + delta
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
@@ -146,8 +148,8 @@ class MCMCBase(ABC, MCMCLogger):
         self._check_log_priors_for_zero_probability(log_priors)
         log_like = self.evaluate_log_likelihood(inputs)
 
-        #if gi.USING_GPU:
-        #    cov = gi.num_lib.asarray(cov)
+        if gi.USING_GPU:
+            cov = gi.num_lib.asarray(cov)
 
         for i in range(num_samples):
 
