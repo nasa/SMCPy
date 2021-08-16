@@ -135,7 +135,7 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
     return fig
 
 def plot_pairwise(samples, weights=None, param_names=None,
-                  save=False, show=True,
+                  save=False, show=True, xlim=None, ylim=None,
                   filename='pairwise.png'):  # pragma no cover
     #TODO true params on plot #true_params=None,
     '''
@@ -159,6 +159,8 @@ def plot_pairwise(samples, weights=None, param_names=None,
     ax = sns.pairplot(df, diag_kind='kde', corner=True,
                       hue='weights_', palette='viridis',
                       diag_kws={'weights': weights.flatten(), 'hue': None})
+    ax.set(xlim=xlim)
+    ax.set(ylim=ylim)
 
     ax.legend.remove()
     cbar = plt.gcf().colorbar(sm)
