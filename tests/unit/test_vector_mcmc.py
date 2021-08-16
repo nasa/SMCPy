@@ -122,20 +122,17 @@ def test_vectorized_accept_ratio(vector_mcmc, new_inputs, old_inputs, mocker):
     np.testing.assert_array_equal(accpt_ratio, expected)
 
 
-@pytest.mark.parametrize('new_inputs, old_inputs', (
-                        (np.array([[1, 1, 1]]), np.array([[2, 2, 2]])),
-                        (np.array([[1, 1, 1]] * 4), np.array([[2, 2, 2]] * 4))))
-def test_vectorized_selection(vector_mcmc, new_inputs, old_inputs, mocker):
-    mocked_uniform_samples = np.ones([new_inputs.shape[0], 1]) * 0.5
-    acceptance_ratios = np.c_[[0.25, 1.2, 0.25, 0.75]][:new_inputs.shape[0]]
+def test_vectorized_get_rejections(vector_mcmc, mocker):
+    acceptance_ratios = np.c_[[0.25, 1.2, 0.25, 0.75]]
+    uniform_samples = np.full((4, 1), 0.5)
+    uniform_mock = mocker.patch('smcpy.mcmc.mcmc_base.np.random.uniform',
+                                return_value=uniform_samples)
+    expected = np.c_[[True, False, True, False]]
 
-    accepted_inputs = vector_mcmc.selection(new_inputs, old_inputs,
-                                            acceptance_ratios,
-                                            mocked_uniform_samples)
+    rejected = vector_mcmc.get_rejections(acceptance_ratios)
 
-    expected = np.array([[2, 2, 2], [1, 1, 1], [2, 2, 2], [1, 1, 1]])
-    np.testing.assert_array_equal(accepted_inputs,
-                                  expected[:new_inputs.shape[0]])
+    uniform_mock.assert_called_once()
+    np.testing.assert_array_equal(expected, rejected)
 
 
 @pytest.mark.parametrize('adapt_interval,adapt_delay,adapt',
@@ -169,78 +166,64 @@ def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
 
 @pytest.mark.parametrize('phi', (0.5, 1))
 @pytest.mark.parametrize('num_samples', (1, 2))
-@pytest.mark.parametrize('pct_accepted', (0, 0.5, 1))
-def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, pct_accepted,
+@pytest.mark.parametrize('num_accepted', (0, 5, 10))
+def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, num_accepted,
                                    mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
-    vector_mcmc._std_dev = 1
+    rejected = np.array([True] * (10 - num_accepted) + [False] * num_accepted)
 
-    vector_mcmc._priors = vector_mcmc._priors[:3] # drop mvn
+    pobj = mocker.patch.object
+    prior_mock = pobj(vector_mcmc, 'evaluate_log_priors')
+    chk_prior_mock = pobj(vector_mcmc, '_check_log_priors_for_zero_probability')
+    like_nz_mock = pobj(vector_mcmc, '_eval_log_like_if_prior_nonzero')
+    like_mock = pobj(vector_mcmc, 'evaluate_log_likelihood')
+    prop_mock = pobj(vector_mcmc, 'proposal')
+    accpt_mock = pobj(vector_mcmc, 'acceptance_ratio')
+    reject_mock = pobj(vector_mcmc, 'get_rejections', return_value=rejected)
 
-    u_samples = np.ones(inputs.shape[0])
-    u_samples[:int(pct_accepted * inputs.shape[0])] = 0
-    mocker.patch('numpy.random.uniform', return_value=u_samples)
-    mocker.patch.object(vector_mcmc, 'acceptance_ratio',
-                        return_value=inputs[:, 0])
-    prop_mock = mocker.patch.object(vector_mcmc, 'proposal',
-                                    side_effect=[inputs + 1, inputs + 2])
-    mocker.patch.object(vector_mcmc, 'selection',
-                        new=lambda new_log_like, x, y, z: new_log_like)
-    log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
-                                   return_value=inputs[:, 0].reshape(-1, 1) * 2)
+    mocker.patch('smcpy.mcmc.mcmc_base.np.where', new=lambda x, y, z: y)
 
-    new_inputs, new_log_likes = vector_mcmc.smc_metropolis(inputs, num_samples,
-                                                           cov, phi)
+    vector_mcmc.smc_metropolis(inputs, num_samples, cov, phi)
 
-    expected_new_inputs = inputs + num_samples
-    expected_new_log_likes = inputs[:, 0].reshape(-1, 1) * 2
-
-    np.testing.assert_array_equal(new_inputs, expected_new_inputs)
-    np.testing.assert_array_equal(new_log_likes, expected_new_log_likes)
-
-    assert log_like.call_count == num_samples + 1
+    assert like_mock.call_count == 1
+    assert chk_prior_mock.call_count == 1
+    assert like_nz_mock.call_count == num_samples
+    assert prior_mock.call_count == num_samples + 1
+    assert prop_mock.call_count == num_samples
+    assert accpt_mock.call_count == num_samples
+    assert reject_mock.call_count == num_samples
 
     expected_cov = np.eye(3)
     for i, call in enumerate(prop_mock.call_args_list):
         np.testing.assert_array_equal(call[0][1], expected_cov)
-        if pct_accepted > 0.7:
+        if num_accepted > 7:
             expected_cov *= 2
-        if pct_accepted < 0.2:
+        if num_accepted < 2:
             expected_cov *= 1/5
 
 
-@pytest.mark.parametrize('num_samples', (1, 5, 50))
+@pytest.mark.parametrize('num_samples', (1, 2))
 def test_vectorized_metropolis(vector_mcmc, num_samples, mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
-    vector_mcmc._std_dev = 1
     adapt_delay = 0
     adapt_interval = 1
+    expected_chain = np.ones([10, 3, num_samples + 1])
+    mock = mocker.Mock()
 
-    vector_mcmc._priors = vector_mcmc._priors[:3] # drop mvn
-    mocker.patch('numpy.random.uniform')
-
-    mocker.patch.object(vector_mcmc, 'acceptance_ratio', return_value=inputs)
-    mocker.patch.object(vector_mcmc, 'proposal',
-                    side_effect=[inputs + i for i in range(1, num_samples + 1)])
-    mocker.patch.object(vector_mcmc, 'selection',
-                        new=lambda new_log_like, x, y, z: new_log_like)
-    log_like = mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
-                                   return_value=np.zeros((inputs.shape[0], 1)))
-    adapt = mocker.patch.object(vector_mcmc, 'adapt_proposal_cov')
-
-    expected_chain = np.zeros([10, 3, num_samples + 1])
-    expected_chain[:, :, 0] = inputs
-    for i in range(num_samples):
-        expected_chain[:, :, i + 1] = expected_chain[:, :, i].copy() + 1
+    init_mock = mocker.patch.object(vector_mcmc, '_initialize_probabilities',
+                                    return_value=(mock, mock))
+    step_mock = mocker.patch.object(vector_mcmc, '_perform_mcmc_step',
+                                    return_value=(inputs, mock, mock, mock))
+    adapt_mock = mocker.patch.object(vector_mcmc, 'adapt_proposal_cov')
 
     chain = vector_mcmc.metropolis(inputs, num_samples, cov, adapt_interval,
                                    adapt_delay)
 
     np.testing.assert_array_equal(chain, expected_chain)
-    assert log_like.call_count == num_samples + 1
-    assert adapt.call_count == num_samples
+    init_mock.assert_called_once()
+    step_mock.call_count == num_samples
 
 
 @pytest.mark.parametrize('num_chains', (1, 3, 5))
