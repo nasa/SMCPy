@@ -105,7 +105,7 @@ class MCMCBase(ABC, MCMCLogger):
         z = gi.num_lib.random.normal(0, 1, inputs.shape)
 
         if gi.USING_GPU:
-            delta = _matmul_gpu_with_lower_triangular(z, chol)
+            delta = _matmul_gpu_with_lower_triangular(chol, z.T).T
             delta = delta.get()
 
             # validation code
