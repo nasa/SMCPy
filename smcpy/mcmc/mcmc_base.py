@@ -112,8 +112,8 @@ class MCMCBase(ABC, MCMCLogger):
             print("testing")
             z = z.get()
             chol = chol.get()
+            np.testing.assert_allclose(np.matmul(chol, z.T).T, np.matmul(z, chol))
             np.testing.assert_allclose(np.matmul(z, chol), delta)
-            np.testing.assert_allclose(np.matmul(chol, z.T).T, delta)
         else:
             delta = np.matmul(z, chol)
         return inputs + delta
