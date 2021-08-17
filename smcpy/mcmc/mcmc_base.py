@@ -112,10 +112,9 @@ class MCMCBase(ABC, MCMCLogger):
             print("testing")
             z = z.get()
             chol = chol.get()
-            np.testing.assert_allclose(np.matmul(chol, z.T).T, np.matmul(z, chol))
-            np.testing.assert_allclose(np.matmul(z, chol), delta)
+            np.testing.assert_allclose(np.matmul(chol, z.T).T, delta)
         else:
-            delta = np.matmul(z, chol)
+            delta = np.matmul(chol, z.T).T
         return inputs + delta
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
@@ -242,24 +241,25 @@ class MCMCBase(ABC, MCMCLogger):
         return ~(log_priors == -np.inf).any(axis=1)
 
 
-def _matmul_gpu_with_lower_triangular(mat, lower):
-    if mat.shape[-1] != lower.shape[0]:
+def _matmul_gpu_with_lower_triangular(lower, mat):
+    if lower.shape[-1] != mat.shape[0]:
         raise np.linalg.LinAlgError(f"Matrix dimensions {mat.shape} and {lower.shape} "
                                     f"incompatible for multiplication.")
 
-    num_rows = mat.shape[0]
-    num_cols = lower.shape[1]
+    num_rows = lower.shape[0]
+    num_cols = mat.shape[1]
+    mid_dim = lower.shape[-1]
     output = gi.num_lib.zeros((num_rows, num_cols))
     blockspergrid = int(np.ceil(num_rows / gi.GPU_THREADS_PER_BLOCK))
-    _matmul_lt_gpu_kernel[blockspergrid, gi.GPU_THREADS_PER_BLOCK](mat, lower, output, num_rows, num_cols, mat.shape[-1])
+    _matmul_lt_gpu_kernel[blockspergrid, gi.GPU_THREADS_PER_BLOCK](lower, mat, output, num_rows, num_cols, mid_dim)
     return output
 
 
 @jit.rawkernel()
-def _matmul_lt_gpu_kernel(mat, lower, output, num_rows, num_cols, mid_dim):
-    row = jit.blockIdx.x * jit.blockDim.x + jit.threadIdx.x
+def _matmul_lt_gpu_kernel(lower, mat, output, num_rows, num_cols, mid_dim):
+    col = jit.blockIdx.x * jit.blockDim.x + jit.threadIdx.x
 
-    if row < num_rows:
-        for col in range(num_cols):
-            for i in range(col, mid_dim):
-                output[row, col] += mat[row, i] * lower[i, col]
+    if col < num_cols:
+        for row in range(num_rows):
+            for i in range(col + 1):
+                output[row, col] += lower[row, i] * mat[i, col]
