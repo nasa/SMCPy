@@ -11,3 +11,5 @@ def set_use_gpu(use_gpu):
         import cupy as num_lib
     else:
         import numpy as num_lib
+
+GPU_THREADS_PER_BLOCK = 256

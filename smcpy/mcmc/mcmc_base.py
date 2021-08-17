@@ -5,6 +5,8 @@ from tqdm import tqdm
 
 from .mcmc_logger import MCMCLogger
 import smcpy.utils.global_imports as gi
+from cupyx import jit
+import cupy as cp
 
 class MCMCBase(ABC, MCMCLogger):
     
@@ -99,11 +101,14 @@ class MCMCBase(ABC, MCMCLogger):
     def proposal(inputs, cov):
         scale_factor = 1  # 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         cov *= scale_factor
-        chol = np.linalg.cholesky(cov)
-        z = np.random.normal(0, 1, inputs.shape)
-        delta = np.matmul(chol, z.T).T
-        #if gi.USING_GPU:
-        #    delta = delta.get()
+        chol = gi.num_lib.linalg.cholesky(cov)
+        z = gi.num_lib.random.normal(0, 1, inputs.shape)
+
+        if gi.USING_GPU:
+            delta = _matmul_gpu_with_lower_triangular(z, chol)
+            delta = delta.get()
+        else:
+            delta = np.matmul(z, chol)
         return inputs + delta
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
@@ -148,8 +153,8 @@ class MCMCBase(ABC, MCMCLogger):
         self._check_log_priors_for_zero_probability(log_priors)
         log_like = self.evaluate_log_likelihood(inputs)
 
-        #if gi.USING_GPU:
-        #    cov = gi.num_lib.asarray(cov)
+        if gi.USING_GPU:
+            cov = gi.num_lib.asarray(cov)
 
         for i in range(num_samples):
 
@@ -228,3 +233,25 @@ class MCMCBase(ABC, MCMCLogger):
     @staticmethod
     def _row_has_nonzero_prior_probability(log_priors):
         return ~(log_priors == -np.inf).any(axis=1)
+
+
+def _matmul_gpu_with_lower_triangular(mat, lower):
+    if mat.shape[-1] != lower.shape[0]:
+        raise np.linalg.LinAlgError(f"Matrix dimensions {mat.shape} and {lower.shape} "
+                                    f"incompatible for multiplication.")
+
+    num_rows = mat.shape[0]
+    num_cols = lower.shape[1]
+    output = gi.num_lib.zeros((num_rows, num_cols))
+    blockspergrid = math.ceil(num_rows / gi.GPU_THREADS_PER_BLOCK)
+
+
+
+@jit.rawkernel()
+def _matmul_lt_gpu_kernel(mat, lower, output, num_rows, num_cols, mid_dim):
+    row = jit.blockIdx.x * jit.blockDim.x + jit.threadIdx.x
+
+    if row < num_rows:
+        for col in range(num_cols):
+            for i in range(col, mid_dim):
+                output[row, col] += mat[row, i] * lower[i, col]
