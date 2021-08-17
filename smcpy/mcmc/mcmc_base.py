@@ -65,6 +65,12 @@ class MCMCBase(ABC):
                                           adapt_delay)
         return chain
 
+    @abstractmethod
+    def evaluate_model(self, inputs):
+        '''
+        Calls self._model with "inputs" and returns corresponding outputs.
+        '''
+
     def sample_from_priors(self, num_samples):
         samples = []
         for i, p in enumerate(self._priors):
@@ -77,27 +83,20 @@ class MCMCBase(ABC):
         if inputs.shape[1] != sum(prior_dims):
             raise ValueError("Num prior distributions != num input params")
 
-        prior_probs = []
+        prior_probs = np.empty((inputs.shape[0], len(self._priors)))
         in_start_idx = 0
         for i, p in enumerate(self._priors):
-            in_ = inputs.T[in_start_idx:in_start_idx + prior_dims[i]]
-            prior_probs.append(p.pdf(in_.T).reshape(-1, 1))
+            in_ = inputs[:, in_start_idx:in_start_idx + prior_dims[i]]
+            prior_probs[:, i] = p.pdf(in_).squeeze()
             in_start_idx += prior_dims[i]
-        prior_probs = np.hstack(prior_probs)
 
         nonzero_priors = prior_probs != 0
-        log_priors = np.ones(prior_probs.shape) * -np.inf
+        log_priors = np.full(prior_probs.shape, -np.inf)
         log_priors = np.log(prior_probs, where=nonzero_priors, out=log_priors)
         return log_priors
 
     def _get_prior_dims(self):
         return [p.dim if hasattr(p, 'dim') else 1 for p in self._priors]
-
-    @abstractmethod
-    def evaluate_model(self, inputs):
-        '''
-        Calls self._model with "inputs" and returns corresponding outputs.
-        '''
 
     def evaluate_log_likelihood(self, inputs):
         log_like = self._log_like_func(inputs)
@@ -138,20 +137,6 @@ class MCMCBase(ABC):
             return np.cov(flat_chain)
         return cov
 
-    @staticmethod
-    def _is_adapt_iteration(adapt_interval, idx, adapt_delay):
-        if adapt_interval is None:
-            return False
-        surpassed_delay = idx >= adapt_delay
-        is_adapt_iteration = (idx - adapt_delay) % adapt_interval == 0
-        return surpassed_delay and is_adapt_iteration
-
-    @staticmethod
-    def _get_window_start(idx, adapt_delay, adapt_interval):
-        if idx >= adapt_delay + adapt_interval:
-            return adapt_delay + 1
-        return max(adapt_delay - adapt_interval + 1, 1)
-
     def _initialize_probabilities(self, inputs):
         log_priors = self.evaluate_log_priors(inputs)
         self._check_log_priors_for_zero_probability(log_priors)
@@ -175,6 +160,20 @@ class MCMCBase(ABC):
         log_priors = np.where(rejected, log_priors, new_log_priors)
 
         return inputs, log_like, log_priors, rejected
+
+    @staticmethod
+    def _is_adapt_iteration(adapt_interval, idx, adapt_delay):
+        if adapt_interval is None:
+            return False
+        surpassed_delay = idx >= adapt_delay
+        is_adapt_iteration = (idx - adapt_delay) % adapt_interval == 0
+        return surpassed_delay and is_adapt_iteration
+
+    @staticmethod
+    def _get_window_start(idx, adapt_delay, adapt_interval):
+        if idx >= adapt_delay + adapt_interval:
+            return adapt_delay + 1
+        return max(adapt_delay - adapt_interval + 1, 1)
 
     def _check_log_priors_for_zero_probability(self, log_priors):
         if any(~self._row_has_nonzero_prior_probability(log_priors)):
