@@ -107,17 +107,6 @@ class MCMCBase(ABC, MCMCLogger):
         if gi.USING_GPU:
             delta = _matmul_gpu_with_lower_triangular(chol, z.T).T
             delta = delta.get()
-
-            # validation code
-            print("testing")
-            z = z.get()
-            chol = chol.get()
-            print(z)
-            print(chol)
-            print()
-            print()
-            print(delta - np.matmul(chol, z.T).T)
-            np.testing.assert_allclose(np.matmul(chol, z.T).T, delta)
         else:
             delta = np.matmul(chol, z.T).T
         return inputs + delta
@@ -254,9 +243,6 @@ def _matmul_gpu_with_lower_triangular(lower, mat):
     num_rows = lower.shape[0]
     num_cols = mat.shape[1]
     mid_dim = lower.shape[-1]
-    print(num_rows)
-    print(num_cols)
-    print(mid_dim)
     output = gi.num_lib.zeros((num_rows, num_cols))
     blockspergrid = int(np.ceil(num_cols / gi.GPU_THREADS_PER_BLOCK))
     _matmul_lt_gpu_kernel[blockspergrid, gi.GPU_THREADS_PER_BLOCK](lower, mat, output, num_rows, num_cols, mid_dim)
