@@ -254,6 +254,9 @@ def _matmul_gpu_with_lower_triangular(lower, mat):
     num_rows = lower.shape[0]
     num_cols = mat.shape[1]
     mid_dim = lower.shape[-1]
+    print(num_rows)
+    print(num_cols)
+    print(mid_dim)
     output = gi.num_lib.zeros((num_rows, num_cols))
     blockspergrid = int(np.ceil(num_rows / gi.GPU_THREADS_PER_BLOCK))
     _matmul_lt_gpu_kernel[blockspergrid, gi.GPU_THREADS_PER_BLOCK](lower, mat, output, num_rows, num_cols, mid_dim)
