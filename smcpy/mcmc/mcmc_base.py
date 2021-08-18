@@ -266,5 +266,5 @@ def _matmul_lt_gpu_kernel(lower, mat, output, num_rows, num_cols, mid_dim):
 
     if col < num_cols:
         for row in range(num_rows):
-            for i in range(col + 1):
+            for i in range(row + 1):
                 output[row, col] += lower[row, i] * mat[i, col]
