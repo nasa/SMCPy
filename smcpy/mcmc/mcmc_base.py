@@ -5,8 +5,6 @@ from tqdm import tqdm
 
 from .mcmc_logger import MCMCLogger
 import smcpy.utils.global_imports as gi
-from cupyx import jit
-import cupy as cp
 
 class MCMCBase(ABC, MCMCLogger):
     
@@ -81,31 +79,16 @@ class MCMCBase(ABC, MCMCLogger):
     def evaluate_log_posterior(log_likelihood, log_priors):
         return np.sum(np.hstack((log_likelihood, log_priors)), axis=1)
 
-    """
-    @staticmethod
-    def proposal(inputs, cov):
-        scale_factor = 1 #2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
-        mean = np.zeros(cov.shape[0]) #gi.num_lib.zeros(cov.shape[0])
-        #print(cov)
-        #if np.allclose(cov, np.zeros(cov.shape)):
-        #    raise RuntimeError
-        
-        #if gi.USING_GPU:
-        #    inputs = gi.num_lib.asarray(inputs)
-        delta = np.random.multivariate_normal(mean, scale_factor * cov, #gi.num_lib.
-                                              inputs.shape[0])
-        return inputs + delta #if not gi.USING_GPU else (inputs + delta).get()
 
-    """
     @staticmethod
     def proposal(inputs, cov):
         scale_factor = 1  # 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         cov *= scale_factor
-        chol = np.linalg.cholesky(cov)
-        z = np.random.normal(0, 1, inputs.shape)
+        chol = gi.num_lib.linalg.cholesky(cov)
+        z = gi.num_lib.random.normal(0, 1, inputs.shape)
 
-        if False and gi.USING_GPU:
-            delta = _matmul_gpu_with_lower_triangular(chol, z.T).T
+        if gi.USING_GPU:
+            delta = gi.gpu_matmul.matmul_gpu_with_lower_triangular(chol, z.T).T
             delta = delta.get()
         else:
             delta = np.matmul(chol, z.T).T
@@ -235,25 +218,3 @@ class MCMCBase(ABC, MCMCLogger):
         return ~(log_priors == -np.inf).any(axis=1)
 
 
-def _matmul_gpu_with_lower_triangular(lower, mat):
-    if lower.shape[-1] != mat.shape[0]:
-        raise np.linalg.LinAlgError(f"Matrix dimensions {mat.shape} and {lower.shape} "
-                                    f"incompatible for multiplication.")
-
-    num_rows = lower.shape[0]
-    num_cols = mat.shape[1]
-    mid_dim = lower.shape[-1]
-    output = gi.num_lib.zeros((num_rows, num_cols))
-    blockspergrid = int(np.ceil(num_cols / gi.GPU_THREADS_PER_BLOCK))
-    _matmul_lt_gpu_kernel[blockspergrid, gi.GPU_THREADS_PER_BLOCK](lower, mat, output, num_rows, num_cols, mid_dim)
-    return output
-
-
-@jit.rawkernel()
-def _matmul_lt_gpu_kernel(lower, mat, output, num_rows, num_cols, mid_dim):
-    col = jit.blockIdx.x * jit.blockDim.x + jit.threadIdx.x
-
-    if col < num_cols:
-        for row in range(num_rows):
-            for i in range(row + 1):
-                output[row, col] += lower[row, i] * mat[i, col]
