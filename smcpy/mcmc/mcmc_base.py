@@ -136,8 +136,8 @@ class MCMCBase(ABC, MCMCLogger):
         self._check_log_priors_for_zero_probability(log_priors)
         log_like = self.evaluate_log_likelihood(inputs)
 
-        #if gi.USING_GPU:
-        #    cov = gi.num_lib.asarray(cov)
+        if gi.USING_GPU:
+            cov = gi.num_lib.asarray(cov)
 
         for i in range(num_samples):
 
