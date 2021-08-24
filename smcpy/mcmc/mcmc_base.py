@@ -34,9 +34,9 @@ class MCMCBase(ABC):
         num_particles = inputs.shape[0]
         log_priors, log_like = self._initialize_probabilities(inputs)
 
-        if gi.USING_GPU:
-            cov = gi.num_lib.asarray(cov)
-            
+        #if gi.USING_GPU:
+        #    cov = gi.num_lib.asarray(cov)
+
         for i in range(num_samples):
 
             inputs, log_like, log_priors, rejected = \
@@ -113,10 +113,10 @@ class MCMCBase(ABC):
     def proposal(inputs, cov):
         scale_factor = 1  # 2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         cov *= scale_factor
-        chol = gi.num_lib.linalg.cholesky(cov)
-        z = gi.num_lib.random.normal(0, 1, inputs.shape)
+        chol = np.linalg.cholesky(cov)
+        z = np.random.normal(0, 1, inputs.shape)
 
-        if gi.USING_GPU:
+        if False and gi.USING_GPU:
             delta = gi.gpu_matmul.matmul_gpu_with_lower_triangular(chol, z.T).T
             delta = delta.get()
         else:
