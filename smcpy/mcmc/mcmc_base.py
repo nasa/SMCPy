@@ -115,12 +115,7 @@ class MCMCBase(ABC):
         cov *= scale_factor
         chol = np.linalg.cholesky(cov)
         z = np.random.normal(0, 1, inputs.shape)
-
-        if False and gi.USING_GPU:
-            delta = gi.gpu_matmul.matmul_gpu_with_lower_triangular(chol, z.T).T
-            delta = delta.get()
-        else:
-            delta = np.matmul(chol, z.T).T
+        delta = np.matmul(chol, z.T).T
         return inputs + delta
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
