@@ -1,6 +1,8 @@
+import cupy
 import numpy as np
 import nvtx
-import smcpy.utils.global_imports as gi
+
+from smcpy.utils import global_imports as gi
 
 class BaseLogLike:
 
@@ -45,21 +47,22 @@ class Normal(BaseLogLike):
         with nvtx.annotate(message='convert var'):
             if gi.USING_GPU:
                 var = gi.num_lib.asarray(var)
-        return self._calc_normal_log_like(output, self._data, var)
+        return self._calc_normal_log_like(output, self._data, var,
+                                          output.shape[1]).get()
 
-    @staticmethod
-    def _calc_normal_log_like(output, data, var):
+    @cupy.fuse()
+    def _calc_normal_log_like(output, data, var, output_shape):
         rng = nvtx.start_range(message='ssqe')
         ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
         nvtx.end_range(rng)
     
         rng = nvtx.start_range(message='normal like')
-        term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * (output.shape[1] / 2.)
+        term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * (output_shape / 2.)
         term2 = -1 / 2. * ssqe / var
         nvtx.end_range(rng)
     
         rng = nvtx.start_range(message='assemble normal like and transfer')
-        nll = (term1 + term2) if not gi.USING_GPU else (term1 + term2).get()
+        nll = (term1 + term2) if not gi.USING_GPU else (term1 + term2)
         nvtx.end_range(rng)
         return nll
 
