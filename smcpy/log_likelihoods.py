@@ -1,4 +1,5 @@
 import numpy as np
+import nvtx
 import smcpy.utils.global_imports as gi
 
 class BaseLogLike:
@@ -9,8 +10,9 @@ class BaseLogLike:
         self._args = args
 
     def _get_output(self, inputs):
-        if gi.USING_GPU:
-            inputs = gi.num_lib.asarray(inputs)
+        with nvtx.annotate(message='convert inputs'):
+            if gi.USING_GPU:
+                inputs = gi.num_lib.asarray(inputs)
 
         output = self._model(inputs)
 
@@ -29,6 +31,8 @@ class Normal(BaseLogLike):
         '''
         super().__init__(model, data, args)
 
+
+    @nvtx.annotate(message='Normal.__call__')
     def __call__(self, inputs):
         std_dev = self._args
         if std_dev is None:
@@ -38,19 +42,26 @@ class Normal(BaseLogLike):
 
         output = self._get_output(inputs)
 
-        if gi.USING_GPU:
-            var = gi.num_lib.asarray(var)
+        with nvtx.annotate(message='convert var'):
+            if gi.USING_GPU:
+                var = gi.num_lib.asarray(var)
         return self._calc_normal_log_like(output, self._data, var)
 
     @staticmethod
     def _calc_normal_log_like(output, data, var):
+        rng = nvtx.start_range(message='ssqe')
         ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
+        nvtx.end_range(rng)
     
+        rng = nvtx.start_range(message='normal like')
         term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * (output.shape[1] / 2.)
         term2 = -1 / 2. * ssqe / var
+        nvtx.end_range(rng)
     
-        return (term1 + term2) if not gi.USING_GPU else (term1 + term2).get()
-
+        rng = nvtx.start_range(message='assemble normal like and transfer')
+        nll = (term1 + term2) if not gi.USING_GPU else (term1 + term2).get()
+        nvtx.end_range(rng)
+        return nll
 
 class MultiSourceNormal(Normal):
 
