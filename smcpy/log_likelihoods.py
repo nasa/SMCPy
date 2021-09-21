@@ -4,6 +4,10 @@ import nvtx
 
 from smcpy.utils import global_imports as gi
 
+@cupy.fuse(kernel_name='check_nan')
+def finds_nan(output):
+    return gi.num_lib.isnan(output).any()
+
 class BaseLogLike:
 
     def __init__(self, model, data, args):
@@ -18,7 +22,7 @@ class BaseLogLike:
 
         output = self._model(inputs)
 
-        if gi.num_lib.isnan(output).any():
+        if finds_nan(output):
             raise ValueError
         return output
 
@@ -34,7 +38,6 @@ class Normal(BaseLogLike):
         super().__init__(model, data, args)
 
 
-    @nvtx.annotate(message='Normal.__call__')
     def __call__(self, inputs):
         std_dev = self._args
         if std_dev is None:
@@ -42,28 +45,35 @@ class Normal(BaseLogLike):
             inputs = inputs[:, :-1]
         var = std_dev ** 2
 
-        output = self._get_output(inputs)
+        with nvtx.annotate(message='call get_output'):
+            output = self._get_output(inputs)
 
         with nvtx.annotate(message='convert var'):
             if gi.USING_GPU:
                 var = gi.num_lib.asarray(var)
-        return self._calc_normal_log_like(output, self._data, var,
-                                          output.shape[1]).get()
+        with nvtx.annotate(message='calc norm log like'):
+            nll = self._calc_normal_log_like(output, self._data, var,
+                                             output.shape[1])
+        with nvtx.annotate(message='get'):
+            out_nll = np.empty(inputs.shape[0])
+            out_nll = nll.get(out=out_nll) # makes asynch
 
-    @cupy.fuse()
+        return out_nll
+
+    @cupy.fuse(kernel_name='fused_nll_kernel')
+    #@staticmethod
     def _calc_normal_log_like(output, data, var, output_shape):
-        rng = nvtx.start_range(message='ssqe')
-        ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
-        nvtx.end_range(rng)
+        with nvtx.annotate(message='ssqe'):
+            ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
     
-        rng = nvtx.start_range(message='normal like')
-        term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * (output_shape / 2.)
-        term2 = -1 / 2. * ssqe / var
-        nvtx.end_range(rng)
+        with nvtx.annotate(message='normal like'):
+            cupy.cuda.nvtx.Mark(message='normal like')
+            term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * \
+                    (output_shape / 2.)
+            term2 = -1 / 2. * ssqe / var
     
-        rng = nvtx.start_range(message='assemble normal like and transfer')
-        nll = (term1 + term2) if not gi.USING_GPU else (term1 + term2)
-        nvtx.end_range(rng)
+        with nvtx.annotate(message='assemble normal like and transfer'):
+            nll = (term1 + term2)
         return nll
 
 class MultiSourceNormal(Normal):
