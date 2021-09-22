@@ -4,9 +4,24 @@ import nvtx
 
 from smcpy.utils import global_imports as gi
 
-@cupy.fuse(kernel_name='check_nan')
-def finds_nan(output):
-    return gi.num_lib.isnan(output).any()
+@cupy.fuse(kernel_name='fused_is_nan_kernel')
+def fused_is_nan(output):
+    return cupy.any(cupy.isnan(output))
+ 
+
+@cupy.fuse(kernel_name='sum_output_kernel')
+def sum_output_kernel(output, data):
+    return cupy.sum((output - data) ** 2, axis=1)
+
+
+@cupy.fuse(kernel_name='calc_normal_log_like_kernel')
+def calc_normal_log_like(ssqe, var, output_shape_1):
+
+    term1 = -cupy.log(2 * cupy.pi * var) * (output_shape_1 / 2.)
+    term2 = -1 / 2. * ssqe / var
+
+    return (term1 + term2)
+
 
 class BaseLogLike:
 
@@ -15,6 +30,7 @@ class BaseLogLike:
         self._data = data
         self._args = args
 
+    @nvtx.annotate(color='green')
     def _get_output(self, inputs):
         with nvtx.annotate(message='convert inputs'):
             if gi.USING_GPU:
@@ -22,8 +38,10 @@ class BaseLogLike:
 
         output = self._model(inputs)
 
-        if finds_nan(output):
-            raise ValueError
+        with nvtx.annotate(message='isnan'):
+            if gi.USING_GPU:
+                if fused_is_nan(output):
+                    raise ValueError
         return output
 
 
@@ -61,20 +79,10 @@ class Normal(BaseLogLike):
         return out_nll
 
     @cupy.fuse(kernel_name='fused_nll_kernel')
-    #@staticmethod
     def _calc_normal_log_like(output, data, var, output_shape):
-        with nvtx.annotate(message='ssqe'):
-            ssqe = gi.num_lib.sum((output - data) ** 2, axis=1)
-    
-        with nvtx.annotate(message='normal like'):
-            cupy.cuda.nvtx.Mark(message='normal like')
-            term1 = -gi.num_lib.log(2 * gi.num_lib.pi * var) * \
-                    (output_shape / 2.)
-            term2 = -1 / 2. * ssqe / var
-    
-        with nvtx.annotate(message='assemble normal like and transfer'):
-            nll = (term1 + term2)
-        return nll
+        if gi.USING_GPU:
+            return calc_normal_log_like(sum_output_kernel(output, data), var,
+                                        output_shape)
 
 class MultiSourceNormal(Normal):
 
