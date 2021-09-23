@@ -4,6 +4,7 @@ import nvtx
 
 from smcpy.utils import global_imports as gi
 
+
 @cupy.fuse(kernel_name='fused_is_nan_kernel')
 def fused_is_nan(output):
     return cupy.any(cupy.isnan(output))
@@ -16,10 +17,8 @@ def sum_output_kernel(output, data):
 
 @cupy.fuse(kernel_name='calc_normal_log_like_kernel')
 def calc_normal_log_like(ssqe, var, output_shape_1):
-
     term1 = -cupy.log(2 * cupy.pi * var) * (output_shape_1 / 2.)
     term2 = -1 / 2. * ssqe / var
-
     return (term1 + term2)
 
 
@@ -70,19 +69,14 @@ class Normal(BaseLogLike):
             if gi.USING_GPU:
                 var = gi.num_lib.asarray(var)
         with nvtx.annotate(message='calc norm log like'):
-            nll = self._calc_normal_log_like(output, self._data, var,
-                                             output.shape[1])
+            nll = calc_normal_log_like(sum_output_kernel(output, self._data),
+                                       var, output.shape[1])
         with nvtx.annotate(message='get'):
             out_nll = np.empty(inputs.shape[0])
             out_nll = nll.get(out=out_nll) # makes asynch
 
         return out_nll
 
-    @cupy.fuse(kernel_name='fused_nll_kernel')
-    def _calc_normal_log_like(output, data, var, output_shape):
-        if gi.USING_GPU:
-            return calc_normal_log_like(sum_output_kernel(output, data), var,
-                                        output_shape)
 
 class MultiSourceNormal(Normal):
 
