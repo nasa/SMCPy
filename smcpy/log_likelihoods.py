@@ -10,30 +10,11 @@ def fused_is_nan(output):
     return cupy.any(cupy.isnan(output))
  
 
-@cupy.fuse(kernel_name='sum_output_kernel')
-def sum_output_kernel(output, data):
-    return cupy.sum((output - data) ** 2, axis=1)
-
-
 @cupy.fuse(kernel_name='calc_normal_log_like_kernel')
-def calc_normal_log_like(ssqe, var, output_shape_1):
-    term1 = -cupy.log(2 * cupy.pi * var) * (output_shape_1 / 2.)
-    term2 = -1 / 2. * ssqe / var
-    return (term1 + term2)
-
-
-@cupy.fuse(kernel_name='nested_calc_normal_log_like_kernel')
-def nested_fuse_calc_nll(output, data, var, output_shape):
-    ssqe = sum_output_kernel(output, data)
-    return calc_normal_log_like(ssqe, var, output_shape)
-
-
-@cupy.fuse(kernel_name='all_in_one_calc_nll')
-def all_in_one_calc_nll(output, data, var, output_shape):
-    ssqe = cupy.sum((output - data) ** 2, axis=1)
-    term1 = -cupy.log(2 * cupy.pi * var) * (output_shape / 2.)
-    term2 = -1 / 2. * ssqe / var
-    return (term1 + term2)
+def calc_normal_log_like(output, data, var):
+    term1 = cupy.log(2 * cupy.pi * var)
+    term2 = (output - data)**2 / var
+    return cupy.sum((term1 + term2) * -0.5, axis=1)
 
 
 class BaseLogLike:
@@ -83,10 +64,7 @@ class Normal(BaseLogLike):
             if gi.USING_GPU:
                 var = gi.num_lib.asarray(var)
         with nvtx.annotate(message='calc norm log like'):
-            #SLOW #nll = all_in_one_calc_nll(output, self._data, var, output.shape[1])
-            #SLOW #nll = nested_fuse_calc_nll(output, self._data, var, output.shape[1])
-            nll = calc_normal_log_like(sum_output_kernel(output, self._data),
-                                       var, output.shape[1])
+            nll = calc_normal_log_like(output, self._data, var.reshape(-1, 1))
         with nvtx.annotate(message='get'):
             out_nll = np.empty(inputs.shape[0])
             out_nll = nll.get(out=out_nll) # makes asynch
