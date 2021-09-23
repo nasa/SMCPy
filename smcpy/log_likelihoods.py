@@ -26,10 +26,6 @@ class BaseLogLike:
 
     @nvtx.annotate(color='green')
     def _get_output(self, inputs):
-        with nvtx.annotate(message='convert inputs'):
-            if gi.USING_GPU:
-                inputs = gi.num_lib.asarray(inputs)
-
         output = self._model(inputs)
 
         with nvtx.annotate(message='isnan'):
@@ -51,6 +47,10 @@ class Normal(BaseLogLike):
 
 
     def __call__(self, inputs):
+        with nvtx.annotate(message='convert inputs'):
+            if gi.USING_GPU:
+                inputs = gi.num_lib.asarray(inputs)
+
         std_dev = self._args
         if std_dev is None:
             std_dev = inputs[:, -1]
@@ -59,10 +59,6 @@ class Normal(BaseLogLike):
 
         with nvtx.annotate(message='call get_output'):
             output = self._get_output(inputs)
-
-        with nvtx.annotate(message='convert var'):
-            if gi.USING_GPU:
-                var = gi.num_lib.asarray(var)
         with nvtx.annotate(message='calc norm log like'):
             nll = calc_normal_log_like(output, self._data, var.reshape(-1, 1))
         with nvtx.annotate(message='get'):
