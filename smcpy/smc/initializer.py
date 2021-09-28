@@ -57,21 +57,7 @@ class Initializer:
             raise TypeError
         self._mcmc_kernel = mcmc_kernel
 
-    def init_particles_from_prior(self, num_particles):
-        '''
-        Use model stored in MCMC kernel to sample initial set of particles.
-
-        :param num_particles: number of particles to sample (total across all
-            ranks)
-        :type num_particles: int
-        '''
-        params = self.mcmc_kernel.sample_from_prior(num_particles)
-        log_likes = self.mcmc_kernel.get_log_likelihoods(params)
-        log_weights = np.array([np.log(1/num_particles)] * num_particles)
-        particles = Particles(params, log_likes, log_weights)
-        return particles
-
-    def init_particles_from_samples(self, samples, proposal_pdensities):
+    def __call__(self, samples):
         '''
         Initialize a set of particles using pre-sampled parameter values and
         the corresponding prior pdf at those values.
@@ -81,13 +67,10 @@ class Initializer:
             parameter values. Can also be a pandas DataFrame object for this
             reason.
         :type samples: dict, pandas.DataFrame
-        :param proposal_pdensities: corresponding probability density function
-            values; must be aligned with samples
-        :type proposal_pdensities: list or nd.array
         '''
-        proposal_pdensities = np.array(proposal_pdensities).reshape(-1, 1)
         log_likes = self.mcmc_kernel.get_log_likelihoods(samples)
         log_priors = self.mcmc_kernel.get_log_priors(samples)
-        log_weights = log_priors - np.log(proposal_pdensities)
+        log_weights = np.full(samples.shape, np.log(1 / samples.shape[1]))
+        samples = self.mcmc_kernel.conv_param_array_to_dict(samples)
         particles = Particles(samples, log_likes, log_weights)
         return particles
