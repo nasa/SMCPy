@@ -33,7 +33,7 @@ AGREEMENT.
 import numpy as np
 
 from .particles import Particles
-
+from smcpy.utils import global_imports as gi
 
 class Updater:
     '''
@@ -92,15 +92,17 @@ class Updater:
         return un_log_weights
 
     def _resample(self, particles):
-        u = np.random.uniform(0, 1, particles.num_particles)
-        resample_indices = np.digitize(u, np.cumsum(particles.weights))
-
+        print(dir(particles))
+        u = np.random.uniform(0, 1, size=particles.weights.shape)
+        print(particles.weights.shape)
+        resample_indices = np.digitize(u, np.cumsum(particles.weights, axis=1)[-1])
         new_params = particles.params[resample_indices]
-        param_dict = dict(zip(particles.param_names, new_params.T))
+        param_dict = dict(zip(particles.param_names, np.transpose(new_params, axis=(2,0,1))))
 
         new_log_likes = particles.log_likes[resample_indices]
 
-        uniform_weights = [1/particles.num_particles] * particles.num_particles
+        uniform_weights = np.full(self.particles.weights.shape, 
+				1/particles.num_particles)
         new_weights = np.log(uniform_weights)
 
         return Particles(param_dict, new_log_likes, new_weights)
