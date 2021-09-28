@@ -192,12 +192,13 @@ class Particles(Checks):
         '''
         means = self.compute_mean(package=False)
         diff = self.params - means
+        diffT = np.transpose(diff, (0, 2, 1))
         norm = 1 / (1 - np.sum(self.weights ** 2, axis=1, keepdims=True))
-        cov = np.dot(diff.T, diff * self.weights) * norm
+        cov = np.matmul(diffT, diff * self.weights) * norm
 
         if not self._is_positive_definite(cov):
             warnings.warn('Covariance matrix is not positive definite; setting '
                           'off-diagonal terms to zero.')
-            cov= np.eye(cov.shape[0]) * np.diag(cov)
+            cov += np.tile(np.eye(cov.shape[1]), (cov.shape[0], 1, 1)) * 1e-6
 
         return cov
