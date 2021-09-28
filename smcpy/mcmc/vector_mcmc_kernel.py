@@ -10,30 +10,30 @@ class VectorMCMCKernel(MCMCKernel):
         self._param_order = param_order
 
     def mutate_particles(self, param_dict, log_likes, num_samples, cov, phi):
-        param_array = self._conv_param_dict_to_array(param_dict)
+        param_array = self.conv_param_dict_to_array(param_dict)
         param_array, log_likes = self._mcmc.smc_metropolis(param_array,
                                                            num_samples,
                                                            cov, phi)
-        param_dict = self._conv_param_array_to_dict(param_array)
+        param_dict = self.conv_param_array_to_dict(param_array)
         return param_dict, log_likes
 
     def sample_from_prior(self, num_samples):
         param_array = self._mcmc.sample_from_priors(num_samples)
-        return self._conv_param_array_to_dict(param_array)
+        return self.conv_param_array_to_dict(param_array)
 
     def get_log_likelihoods(self, param_dict):
-        param_array = self._conv_param_dict_to_array(param_dict)
+        param_array = self.conv_param_dict_to_array(param_dict)
         return self._mcmc.evaluate_log_likelihood(param_array)
 
     def get_log_priors(self, param_dict):
-        param_array = self._conv_param_dict_to_array(param_dict)
+        param_array = self.conv_param_dict_to_array(param_dict)
         log_priors = self._mcmc.evaluate_log_priors(param_array)
         return np.sum(log_priors, axis=1).reshape(-1, 1)
 
-    def _conv_param_array_to_dict(self, param_array):
+    def conv_param_array_to_dict(self, param_array):
         return dict(zip(self._param_order, param_array.T))
 
-    def _conv_param_dict_to_array(self, param_dict):
+    def conv_param_dict_to_array(self, param_dict):
         dim0 = 1
         if not isinstance(param_dict[self._param_order[0]], (int, float)):
             dim0 = len(param_dict[self._param_order[0]])
