@@ -3,7 +3,7 @@ import pytest
 
 from smcpy.smc.updater import Updater
 
-#@pytest.fixture
+
 class MockedParticles:
 
     def __init__(self, params, log_likes, log_weights):
@@ -22,23 +22,10 @@ class MockedParticles:
 @pytest.fixture
 def mocked_particles(mocker):
     params = {'a': np.array([1, 1, 2]), 'b': np.array([2, 3, 4])}
-    log_likes = np.array([-1, -2, -3]).reshape(3,1)
-    log_weights = np.log([0.1, 0.6, 0.3]).reshape(3, 1)
+    log_likes = np.array([-1, -2, -3]).reshape(-1, 1)
+    log_weights = np.log([0.1, 0.6, 0.3]).reshape(-1, 1)
     particles = MockedParticles(params, log_likes, log_weights)
     return particles
-
-@pytest.fixture
-def param_dict():
-    s = (2, 5)
-    return {'p1': np.ones(s), 'p2': np.full(s, 2), 'p3': np.full(s, 3)}
-
-@pytest.fixture
-def particles(param_dict):
-    log_likes = np.ones((2, 5, 1))
-    weights = np.array([[[1], [4], [1], [1], [1]],
-                        [[1], [6], [1], [1], [1]]])
-    log_weights = np.log(weights)
-    return Particles(param_dict, log_likes, log_weights)
 
 
 @pytest.mark.parametrize('ess_threshold', [-0.1, 1.1])
