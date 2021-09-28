@@ -94,26 +94,25 @@ class SMCSampler:
                                                           mut_particles)
             set_bar(phi_iterator, i + 2, mutation_ratio, updater)
 
-        return step_list, self._estimate_marginal_log_likelihoods(updater)
+        return step_list, self.estimate_marginal_log_likelihoods(updater)
 
     def _initialize(self, initializer, num_particles, proposal):
         particles = initializer.init_particles_from_samples(*proposal)
         return particles
 
-    def _estimate_marginal_log_likelihoods(self, updater):
+    def estimate_marginal_log_likelihoods(self, updater):
         sum_un_log_wts = [self._logsum(ulw) \
                           for ulw in updater._unnorm_log_weights]
-        num_updates = len(sum_un_log_wts)
-        return [0] + [np.sum(sum_un_log_wts[:i+1]) for i in range(num_updates)]
+        sum_un_log_wts.insert(0, np.zeros(sum_un_log_wts[0].shape))
+        return np.cumsum(np.array(sum_un_log_wts).squeeze(), axis=0).T
 
     @staticmethod
     def _logsum(Z):
-        Z = -np.sort(-Z, axis=0) # descending
-        Z0 = Z[0, :]
-        Z_shifted = Z[1:, :] - Z0
-        return Z0 + np.log(1 + np.sum(np.exp(Z_shifted), axis=0))
+        shift = Z.max(axis=1, keepdims=True)
+        Z_shifted = Z - shift
+        return shift + np.log(np.sum(np.exp(Z_shifted), axis=1, keepdims=True))
 
     @staticmethod
     def _compute_mutation_ratio(old_particles, new_particles):
-        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
-        return np.sum(mutated) / new_particles.params.shape[0]
+        mutated = ~np.all(new_particles.params == old_particles.params, axis=2)
+        return np.sum(mutated, axis=1) / new_particles.params.shape[1]
