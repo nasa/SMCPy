@@ -49,7 +49,7 @@ class SMCSampler:
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
-               ess_threshold, proposal=None, progress_bar=False):
+               ess_threshold, proposal, progress_bar=False):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -97,10 +97,7 @@ class SMCSampler:
         return step_list, self._estimate_marginal_log_likelihoods(updater)
 
     def _initialize(self, initializer, num_particles, proposal):
-        if proposal is None:
-            particles = initializer.init_particles_from_prior(num_particles)
-        else:
-            particles = initializer.init_particles_from_samples(*proposal)
+        particles = initializer.init_particles_from_samples(*proposal)
         return particles
 
     def _estimate_marginal_log_likelihoods(self, updater):
