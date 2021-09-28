@@ -7,16 +7,12 @@ import smcpy.utils.global_imports as gi
 
 class MCMCBase(ABC):
 
-    def __init__(self, model, data, priors, log_like_args, log_like_func,
-                 debug):
+    def __init__(self, model, data, log_like_args, log_like_func):
         '''
         :param model: maps inputs to outputs
         :type model: callable
         :param data: data corresponding to model outputs
         :type data: 1D array
-        :param priors: random variable objects with a pdf and rvs method (e.g.
-            scipy stats random variable objects)
-        :type priors: list of objects
         :param log_like_args: any fixed parameters that define the likelihood
             function (e.g., standard deviation for a Gaussian likelihood).
         :type log_like_args: 1D array or None
@@ -26,7 +22,6 @@ class MCMCBase(ABC):
         '''
         self._eval_model = model
         self._data = data
-        self._priors = priors
         self._log_like_func = log_like_func(self.evaluate_model, data,
                                             log_like_args)
 

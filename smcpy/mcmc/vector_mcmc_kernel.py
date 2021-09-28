@@ -17,10 +17,6 @@ class VectorMCMCKernel(MCMCKernel):
         param_dict = self.conv_param_array_to_dict(param_array)
         return param_dict, log_likes
 
-    def sample_from_prior(self, num_samples):
-        param_array = self._mcmc.sample_from_priors(num_samples)
-        return self.conv_param_array_to_dict(param_array)
-
     def get_log_likelihoods(self, param_dict):
         param_array = self.conv_param_dict_to_array(param_dict)
         return self._mcmc.evaluate_log_likelihood(param_array)
@@ -30,15 +26,15 @@ class VectorMCMCKernel(MCMCKernel):
         log_priors = self._mcmc.evaluate_log_priors(param_array)
         return np.sum(log_priors, axis=1).reshape(-1, 1)
 
-    def conv_param_array_to_dict(self, param_array):
-        return dict(zip(self._param_order, param_array.T))
+    def conv_param_array_to_dict(self, params):
+        return dict(zip(self._param_order, np.transpose(params, (2, 0, 1))))
 
     def conv_param_dict_to_array(self, param_dict):
-        dim0 = 1
-        if not isinstance(param_dict[self._param_order[0]], (int, float)):
-            dim0 = len(param_dict[self._param_order[0]])
-        param_array = np.zeros((dim0, len(self._param_order)))
+        array_shape = param_dict[self._param_order[0]].shape
+        array_shape = (array_shape[0], array_shape[1], len(self._param_order))
+        array = np.empty(array_shape)
 
-        for i, k in enumerate(self._param_order):
-            param_array[:, i] = param_dict[k]
-        return param_array
+        for i, name in enumerate(self._param_order):
+            array[:, :, i] = param_dict[name]
+
+        return array

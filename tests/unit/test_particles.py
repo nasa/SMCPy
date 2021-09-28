@@ -110,31 +110,38 @@ def test_compute_std_dev(mocker, particles):
                                   expected_std)
 
 def test_compute_covariance(mocker):
-    params = {'a': [1.1, 1.0, 0.8], 'b': [2.2, 2.1, 1.9]}
-    log_likes = np.ones(3)
-    log_weights = np.log([0.1, 0.7, 0.2])
+    params = {'a': np.array([[1.1, 1.0, 0.8], [1.1, 1.0, 0.8]]),
+              'b': np.array([[2.2, 2.1, 1.9], [2.2, 2.1, 1.9]])}
+    log_likes = np.ones((2, 3, 1))
+    weights = np.array([[[0.1], [0.7], [0.2]], [[0.1], [0.7], [0.2]]])
+    log_weights = np.log(weights)
 
     particles = Particles(params, log_likes, log_weights)
     mocker.patch.object(particles, 'compute_mean',
-                        return_value=np.array([0.97, 2.06]))
+                        return_value=np.array([[[0.97, 2.06]], [[0.97, 2.06]]]))
 
-    scale = 1 / (1 - np.sum(np.array([0.1, 0.7, 0.2]) ** 2))
+    scale = 1 / (1 - np.sum(weights ** 2, axis=1, keepdims=True))
     expected_cov = np.array([[0.0081, 0.0081], [0.0081, 0.0082]]) * scale
     np.testing.assert_array_almost_equal(particles.compute_covariance(),
                                          expected_cov)
 
 
-#@pytest.mark.filterwarnings('ignore: Covariance matrix is')
-#@pytest.mark.parametrize('params, weights, expected_var',
-#        (({'a': [1, 2], 'b': [2, 3]}, [1, 1], np.array([0.5, 0.5])),
-#         ({'a': [1, 5/3], 'b': [4, 2]}, [1, 3], np.array([2/9, 2.]))))
-#def test_non_positive_def_cov_is_independent(params, weights, expected_var,
-#                                             mocker):
-#    log_likes = np.ones(2)
-#    particles = Particles(params, log_likes, np.log(weights))
-#    mocker.patch.object(particles, '_is_positive_definite', return_value=False)
-#    expected_cov = np.eye(2) * expected_var
-#
-#    cov = particles.compute_covariance()
-#
-#    np.testing.assert_array_almost_equal(cov, expected_cov)
+@pytest.mark.filterwarnings('ignore: Covariance matrix is')
+def test_non_positive_def_cov(mocker):
+    params = {'a': np.ones((10, 2))}
+    log_likes = np.ones((10, 2, 1))
+    weights = np.ones((10, 2, 1))
+    base_cov = np.tile(np.eye(2), (10, 1, 1))
+
+    mocker.patch('smcpy.smc.particles.np.matmul', return_value=base_cov)
+    mocker.patch('smcpy.smc.particles.np.transpose')
+
+    particles = Particles(params, log_likes, np.log(weights))
+    particles._is_positive_definite = mocker.Mock(return_value=False)
+    particles.compute_mean = mocker.Mock(return_value=1)
+
+    expected_cov = base_cov * 2 + np.tile(np.eye(2), (10, 1, 1)) * 1e-6
+
+    cov = particles.compute_covariance()
+
+    np.testing.assert_array_almost_equal(cov, expected_cov)
