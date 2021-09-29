@@ -63,6 +63,10 @@ class MCMCBase(ABC):
         scale_array = scale_array.reshape(-1, 1, 1)
 
         cov *= scale_array
+
+        # potential improvement from Karthik 9/29
+        #cov=cp.piecewise(cov, [low_acceptance, high_acceptance,~(low_acceptance or high_acceptance)], [lambda x: x*0.2, lambda x: x*2, lambda x: x])
+
         return cov
 
 
