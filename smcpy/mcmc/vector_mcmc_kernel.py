@@ -30,8 +30,10 @@ class VectorMCMCKernel(MCMCKernel):
 
     def get_log_priors(self, param_dict):
         param_array = self.conv_param_dict_to_array(param_dict)
+        with nvtx.annotate(message='convert inputs (init)'):
+            param_array = gi.num_lib.asarray(param_array)
         log_priors = self._mcmc.evaluate_log_priors(param_array)
-        return np.sum(log_priors, axis=1).reshape(-1, 1)
+        return np.sum(log_priors.get(), axis=1).reshape(-1, 1)
 
     def conv_param_array_to_dict(self, params):
         return dict(zip(self._param_order, np.transpose(params, (2, 0, 1))))

@@ -7,15 +7,6 @@ from tqdm import tqdm
 
 import smcpy.utils.global_imports as gi
 
-#@cupy.vectorize
-#def scale_cov(cov, num_accepted, num_particles):
-#    if num_accepted < num_particles*0.2:
-#        return cov * 0.2
-#    elif num_accepted>num_particles*0.7:
-#        return cov * 2
-#    else:
-#        return cov
-
 
 class MCMCBase(ABC):
 
@@ -89,8 +80,8 @@ class MCMCBase(ABC):
         has prior U(0, inf).
         '''
         log_priors = gi.num_lib.zeros((inputs.shape[0], inputs.shape[1], 1))
-        neg_value = inputs < 0
-        log_priors[neg_value[:, :, -1]] = -gi.num_lib.inf
+        log_priors = gi.num_lib.where(inputs[:, :, -1:] < 0, -gi.num_lib.inf,
+                                      log_priors)
         return log_priors
 
     @nvtx.annotate(color='turquoise')
