@@ -31,6 +31,7 @@ AGREEMENT.
 '''
 
 import numpy as np
+import nvtx
 
 from tqdm import tqdm
 
@@ -68,24 +69,30 @@ class SMCSampler:
             second element is array of corresponding proposal PDF values
         :type proposal: tuple(dict, array)
         '''
-        initializer = Initializer(self._mcmc_kernel)
-        updater = Updater(ess_threshold)
-        mutator = Mutator(self._mcmc_kernel)
+        with nvtx.annotate(message='init helper classes', color='orange'):
+            initializer = Initializer(self._mcmc_kernel)
+            updater = Updater(ess_threshold)
+            mutator = Mutator(self._mcmc_kernel)
 
-        particles = self._initialize(initializer, num_particles, proposal)
-        particles = updater.resample_if_needed(particles)
+        with nvtx.annotate(message='init particles', color='orange'):
+            particles = self._initialize(initializer, num_particles, proposal)
+            particles = updater.resample_if_needed(particles)
 
         step_list = [particles]
 
         phi_iterator = phi_sequence[1:]
 
         for i, phi in enumerate(phi_iterator):
-            particles = updater(step_list[-1], phi - phi_sequence[i])
-            mut_particles = mutator(particles, phi, num_mcmc_samples)
-            step_list.append(mut_particles)
+            with nvtx.annotate(message='update particles', color='orange'):
+                particles = updater(step_list[-1], phi - phi_sequence[i])
+            with nvtx.annotate(message='mutate particles', color='orange'):
+                mut_particles = mutator(particles, phi, num_mcmc_samples)
+            with nvtx.annotate(message='append step', color='orange'):
+                step_list.append(mut_particles)
 
-            mutation_ratio = self._compute_mutation_ratio(particles,
-                                                          mut_particles)
+            with nvtx.annotate(message='mut. ratio', color='orange'):
+                mutation_ratio = self._compute_mutation_ratio(particles,
+                                                              mut_particles)
 
         return step_list, self.estimate_marginal_log_likelihoods(updater)
 
@@ -94,6 +101,7 @@ class SMCSampler:
         particles = initializer(proposal)
         return particles
 
+    @nvtx.annotate(message="estimate_mll", color="orange")
     def estimate_marginal_log_likelihoods(self, updater):
         sum_un_log_wts = [self._logsum(ulw) \
                           for ulw in updater._unnorm_log_weights]
