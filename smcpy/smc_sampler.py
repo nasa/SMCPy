@@ -37,7 +37,6 @@ from tqdm import tqdm
 from .smc.initializer import Initializer
 from .smc.updater import Updater
 from .smc.mutator import Mutator
-from .utils.progress_bar import set_bar
 from .utils.mpi_utils import rank_zero_output_only
 
 
@@ -49,7 +48,7 @@ class SMCSampler:
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
-               ess_threshold, proposal, progress_bar=False):
+               ess_threshold, proposal):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -68,8 +67,6 @@ class SMCSampler:
             equal to parameter names and values equal to corresponding samples;
             second element is array of corresponding proposal PDF values
         :type proposal: tuple(dict, array)
-        :param progress_bar: display progress bar during sampling
-        :type progress_bar: bool
         '''
         initializer = Initializer(self._mcmc_kernel)
         updater = Updater(ess_threshold)
@@ -81,9 +78,6 @@ class SMCSampler:
         step_list = [particles]
 
         phi_iterator = phi_sequence[1:]
-        if progress_bar:
-            phi_iterator = tqdm(phi_iterator)
-        set_bar(phi_iterator, 1, mutation_ratio=0, updater=updater)
 
         for i, phi in enumerate(phi_iterator):
             particles = updater(step_list[-1], phi - phi_sequence[i])
@@ -92,7 +86,6 @@ class SMCSampler:
 
             mutation_ratio = self._compute_mutation_ratio(particles,
                                                           mut_particles)
-            set_bar(phi_iterator, i + 2, mutation_ratio, updater)
 
         return step_list, self.estimate_marginal_log_likelihoods(updater)
 
