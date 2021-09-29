@@ -86,8 +86,8 @@ class SMCSampler:
         set_bar(phi_iterator, 1, mutation_ratio=0, updater=updater)
 
         for i, phi in enumerate(phi_iterator):
-            particles = updater.update(step_list[-1], phi - phi_sequence[i])
-            mut_particles = mutator.mutate(particles, phi, num_mcmc_samples)
+            particles = updater(step_list[-1], phi - phi_sequence[i])
+            mut_particles = mutator(particles, phi, num_mcmc_samples)
             step_list.append(mut_particles)
 
             mutation_ratio = self._compute_mutation_ratio(particles,
