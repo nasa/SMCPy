@@ -56,7 +56,7 @@ class MCMCBase(ABC):
         with nvtx.annotate(message='shrink cov', color='turquoise'):
             low_acceptance = (num_accepted < num_particles * 0.2)[:, 0]
         with nvtx.annotate(message='shrink cov: x 1/5', color='turquoise'):
-            cov[low_acceptance, :, :] *= 1/5
+            cov[low_acceptance] = cov[low_acceptance] * 0.2
 
         with nvtx.annotate(message='expand cov', color='turquoise'):
             high_acceptance = (num_accepted > num_particles * 0.7).flatten()
