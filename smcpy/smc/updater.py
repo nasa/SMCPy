@@ -69,7 +69,7 @@ class Updater:
     def resampled(self):
         return self._resampled
 
-    def update(self, particles, delta_phi):
+    def __call__(self, particles, delta_phi):
         new_log_weights = self._compute_new_weights(particles, delta_phi)
         new_particles = Particles(particles.param_dict, particles.log_likes,
                                   new_log_weights)
@@ -92,15 +92,20 @@ class Updater:
         return un_log_weights
 
     def _resample(self, particles):
-        u = np.random.uniform(0, 1, particles.num_particles)
-        resample_indices = np.digitize(u, np.cumsum(particles.weights))
+        new_params = np.empty(particles.params.shape)
+        new_log_likes = np.empty(particles.log_likes.shape)
 
-        new_params = particles.params[resample_indices]
-        param_dict = dict(zip(particles.param_names, new_params.T))
+        u_samples = np.random.uniform(0, 1, particles.num_particles)
+        bins = np.cumsum(particles.weights, axis=1)
+        for i, (u, b) in enumerate(zip(u_samples, bins)):
+            resample_indices = np.digitize(u.squeeze(), b.squeeze())
+            new_params[i, :, :] = particles.params[i, resample_indices, :]
+            new_log_likes[i, :, :] = particles.log_likes[i, resample_indices, :]
 
-        new_log_likes = particles.log_likes[resample_indices]
+        param_dict = dict(zip(particles.param_names,
+                              np.transpose(new_params, (2, 0, 1))))
 
-        uniform_weights = [1/particles.num_particles] * particles.num_particles
-        new_weights = np.log(uniform_weights)
+        uniform_weight = 1 / particles.num_particles
+        new_weights = np.log(np.full(particles.weights.shape, uniform_weight))
 
         return Particles(param_dict, new_log_likes, new_weights)
