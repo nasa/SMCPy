@@ -30,6 +30,7 @@ class VectorMCMCKernel(MCMCKernel):
         return dict(zip(self._param_order, np.transpose(params, (2, 0, 1))))
 
     def conv_param_dict_to_array(self, param_dict):
+        import pdb; pdb.set_trace()
         array_shape = param_dict[self._param_order[0]].shape
         array_shape = (array_shape[0], array_shape[1], len(self._param_order))
         array = np.empty(array_shape)

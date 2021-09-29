@@ -97,6 +97,7 @@ class SMCSampler:
         return step_list, self.estimate_marginal_log_likelihoods(updater)
 
     def _initialize(self, initializer, num_particles, proposal):
+        proposal = self._mcmc_kernel.conv_param_array_to_dict(proposal)
         particles = initializer(proposal)
         return particles
 
