@@ -5,9 +5,9 @@ import nvtx
 from smcpy.utils import global_imports as gi
 
 
-@cupy.fuse(kernel_name='fused_is_nan_kernel')
-def fused_is_nan(output):
-    return gi.num_lib.sum(gi.num_lib.isnan(output))
+#@cupy.fuse(kernel_name='fused_is_nan_kernel')
+#def fused_is_nan(output):
+#    return gi.num_lib.any(gi.num_lib.isnan(output))
  
 
 @cupy.fuse(kernel_name='calc_normal_log_like_kernel')
@@ -26,8 +26,8 @@ class BaseLogLike:
 
     def _get_output(self, inputs):
         output = self._model(inputs)
-        if fused_is_nan(output):
-            raise ValueError
+        #if fused_is_nan(output):
+        #    raise ValueError
         return output
 
 
