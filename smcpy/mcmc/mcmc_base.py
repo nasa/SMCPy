@@ -50,13 +50,16 @@ class MCMCBase(ABC):
     @staticmethod
     @nvtx.annotate(color='turquoise')
     def _tune_covariance(num_particles, rejected, cov):
-        num_accepted = num_particles - gi.num_lib.sum(rejected, axis=1)
+        with nvtx.annotate(message='compute accepted', color='turquoise'):
+            num_accepted = num_particles - gi.num_lib.sum(rejected, axis=1)
 
-        low_acceptance = (num_accepted < num_particles * 0.2).flatten()
-        cov[low_acceptance, :, :] *= 1/5
+        with nvtx.annotate(message='shrink cov', color='turquoise'):
+            low_acceptance = (num_accepted < num_particles * 0.2).flatten()
+            cov[low_acceptance, :, :] *= 1/5
 
-        high_acceptance = (num_accepted > num_particles * 0.7).flatten()
-        cov[high_acceptance, :, :] *= 2
+        with nvtx.annotate(message='expand cov', color='turquoise'):
+            high_acceptance = (num_accepted > num_particles * 0.7).flatten()
+            cov[high_acceptance, :, :] *= 2
         return cov
 
 
