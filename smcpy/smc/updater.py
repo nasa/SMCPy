@@ -75,7 +75,6 @@ class Updater:
         with nvtx.annotate(color='darkslategray', message='create Particles'):
             new_particles = Particles(particles.param_dict, particles.log_likes,
                                       new_log_weights)
-
         new_particles = self.resample_if_needed(new_particles)
         return new_particles
 
@@ -83,7 +82,6 @@ class Updater:
     def resample_if_needed(self, new_particles):
         eff_sample_size = new_particles.compute_ess()
         self._ess = eff_sample_size
-        self._resampled = False
         resample_mask = eff_sample_size < self.ess_threshold * \
                                           new_particles.num_particles
         return self._resample(new_particles, resample_mask)
@@ -118,8 +116,10 @@ class Updater:
 
         with nvtx.annotate(message='compute weights', color='darkred'):
             uniform_weight = 1 / particles.num_particles
-            new_weights = np.log(np.full(particles.weights.shape, uniform_weight))
+            new_weights = np.full(particles.weights.shape, uniform_weight)
+            new_log_weights = np.log(new_weights)
 
-        with nvtx.annotate(message='instance Particles', color='darkred'):
-            particles = Particles(param_dict, new_log_likes, new_weights)
+        with nvtx.annotate(message='update Particle weights', color='darkred'):
+            particles._weights = new_weights
+            particles._log_weights = new_log_weights
         return particles
