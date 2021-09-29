@@ -5,9 +5,9 @@ import nvtx
 from smcpy.utils import global_imports as gi
 
 
-@cupy.fuse(kernel_name='fused_is_nan_kernel')
-def fused_is_nan(output):
-    return gi.num_lib.any(gi.num_lib.isnan(output))
+#@cupy.fuse(kernel_name='fused_is_nan_kernel')
+#def fused_is_nan(output):
+#    return gi.num_lib.any(gi.num_lib.isnan(output))
  
 
 @cupy.fuse(kernel_name='calc_normal_log_like_kernel')
@@ -26,8 +26,8 @@ class BaseLogLike:
 
     def _get_output(self, inputs):
         output = self._model(inputs)
-        if fused_is_nan(output):
-            raise ValueError
+        #if fused_is_nan(output):
+        #    raise ValueError
         return output
 
 
@@ -53,7 +53,9 @@ class Normal(BaseLogLike):
             output = self._get_output(inputs)
 
         nll = calc_normal_log_like(output, self._data, var)
-        nll = gi.num_lib.expand_dims(nll, 2)
+
+        with nvtx.annotate(message='expand log like dims'):
+            nll = gi.num_lib.expand_dims(nll, 2)
 
         with nvtx.annotate(message='get'):
             out_nll = np.empty((inputs.shape[0], inputs.shape[1], 1))
