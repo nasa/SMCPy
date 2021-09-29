@@ -70,7 +70,6 @@ class Initializer:
         '''
         log_likes = self.mcmc_kernel.get_log_likelihoods(samples)
         log_priors = self.mcmc_kernel.get_log_priors(samples)
-        log_weights = np.full(samples.shape, np.log(1 / samples.shape[1]))
-        samples = self.mcmc_kernel.conv_param_array_to_dict(samples)
+        log_weights = np.full(log_likes.shape, np.log(1 / log_likes.shape[1]))
         particles = Particles(samples, log_likes, log_weights)
         return particles
