@@ -54,7 +54,8 @@ class MCMCBase(ABC):
             num_accepted = num_particles - gi.num_lib.sum(rejected, axis=1)
 
         with nvtx.annotate(message='shrink cov', color='turquoise'):
-            low_acceptance = (num_accepted < num_particles * 0.2).flatten()
+            low_acceptance = (num_accepted < num_particles * 0.2)[:, 0]
+        with nvtx.annotate(message='shrink cov: x 1/5', color='turquoise'):
             cov[low_acceptance, :, :] *= 1/5
 
         with nvtx.annotate(message='expand cov', color='turquoise'):
