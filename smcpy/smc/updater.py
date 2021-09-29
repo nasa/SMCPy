@@ -48,7 +48,6 @@ class Updater:
         '''
         self.ess_threshold = ess_threshold
         self._ess = np.nan
-        self._resampled = False
         self._unnorm_log_weights = []
 
     @property
@@ -81,23 +80,24 @@ class Updater:
         eff_sample_size = new_particles.compute_ess()
         self._ess = eff_sample_size
         self._resampled = False
-        if eff_sample_size < self.ess_threshold * new_particles.num_particles:
-            self._resampled = True
-            return self._resample(new_particles)
-        return new_particles
+        resample_mask = eff_sample_size < self.ess_threshold * \
+                                          new_particles.num_particles
+        return self._resample(new_particles, resample_mask)
 
     def _compute_new_weights(self, particles, delta_phi):
         un_log_weights = particles.log_weights + particles.log_likes * delta_phi
         self._unnorm_log_weights.append(un_log_weights)
         return un_log_weights
 
-    def _resample(self, particles):
-        new_params = np.empty(particles.params.shape)
-        new_log_likes = np.empty(particles.log_likes.shape)
+    def _resample(self, particles, resample_mask):
+        new_params = particles.params.copy()
+        new_log_likes = particles.log_likes.copy()
 
         u_samples = np.random.uniform(0, 1, particles.num_particles)
         bins = np.cumsum(particles.weights, axis=1)
         for i, (u, b) in enumerate(zip(u_samples, bins)):
+            if not resample_mask[i]:
+                continue
             resample_indices = np.digitize(u.squeeze(), b.squeeze())
             new_params[i, :, :] = particles.params[i, resample_indices, :]
             new_log_likes[i, :, :] = particles.log_likes[i, resample_indices, :]
