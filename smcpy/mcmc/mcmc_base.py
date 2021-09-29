@@ -1,3 +1,4 @@
+import cupy
 import numpy as np
 import nvtx
 
@@ -5,6 +6,16 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 
 import smcpy.utils.global_imports as gi
+
+#@cupy.vectorize
+#def scale_cov(cov, num_accepted, num_particles):
+#    if num_accepted < num_particles*0.2:
+#        return cov * 0.2
+#    elif num_accepted>num_particles*0.7:
+#        return cov * 2
+#    else:
+#        return cov
+
 
 class MCMCBase(ABC):
 
@@ -53,14 +64,14 @@ class MCMCBase(ABC):
         with nvtx.annotate(message='compute accepted', color='turquoise'):
             num_accepted = num_particles - gi.num_lib.sum(rejected, axis=1)
 
-        with nvtx.annotate(message='shrink cov', color='turquoise'):
-            low_acceptance = (num_accepted < num_particles * 0.2)[:, 0]
-        with nvtx.annotate(message='shrink cov: x 1/5', color='turquoise'):
-            cov[low_acceptance] = cov[low_acceptance] * 0.2
+        scale_array = gi.num_lib.ones((cov.shape[0]))
+        low_acceptance = (num_accepted < num_particles * 0.2)[:, 0]
+        high_acceptance = (num_accepted > num_particles * 0.7)[:, 0]
+        scale_array = gi.num_lib.where(low_acceptance, 0.2, scale_array)
+        scale_array = gi.num_lib.where(high_acceptance, 2, scale_array)
+        scale_array = scale_array.reshape(-1, 1, 1)
 
-        with nvtx.annotate(message='expand cov', color='turquoise'):
-            high_acceptance = (num_accepted > num_particles * 0.7).flatten()
-            cov[high_acceptance, :, :] *= 2
+        cov *= scale_array
         return cov
 
 
