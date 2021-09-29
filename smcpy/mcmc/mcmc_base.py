@@ -1,4 +1,5 @@
 import numpy as np
+import nvtx
 
 from abc import ABC, abstractmethod
 from tqdm import tqdm
@@ -32,13 +33,14 @@ class MCMCBase(ABC):
         for i in range(num_samples):
 
             inputs, log_like, log_priors, rejected = \
-                self.perform_mcmc_step(inputs, cov, log_like, log_priors, phi)
+                 self.perform_mcmc_step(inputs, cov, log_like, log_priors, phi)
 
             cov = self._tune_covariance(num_particles, rejected, cov)
 
         return inputs, log_like
 
     @staticmethod
+    @nvtx.annotate(color='turquoise')
     def _tune_covariance(num_particles, rejected, cov):
         num_accepted = num_particles - np.sum(rejected, axis=1)
 
@@ -56,6 +58,7 @@ class MCMCBase(ABC):
         Calls self._model with "inputs" and returns corresponding outputs.
         '''
 
+    @nvtx.annotate(color='turquoise')
     def evaluate_log_priors(self, inputs):
         '''
         Assumes that all input parameters have prior U(-inf, inf) except the
@@ -67,10 +70,12 @@ class MCMCBase(ABC):
         log_priors[neg_value[:, :, -1]] = -np.inf
         return log_priors
 
+    @nvtx.annotate(color='turquoise')
     def evaluate_log_likelihood(self, inputs):
         return self._log_like_func(inputs)
 
     @staticmethod
+    @nvtx.annotate(color='turquoise')
     def proposal(inputs, cov):
         chol = np.linalg.cholesky(cov)
         z = np.random.normal(0, 1, inputs.shape)
@@ -78,6 +83,7 @@ class MCMCBase(ABC):
         return inputs + np.transpose(delta, (0, 2, 1))
 
     @staticmethod
+    @nvtx.annotate(color='turquoise')
     def acceptance_ratio(new_log_like, old_log_like, new_log_priors,
                          old_log_priors):
         old_log_post = old_log_like + old_log_priors
@@ -85,16 +91,19 @@ class MCMCBase(ABC):
         return np.exp(new_log_post - old_log_post)
 
     @staticmethod
+    @nvtx.annotate(color='turquoise')
     def get_rejected(acceptance_ratios):
         u = np.random.uniform(0, 1, acceptance_ratios.shape)
         return acceptance_ratios < u
 
+    @nvtx.annotate(color='turquoise')
     def _initialize_probabilities(self, inputs):
         log_priors = self.evaluate_log_priors(inputs)
         self._check_log_priors_for_zero_probability(log_priors)
         log_like = self.evaluate_log_likelihood(inputs)
         return log_priors, log_like
 
+    @nvtx.annotate(color='turquoise')
     def perform_mcmc_step(self, inputs, cov, log_like, log_priors, phi):
         new_inputs = self.proposal(inputs, cov)
         new_log_priors = self.evaluate_log_priors(new_inputs)
@@ -112,6 +121,7 @@ class MCMCBase(ABC):
 
         return inputs, log_like, log_priors, rejected
 
+    @nvtx.annotate(color='turquoise')
     def _check_log_priors_for_zero_probability(self, log_priors):
         if (log_priors == -np.inf).any():
             raise ValueError('Initial inputs are out of bounds; '
