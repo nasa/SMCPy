@@ -14,7 +14,7 @@ def fused_is_nan(output):
 def calc_normal_log_like(output, data, var):
     term1 = gi.num_lib.log(2 * gi.num_lib.pi * var)
     term2 = (output - data)**2 / var
-    return gi.num_lib.sum((term1 + term2) * -0.5, axis=2)
+    return gi.num_lib.sum((term1 + term2) * -0.5, axis=2, keepdims=True)
 
 
 class BaseLogLike:
@@ -56,7 +56,7 @@ class Normal(BaseLogLike):
         #with nvtx.annotate(message='calc norm log like'):
         nll = calc_normal_log_like(output, self._data, var)
         #with nvtx.annotate(message='get'):
-        out_nll = gi.num_lib.empty((inputs.shape[0], inputs.shape[1], 1))
+        out_nll = np.empty((inputs.shape[0], inputs.shape[1], 1))
         if gi.USING_GPU:
             nll.get(out=out_nll) # makes asynch
         else:
