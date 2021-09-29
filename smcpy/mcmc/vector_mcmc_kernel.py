@@ -1,5 +1,8 @@
 from copy import copy
 import numpy as np
+import nvtx
+
+import smcpy.utils.global_imports as gi
 
 from .kernel_base import MCMCKernel
 
@@ -19,7 +22,11 @@ class VectorMCMCKernel(MCMCKernel):
 
     def get_log_likelihoods(self, param_dict):
         param_array = self.conv_param_dict_to_array(param_dict)
-        return self._mcmc.evaluate_log_likelihood(param_array)
+        with nvtx.annotate(message='convert inputs (init)'):
+            param_array = gi.num_lib.asarray(param_array)
+        with nvtx.annotate(message='eval likelihood (init)'):
+            log_like = self._mcmc.evaluate_log_likelihood(param_array).get()
+        return log_like
 
     def get_log_priors(self, param_dict):
         param_array = self.conv_param_dict_to_array(param_dict)

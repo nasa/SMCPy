@@ -27,6 +27,10 @@ class MCMCBase(ABC):
                                             log_like_args)
 
     def smc_metropolis(self, inputs, num_samples, cov, phi):
+        with nvtx.annotate(message='convert inputs cov', color='turquoise'):
+            inputs = gi.num_lib.asarray(inputs)
+            cov = gi.num_lib.asarray(cov)
+
         num_particles = inputs.shape[1]
         log_priors, log_like = self._initialize_probabilities(inputs)
 
@@ -37,12 +41,16 @@ class MCMCBase(ABC):
 
             cov = self._tune_covariance(num_particles, rejected, cov)
 
+        with nvtx.annotate(message='get inputs, log_like', color='turquoise'):
+            inputs = inputs.get()
+            log_like = log_like.get()
         return inputs, log_like
+
 
     @staticmethod
     @nvtx.annotate(color='turquoise')
     def _tune_covariance(num_particles, rejected, cov):
-        num_accepted = num_particles - np.sum(rejected, axis=1)
+        num_accepted = num_particles - gi.num_lib.sum(rejected, axis=1)
 
         low_acceptance = (num_accepted < num_particles * 0.2).flatten()
         cov[low_acceptance, :, :] *= 1/5
@@ -65,9 +73,9 @@ class MCMCBase(ABC):
         last column, which is assumed to be standard deviation of the noise and
         has prior U(0, inf).
         '''
-        log_priors = np.zeros((inputs.shape[0], inputs.shape[1], 1))
+        log_priors = gi.num_lib.zeros((inputs.shape[0], inputs.shape[1], 1))
         neg_value = inputs < 0
-        log_priors[neg_value[:, :, -1]] = -np.inf
+        log_priors[neg_value[:, :, -1]] = -gi.num_lib.inf
         return log_priors
 
     @nvtx.annotate(color='turquoise')
@@ -77,10 +85,10 @@ class MCMCBase(ABC):
     @staticmethod
     @nvtx.annotate(color='turquoise')
     def proposal(inputs, cov):
-        chol = np.linalg.cholesky(cov)
-        z = np.random.normal(0, 1, inputs.shape)
-        delta = np.matmul(chol, np.transpose(z, (0, 2, 1)))
-        return inputs + np.transpose(delta, (0, 2, 1))
+        chol = gi.num_lib.linalg.cholesky(cov)
+        z = gi.num_lib.random.normal(0, 1, inputs.shape)
+        delta = gi.num_lib.matmul(chol, gi.num_lib.transpose(z, (0, 2, 1)))
+        return inputs + gi.num_lib.transpose(delta, (0, 2, 1))
 
     @staticmethod
     @nvtx.annotate(color='turquoise')
@@ -88,12 +96,12 @@ class MCMCBase(ABC):
                          old_log_priors):
         old_log_post = old_log_like + old_log_priors
         new_log_post = new_log_like + new_log_priors
-        return np.exp(new_log_post - old_log_post)
+        return gi.num_lib.exp(new_log_post - old_log_post)
 
     @staticmethod
     @nvtx.annotate(color='turquoise')
     def get_rejected(acceptance_ratios):
-        u = np.random.uniform(0, 1, acceptance_ratios.shape)
+        u = gi.num_lib.random.uniform(0, 1, acceptance_ratios.shape)
         return acceptance_ratios < u
 
     @nvtx.annotate(color='turquoise')
@@ -115,9 +123,9 @@ class MCMCBase(ABC):
 
         rejected = self.get_rejected(accpt_ratio)
 
-        inputs = np.where(rejected, inputs, new_inputs)
-        log_like = np.where(rejected, log_like, new_log_like)
-        log_priors = np.where(rejected, log_priors, new_log_priors)
+        inputs = gi.num_lib.where(rejected, inputs, new_inputs)
+        log_like = gi.num_lib.where(rejected, log_like, new_log_like)
+        log_priors = gi.num_lib.where(rejected, log_priors, new_log_priors)
 
         return inputs, log_like, log_priors, rejected
 

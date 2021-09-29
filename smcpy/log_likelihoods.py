@@ -43,11 +43,9 @@ class Normal(BaseLogLike):
 
 
     def __call__(self, inputs):
-        with nvtx.annotate(message='convert inputs'):
-            inputs = gi.num_lib.asarray(inputs)
-            std_dev = gi.num_lib.expand_dims(inputs[:, :, -1], 2)
-            inputs = inputs[:, :, :-1]
-            var = std_dev ** 2
+        std_dev = gi.num_lib.expand_dims(inputs[:, :, -1], 2)
+        inputs = inputs[:, :, :-1]
+        var = std_dev ** 2
 
         with nvtx.annotate(message='call get_output'):
             output = self._get_output(inputs)
@@ -57,10 +55,11 @@ class Normal(BaseLogLike):
         with nvtx.annotate(message='expand log like dims'):
             nll = gi.num_lib.expand_dims(nll, 2)
 
-        with nvtx.annotate(message='get'):
-            out_nll = np.empty((inputs.shape[0], inputs.shape[1], 1))
-            if gi.USING_GPU:
-                nll.get(out=out_nll) # makes asynch
-            else:
-                out_nll[:, :, -1] = nll
-        return out_nll
+        return nll
+        #with nvtx.annotate(message='get'):
+        #    out_nll = np.empty((inputs.shape[0], inputs.shape[1], 1))
+        #    if gi.USING_GPU:
+        #        nll.get(out=out_nll) # makes asynch
+        #    else:
+        #        out_nll[:, :, -1] = nll
+        #return out_nll
