@@ -47,7 +47,6 @@ def test_sample(mocker):
     _ = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
                    ess_threshold, proposal, prog_bar)
 
-    mocked_init.init_particles_from_prior.assert_not_called()
     mocked_init.init_particles_from_samples.assert_called_once()
 
     call_args = mocked_init.init_particles_from_samples.call_args[0]
