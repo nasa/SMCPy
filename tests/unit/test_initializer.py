@@ -5,6 +5,7 @@ import pytest
 from collections import namedtuple
 
 from smcpy.smc.initializer import Initializer
+from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 
 
 class StubParticles:
@@ -16,9 +17,10 @@ class StubParticles:
 
 
 @pytest.fixture
-def initializer(stub_mcmc_kernel, mocker):
+def initializer(mocker):
+    kernel = mocker.Mock(VectorMCMCKernel)
     mocker.patch('smcpy.smc.initializer.Particles', new=StubParticles)
-    initializer = Initializer(stub_mcmc_kernel)
+    initializer = Initializer(kernel)
     return initializer
 
 
@@ -27,48 +29,15 @@ def test_mcmc_kernel_not_kernel_instance():
         initializer = Initializer(None, None)
 
 
-def test_initialize_particles_from_prior(initializer, mocker):
-    particles = initializer.init_particles_from_prior(5)
+@pytest.mark.parametrize('num_particles', [5, 10, 50])
+def test_initialize_particles(initializer, mocker, num_particles):
+    samples = np.ones((2, num_particles, 3))
+    expected_log_weights = np.full(samples.shape, np.log(1 / num_particles))
 
-    expected_a_vals = [1, 1, 1, 2, 2]
-    expected_b_vals = [2, 2, 2, 3, 3]
-    expected_log_like = [0.1, 0.1, 0.1, 0.2, 0.2]
-    expected_log_weight = [np.log(1 / len(expected_a_vals))] \
-                           * len(expected_a_vals)
+    particles = initializer(samples)
 
-    np.testing.assert_array_almost_equal(particles.params['a'], expected_a_vals)
-    np.testing.assert_array_almost_equal(particles.params['b'], expected_b_vals)
-    np.testing.assert_array_almost_equal(particles.log_likes,
-                                         expected_log_like)
-    np.testing.assert_array_almost_equal(particles.log_weights,
-                                         expected_log_weight)
+    initializer.mcmc_kernel.get_log_likelihoods.called_once_with(samples)
+    initializer.mcmc_kernel.get_log_priors.called_once_with(samples)
+    initializer.mcmc_kernel.conv_param_array_to_dict.called_once_with(samples)
+    np.testing.assert_array_equal(particles.log_weights, expected_log_weights)
 
-
-@pytest.mark.parametrize('dataframe', [True, False])
-def test_initialize_particles_from_samples(initializer, dataframe, mocker):
-
-    expected_a_params = [3, 3, 3, 4, 4]
-    expected_b_params = [1, 1, 1, 2, 2]
-    expected_log_like = np.array([[0.1, 0.1, 0.1, 0.2, 0.2]]).T
-    expected_log_prior = np.array([[0.2, 0.2, 0.2, 0.3, 0.3]]).T
-    expected_log_weight = np.array([[-0.1, -0.1, -0.1, -0.1, -0.1]]).T
-
-    samples = {'a': np.array(expected_a_params),
-               'b': np.array(expected_b_params)}
-
-    proposal_pdensities = np.exp(np.array(samples['a']) * 0.1)
-
-    mocker.patch.object(initializer.mcmc_kernel, 'get_log_likelihoods',
-                        return_value=np.array([[0.1, 0.1, 0.1, 0.2, 0.2]]).T)
-    mocker.patch.object(initializer.mcmc_kernel, 'get_log_priors',
-                        return_value=np.array([[0.2, 0.2, 0.2, 0.3, 0.3]]).T)
-
-    if dataframe:
-        samples = pandas.DataFrame(samples)
-    particles = initializer.init_particles_from_samples(samples,
-                                                        proposal_pdensities)
-
-    np.testing.assert_array_equal(particles.params['a'], expected_a_params)
-    np.testing.assert_array_equal(particles.params['b'], expected_b_params)
-    np.testing.assert_array_equal(particles.log_likes, expected_log_like)
-    np.testing.assert_array_almost_equal(particles.log_weights, expected_log_weight)

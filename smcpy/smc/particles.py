@@ -90,22 +90,26 @@ class Particles(Checks):
         if not self._is_dict(params):
             raise TypeError('"params" must be dict of array-like objects.')
         self._param_names = tuple(params.keys())
-        self._params = np.vstack(list(params.values())).T
-        self._num_particles = self._params.shape[0]
+        param_shape = params[self._param_names[0]].shape
+        param_shape = (param_shape[0], param_shape[1], len(self._param_names))
+        self._params = np.empty(param_shape)
+        for i, values in enumerate(params.values()):
+            self._params[:, :, i] = values
+        self._num_particles = self._params.shape[1]
 
     @property
     def param_dict(self):
-        return dict(zip(self._param_names, self._params.T))
+        transposed = np.transpose(self._params, (2, 0, 1))
+        return dict(zip(self._param_names, transposed))
 
     @property
     def log_likes(self):
         return self._log_likes
 
     def _set_log_likes(self, log_likes):
-        log_likes = np.array(log_likes).reshape(-1, 1)
-        if log_likes.shape[0] != self._num_particles:
-            raise ValueError('log_likes.shape[0] != number particles: '
-                             f'{log_likes.shape[0]} != {self._num_particles}')
+        if log_likes.shape[1] != self._num_particles:
+            raise ValueError('log_likes.shape[1] != number particles: '
+                             f'{log_likes.shape[1]} != {self._num_particles}')
         self._log_likes = log_likes
 
     @property
@@ -117,8 +121,7 @@ class Particles(Checks):
         return self._weights
 
     def _set_and_norm_log_weights(self, log_weights):
-        log_weights = np.array(log_weights).reshape(-1, 1)
-        if log_weights.shape[0] != self._num_particles:
+        if log_weights.shape[1] != self._num_particles:
             raise ValueError('log_weights.shape[0] != number particles: '
                              f'{log_weights.shape[0]} != {self._num_particles}')
         self._log_weights = self._normalize_log_weights(log_weights)
@@ -136,9 +139,11 @@ class Particles(Checks):
         '''
         Normalizes log weights, and then transforms back into log space
         '''
-        shifted_weights = np.exp(log_weights - np.max(log_weights))
-        normalized_weights = shifted_weights / np.sum(shifted_weights)
-        log_zero_weights = np.ones(normalized_weights.shape) * -np.inf
+        max_array = np.max(log_weights, axis=1, keepdims=True)
+        shifted_weights = np.exp(log_weights - max_array)
+        sum_array = np.sum(shifted_weights, axis=1, keepdims=True)
+        normalized_weights = shifted_weights / sum_array
+        log_zero_weights = np.full(normalized_weights.shape, -np.inf)
         return np.log(normalized_weights, out=log_zero_weights,
                       where=normalized_weights > 0)
 
@@ -152,14 +157,14 @@ class Particles(Checks):
         '''
         Computes the effective sample size (ess) of the step based on log weight
         '''
-        return 1 / np.sum(self.weights ** 2)
+        return 1 / np.sum(self.weights ** 2, axis=1, keepdims=True)
 
     @package_for_user
     def compute_mean(self):
         '''
         Returns the estimated mean of each parameter.
         '''
-        return np.sum(self.params * self.weights, axis=0)
+        return np.sum(self.params * self.weights, axis=1, keepdims=True)
 
     @package_for_user
     def compute_variance(self):
@@ -168,8 +173,9 @@ class Particles(Checks):
         sample formula https://en.wikipedia.org/wiki/Sample_mean_and_covariance 
         '''
         means = self.compute_mean(package=False)
-        norm = 1 - np.sum(self.weights ** 2)
-        return np.sum(self.weights * (self.params - means) ** 2, axis=0) / norm
+        norm = 1 - np.sum(self.weights ** 2, axis=1, keepdims=True)
+        sum_kernel = self.weights * (self.params - means) ** 2
+        return np.sum(sum_kernel, axis=1, keepdims=True) / norm
 
     @package_for_user
     def compute_std_dev(self):
@@ -186,12 +192,13 @@ class Particles(Checks):
         '''
         means = self.compute_mean(package=False)
         diff = self.params - means
-        norm = 1 / (1 - np.sum(self.weights ** 2))
-        cov = np.dot(diff.T, diff * self.weights) * norm
+        diffT = np.transpose(diff, (0, 2, 1))
+        norm = 1 / (1 - np.sum(self.weights ** 2, axis=1, keepdims=True))
+        cov = np.matmul(diffT, diff * self.weights) * norm
 
         if not self._is_positive_definite(cov):
             warnings.warn('Covariance matrix is not positive definite; setting '
                           'off-diagonal terms to zero.')
-            cov= np.eye(cov.shape[0]) * np.diag(cov)
+            cov += np.tile(np.eye(cov.shape[1]), (cov.shape[0], 1, 1)) * 1e-6
 
         return cov

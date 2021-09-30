@@ -31,6 +31,7 @@ AGREEMENT.
 '''
 
 import numpy as np
+import nvtx
 
 from .particles import Particles
 
@@ -48,7 +49,6 @@ class Updater:
         '''
         self.ess_threshold = ess_threshold
         self._ess = np.nan
-        self._resampled = False
         self._unnorm_log_weights = []
 
     @property
@@ -69,38 +69,57 @@ class Updater:
     def resampled(self):
         return self._resampled
 
-    def update(self, particles, delta_phi):
+    @nvtx.annotate(color='darkslategray')
+    def __call__(self, particles, delta_phi):
         new_log_weights = self._compute_new_weights(particles, delta_phi)
-        new_particles = Particles(particles.param_dict, particles.log_likes,
-                                  new_log_weights)
-
+        with nvtx.annotate(color='darkslategray', message='create Particles'):
+            new_particles = Particles(particles.param_dict, particles.log_likes,
+                                      new_log_weights)
         new_particles = self.resample_if_needed(new_particles)
         return new_particles
 
+    @nvtx.annotate(color='darkslategray')
     def resample_if_needed(self, new_particles):
         eff_sample_size = new_particles.compute_ess()
         self._ess = eff_sample_size
-        self._resampled = False
-        if eff_sample_size < self.ess_threshold * new_particles.num_particles:
-            self._resampled = True
-            return self._resample(new_particles)
-        return new_particles
+        resample_mask = eff_sample_size < self.ess_threshold * \
+                                          new_particles.num_particles
+        return self._resample(new_particles, resample_mask)
 
+    @nvtx.annotate(color='darkslategray')
     def _compute_new_weights(self, particles, delta_phi):
         un_log_weights = particles.log_weights + particles.log_likes * delta_phi
         self._unnorm_log_weights.append(un_log_weights)
         return un_log_weights
 
-    def _resample(self, particles):
-        u = np.random.uniform(0, 1, particles.num_particles)
-        resample_indices = np.digitize(u, np.cumsum(particles.weights))
+    @nvtx.annotate(color='darkslategray')
+    def _resample(self, particles, resample_mask):
+        with nvtx.annotate(message='initialize arrays', color='darkred'):
+            new_params = particles.params.copy()
+            new_log_likes = particles.log_likes.copy()
 
-        new_params = particles.params[resample_indices]
-        param_dict = dict(zip(particles.param_names, new_params.T))
+        with nvtx.annotate(message='sample and bin', color='darkred'):
+            u_samples = np.random.uniform(0, 1, particles.num_particles)
+            bins = np.cumsum(particles.weights, axis=1)
 
-        new_log_likes = particles.log_likes[resample_indices]
+        with nvtx.annotate(message='loop over models', color='darkred'):
+            for i, (u, b) in enumerate(zip(u_samples, bins)):
+                if not resample_mask[i]:
+                    continue
+                resample_indices = np.digitize(u.squeeze(), b.squeeze())
+                new_params[i, :, :] = particles.params[i, resample_indices, :]
+                new_log_likes[i, :, :] = particles.log_likes[i, resample_indices, :]
 
-        uniform_weights = [1/particles.num_particles] * particles.num_particles
-        new_weights = np.log(uniform_weights)
+        with nvtx.annotate(message='conv to dict', color='darkred'):
+            param_dict = dict(zip(particles.param_names,
+                              np.transpose(new_params, (2, 0, 1))))
 
-        return Particles(param_dict, new_log_likes, new_weights)
+        with nvtx.annotate(message='compute weights', color='darkred'):
+            uniform_weight = 1 / particles.num_particles
+            new_weights = np.full(particles.weights.shape, uniform_weight)
+            new_log_weights = np.log(new_weights)
+
+        with nvtx.annotate(message='update Particle weights', color='darkred'):
+            particles._weights = new_weights
+            particles._log_weights = new_log_weights
+        return particles

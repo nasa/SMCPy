@@ -44,7 +44,7 @@ class Mutator:
     def __init__(self, mcmc_kernel):
         self.mcmc_kernel = mcmc_kernel
 
-    def mutate(self, particles, phi, num_samples):
+    def __call__(self, particles, phi, num_samples):
         cov = particles.compute_covariance()
         mutated = self.mcmc_kernel.mutate_particles(particles.param_dict,
                                                     particles.log_likes,

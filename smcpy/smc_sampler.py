@@ -31,13 +31,13 @@ AGREEMENT.
 '''
 
 import numpy as np
+import nvtx
 
 from tqdm import tqdm
 
 from .smc.initializer import Initializer
 from .smc.updater import Updater
 from .smc.mutator import Mutator
-from .utils.progress_bar import set_bar
 from .utils.mpi_utils import rank_zero_output_only
 
 
@@ -49,7 +49,7 @@ class SMCSampler:
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
-               ess_threshold, proposal=None, progress_bar=False):
+               ess_threshold, proposal):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -68,55 +68,53 @@ class SMCSampler:
             equal to parameter names and values equal to corresponding samples;
             second element is array of corresponding proposal PDF values
         :type proposal: tuple(dict, array)
-        :param progress_bar: display progress bar during sampling
-        :type progress_bar: bool
         '''
-        initializer = Initializer(self._mcmc_kernel)
-        updater = Updater(ess_threshold)
-        mutator = Mutator(self._mcmc_kernel)
+        with nvtx.annotate(message='init helper classes', color='orange'):
+            initializer = Initializer(self._mcmc_kernel)
+            updater = Updater(ess_threshold)
+            mutator = Mutator(self._mcmc_kernel)
 
-        particles = self._initialize(initializer, num_particles, proposal)
-        particles = updater.resample_if_needed(particles)
+        with nvtx.annotate(message='init particles', color='orange'):
+            particles = self._initialize(initializer, num_particles, proposal)
+            particles = updater.resample_if_needed(particles)
 
         step_list = [particles]
 
         phi_iterator = phi_sequence[1:]
-        if progress_bar:
-            phi_iterator = tqdm(phi_iterator)
-        set_bar(phi_iterator, 1, mutation_ratio=0, updater=updater)
 
         for i, phi in enumerate(phi_iterator):
-            particles = updater.update(step_list[-1], phi - phi_sequence[i])
-            mut_particles = mutator.mutate(particles, phi, num_mcmc_samples)
-            step_list.append(mut_particles)
+            with nvtx.annotate(message='update particles', color='orange'):
+                particles = updater(step_list[-1], phi - phi_sequence[i])
+            with nvtx.annotate(message='mutate particles', color='orange'):
+                mut_particles = mutator(particles, phi, num_mcmc_samples)
+            with nvtx.annotate(message='append step', color='orange'):
+                step_list.append(mut_particles)
 
-            mutation_ratio = self._compute_mutation_ratio(particles,
-                                                          mut_particles)
-            set_bar(phi_iterator, i + 2, mutation_ratio, updater)
+            with nvtx.annotate(message='mut. ratio', color='orange'):
+                mutation_ratio = self._compute_mutation_ratio(particles,
+                                                              mut_particles)
 
-        return step_list, self._estimate_marginal_log_likelihoods(updater)
+        return step_list, self.estimate_marginal_log_likelihoods(updater)
 
     def _initialize(self, initializer, num_particles, proposal):
-        if proposal is None:
-            particles = initializer.init_particles_from_prior(num_particles)
-        else:
-            particles = initializer.init_particles_from_samples(*proposal)
+        proposal = self._mcmc_kernel.conv_param_array_to_dict(proposal)
+        particles = initializer(proposal)
         return particles
 
-    def _estimate_marginal_log_likelihoods(self, updater):
+    @nvtx.annotate(message="estimate_mll", color="orange")
+    def estimate_marginal_log_likelihoods(self, updater):
         sum_un_log_wts = [self._logsum(ulw) \
                           for ulw in updater._unnorm_log_weights]
-        num_updates = len(sum_un_log_wts)
-        return [0] + [np.sum(sum_un_log_wts[:i+1]) for i in range(num_updates)]
+        sum_un_log_wts.insert(0, np.zeros(sum_un_log_wts[0].shape))
+        return np.cumsum(np.array(sum_un_log_wts).squeeze(), axis=0).T
 
     @staticmethod
     def _logsum(Z):
-        Z = -np.sort(-Z, axis=0) # descending
-        Z0 = Z[0, :]
-        Z_shifted = Z[1:, :] - Z0
-        return Z0 + np.log(1 + np.sum(np.exp(Z_shifted), axis=0))
+        shift = Z.max(axis=1, keepdims=True)
+        Z_shifted = Z - shift
+        return shift + np.log(np.sum(np.exp(Z_shifted), axis=1, keepdims=True))
 
     @staticmethod
     def _compute_mutation_ratio(old_particles, new_particles):
-        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
-        return np.sum(mutated) / new_particles.params.shape[0]
+        mutated = ~np.all(new_particles.params == old_particles.params, axis=2)
+        return np.sum(mutated, axis=1) / new_particles.params.shape[1]
