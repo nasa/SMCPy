@@ -30,22 +30,18 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-import numpy as np
-
 from tqdm import tqdm
 
-from .smc.initializer import Initializer
+from .sampler_base import SamplerBase
 from .smc.updater import Updater
-from .smc.mutator import Mutator
 from .utils.progress_bar import set_bar
 from .utils.mpi_utils import rank_zero_output_only
 
 
-
-class SMCSampler:
+class SMCSampler(SamplerBase):
 
     def __init__(self, mcmc_kernel):
-        self._mcmc_kernel = mcmc_kernel
+        super().__init__(mcmc_kernel)
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
@@ -71,52 +67,19 @@ class SMCSampler:
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         '''
-        initializer = Initializer(self._mcmc_kernel)
-        updater = Updater(ess_threshold)
-        mutator = Mutator(self._mcmc_kernel)
+        self._updater = Updater(ess_threshold)
 
-        particles = self._initialize(initializer, num_particles, proposal)
-        #particles = updater.resample_if_needed(particles)
-
-        step_list = [particles]
+        step_list = [self._initialize(num_particles, proposal)]
 
         phi_iterator = phi_sequence[1:]
         if progress_bar:
             phi_iterator = tqdm(phi_iterator)
-        set_bar(phi_iterator, 1, mutation_ratio=0, updater=updater)
+        set_bar(phi_iterator, 1, self._mutation_ratio, self._updater)
 
         for i, phi in enumerate(phi_iterator):
-            particles = updater.update(step_list[-1], phi - phi_sequence[i])
-            mut_particles = mutator.mutate(particles, phi, num_mcmc_samples)
-            step_list.append(mut_particles)
+            dphi = phi - phi_sequence[i]
+            step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
+                                               num_mcmc_samples))
+            set_bar(phi_iterator, i + 2, self._mutation_ratio, self._updater)
 
-            mutation_ratio = self._compute_mutation_ratio(particles,
-                                                          mut_particles)
-            set_bar(phi_iterator, i + 2, mutation_ratio, updater)
-
-        return step_list, self._estimate_marginal_log_likelihoods(updater)
-
-    def _initialize(self, initializer, num_particles, proposal):
-        if proposal is None:
-            particles = initializer.init_particles_from_prior(num_particles)
-        else:
-            particles = initializer.init_particles_from_samples(*proposal)
-        return particles
-
-    def _estimate_marginal_log_likelihoods(self, updater):
-        sum_un_log_wts = [self._logsum(ulw) \
-                          for ulw in updater._unnorm_log_weights]
-        num_updates = len(sum_un_log_wts)
-        return [0] + [np.sum(sum_un_log_wts[:i+1]) for i in range(num_updates)]
-
-    @staticmethod
-    def _logsum(Z):
-        Z = -np.sort(-Z, axis=0) # descending
-        Z0 = Z[0, :]
-        Z_shifted = Z[1:, :] - Z0
-        return Z0 + np.log(1 + np.sum(np.exp(Z_shifted), axis=0))
-
-    @staticmethod
-    def _compute_mutation_ratio(old_particles, new_particles):
-        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
-        return sum(mutated) / new_particles.params.shape[0]
+        return step_list, self._estimate_marginal_log_likelihoods()

@@ -2,7 +2,12 @@ import numpy as np
 import pytest
 
 from smcpy import SMCSampler
+from smcpy.mcmc.kernel_base import MCMCKernel
 
+
+@pytest.fixture
+def mcmc_kernel(mocker):
+    return mocker.Mock(MCMCKernel)
 
 @pytest.fixture
 def phi_sequence():
@@ -24,7 +29,7 @@ def step_list(phi_sequence, mocker):
 
 @pytest.mark.parametrize('rank', [0, 1, 2])
 @pytest.mark.parametrize('prog_bar', [True, False])
-def test_sample(mocker, rank, prog_bar):
+def test_sample(mocker, rank, prog_bar, mcmc_kernel):
     num_particles = 100
     num_steps = 10
     num_mcmc_samples = 2
@@ -37,7 +42,7 @@ def test_sample(mocker, rank, prog_bar):
     init_particles = np.array([1] * num_particles)
     mocked_initializer = mocker.Mock()
     mocked_initializer.init_particles_from_prior.return_value = init_particles
-    init = mocker.patch('smcpy.smc_sampler.Initializer',
+    init = mocker.patch('smcpy.sampler_base.Initializer',
                         return_value=mocked_initializer)
 
     upd_mock = mocker.Mock()
@@ -46,11 +51,11 @@ def test_sample(mocker, rank, prog_bar):
 
     mocked_mutator = mocker.Mock()
     mocked_mutator.mutate.return_value = np.array([3] * num_particles)
-    mut = mocker.patch('smcpy.smc_sampler.Mutator', return_value=mocked_mutator)
+    mut = mocker.patch('smcpy.sampler_base.Mutator',
+                       return_value=mocked_mutator)
 
     update_bar = mocker.patch('smcpy.smc_sampler.set_bar')
 
-    mcmc_kernel = mocker.Mock()
     mcmc_kernel._mcmc = mocker.Mock()
     mcmc_kernel._mcmc._rank = rank
     comm = mcmc_kernel._mcmc._comm = mocker.Mock()
@@ -76,12 +81,11 @@ def test_sample(mocker, rank, prog_bar):
     np.testing.assert_array_equal(step_list, expected_step_list)
 
 
-def test_sample_with_proposal(mocker):
+def test_sample_with_proposal(mcmc_kernel, mocker):
     mocked_init = mocker.Mock()
-    mocker.patch('smcpy.smc_sampler.Initializer', return_value=mocked_init)
+    mocker.patch('smcpy.sampler_base.Initializer', return_value=mocked_init)
+    mocker.patch('smcpy.sampler_base.Mutator')
     mocker.patch('smcpy.smc_sampler.Updater')
-    mocker.patch('smcpy.smc_sampler.Mutator')
-    mcmc_kernel = mocker.Mock()
 
     proposal_dist = mocker.Mock()
 
@@ -110,26 +114,29 @@ def test_sample_with_proposal(mocker):
 
 
 @pytest.mark.parametrize('steps', [2, 3, 4, 10])
-def test_marginal_likelihood_estimator(mocker, steps):
+def test_marginal_likelihood_estimator(mocker, steps, mcmc_kernel):
     updater = mocker.Mock()
     unnorm_weights = np.ones((5, 1))
     updater._unnorm_log_weights = [np.log(unnorm_weights) for _ in range(steps)]
     expected_Z = [1] + [5 ** (i + 1) for i in range(steps)]
-    Z = SMCSampler(None)._estimate_marginal_log_likelihoods(updater)
+    smc = SMCSampler(mcmc_kernel)
+    smc._updater = updater
+    Z = smc._estimate_marginal_log_likelihoods()
     np.testing.assert_array_almost_equal(Z, np.log(expected_Z))
 
 
-@pytest.mark.parametrize('new_param_array, expected_ratio',
+@pytest.mark.parametrize('new_param, expected_ratio',
                          ((np.array([[1, 2], [0, 0], [0, 0], [0, 0]]), 0.25),
                           (np.array([[0, 0], [0, 0], [0, 0], [0, 0]]), 0.00),
                           (np.array([[0, 1], [1, 1], [2, 0], [1, 1]]), 1.00),
                           (np.array([[2, 0], [2, 0], [0, 1], [0, 0]]), 0.75)))
-def test_calc_mutation_ratio(mocker, new_param_array, expected_ratio):
-    old_particles = mocker.Mock()
-    old_particles.params = np.zeros((4, 2))
-    new_particles = mocker.Mock()
-    new_particles.params = new_param_array
+def test_calc_mutation_ratio(mocker, new_param, expected_ratio, mcmc_kernel):
+    old = mocker.Mock()
+    old.params = np.zeros((4, 2))
+    new = mocker.Mock()
+    new.params = new_param
 
-    ratio = SMCSampler._compute_mutation_ratio(old_particles, new_particles)
+    smc = SMCSampler(mcmc_kernel)
+    smc._compute_mutation_ratio(old, new)
 
-    assert ratio == expected_ratio
+    assert smc._mutation_ratio == expected_ratio

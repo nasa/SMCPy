@@ -32,25 +32,24 @@ AGREEMENT.
 
 import numpy as np
 
+from scipy.optimize import bisect
 from tqdm import tqdm
 
-from .smc.initializer import Initializer
+from .sampler_base import SamplerBase
 from .smc.updater import Updater
-from .smc.mutator import Mutator
-from .utils.progress_bar import set_bar
 from .utils.mpi_utils import rank_zero_output_only
 
 
 
-class SMCSampler:
+class AdaptiveSMCSampler(SamplerBase):
 
     def __init__(self, mcmc_kernel):
-        self._mcmc_kernel = mcmc_kernel
+        super().__init__(mcmc_kernel)
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples,
                ess_threshold, proposal=None, progress_bar=False,
-               normalization_phi=1.0):
+               specified_phi=1.0):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -69,86 +68,55 @@ class SMCSampler:
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         '''
+        # NEED TO CHANGE NORMALIZATION PHI TO SOMETHING MORE GENERIC AND ADD
+        # TO THE DOC STRING
+
         # HACK
         self._ess_threshold = ess_threshold
 
         # HACK for Bayes factor normalization
-        self._normalization_phi = normalization_phi
-        self._norm_added = False
+        self._specified_phi = specified_phi
+        self._spec_phi_added = False
         # HACK for case where algo jumps straight to phi=1 and skips adding
         # normalization phi, but also needs to account for default = 1
-        if self._normalization_phi == 1:
-            self._norm_added = True
+        if self._specified_phi == 1:
+            self._spec_phi_added = True
 
-        initializer = Initializer(self._mcmc_kernel)
-        updater = Updater(ess_threshold=1) # ensure always resampling
-        mutator = Mutator(self._mcmc_kernel)
+        self._updater = Updater(ess_threshold=1) # ensure always resampling
 
-        particles = self._initialize(initializer, num_particles, proposal)
-        #particles = updater.resample_if_needed(particles)
+        step_list = [self._initialize(num_particles, proposal)]
 
-        step_list = [particles]
         phi_sequence = [0]
-
         while phi_sequence[-1] < 1:
-            phi = self._optimize_step(particles, phi_sequence[-1])
-            particles = updater.update(step_list[-1], phi - phi_sequence[-1])
-            mut_particles = mutator.mutate(particles, phi, num_mcmc_samples)
-            step_list.append(mut_particles)
+            phi = self._optimize_step(step_list[-1], phi_sequence[-1])
+            dphi = phi - phi_sequence[-1]
+            step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
+                                               num_mcmc_samples))
             phi_sequence.append(phi)
-
-            mutation_ratio = self._compute_mutation_ratio(particles,
-                                                          mut_particles)
 
         # HACK for Bayes factor normalization
         self.phi_sequence = np.array(phi_sequence)
-        self.norm_phi_idx = [i for i, phi in enumerate(phi_sequence) \
-                             if phi == self._normalization_phi][0]
+        self.specificed_phi_idx = [i for i, phi in enumerate(phi_sequence) \
+                                   if phi == self._specified_phi][0]
 
-        return step_list, self._estimate_marginal_log_likelihoods(updater)
-
-    def _initialize(self, initializer, num_particles, proposal):
-        if proposal is None:
-            particles = initializer.init_particles_from_prior(num_particles)
-        else:
-            particles = initializer.init_particles_from_samples(*proposal)
-        return particles
-
-    def _estimate_marginal_log_likelihoods(self, updater):
-        sum_un_log_wts = [self._logsum(ulw) \
-                          for ulw in updater._unnorm_log_weights]
-        num_updates = len(sum_un_log_wts)
-        return [0] + [np.sum(sum_un_log_wts[:i+1]) for i in range(num_updates)]
-
-    @staticmethod
-    def _logsum(Z):
-        Z = -np.sort(-Z, axis=0) # descending
-        Z0 = Z[0, :]
-        Z_shifted = Z[1:, :] - Z0
-        return Z0 + np.log(1 + np.sum(np.exp(Z_shifted), axis=0))
-
-    @staticmethod
-    def _compute_mutation_ratio(old_particles, new_particles):
-        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
-        return sum(mutated) / new_particles.params.shape[0]
+        return step_list, self._estimate_marginal_log_likelihoods()
 
     def _optimize_step(self, particles, phi_old):
-        from scipy.optimize import bisect
         # HACKY HACKZ
         self._phi_old = phi_old
         self._temp_particles = particles
-        ESS_1 = self._compute_ess(1)
-        if ESS_1 > 0 and self._norm_added:
+        step_to_completion_ESS_margin = self._predict_ess_margin(1)
+        if step_to_completion_ESS_margin > 0 and self._spec_phi_added:
             return 1
         else:
-            phi = bisect(self._compute_ess, phi_old, 1)
+            phi = bisect(self._predict_ess_margin, phi_old, 1)
             # HACK for Bayes factor normalization
-            if phi > self._normalization_phi and not self._norm_added:
-                self._norm_added = True
-                return self._normalization_phi
+            if phi > self._specified_phi and not self._spec_phi_added:
+                self._spec_phi_added = True
+                return self._specified_phi
             return phi
 
-    def _compute_ess(self, phi):
+    def _predict_ess_margin(self, phi):
         phi_old = self._phi_old
         particles = self._temp_particles
         beta = np.exp((phi - phi_old) * particles.log_likes)

@@ -7,7 +7,7 @@ from scipy.stats import uniform
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 # HACK
-from smcpy.smc_sampler_adaptive import SMCSampler
+from smcpy.smc_sampler_adaptive import AdaptiveSMCSampler
 #from smcpy import SMCSampler
 from smcpy.utils.plotter import *
 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b'))
 
-    smc = SMCSampler(mcmc_kernel)
+    smc = AdaptiveSMCSampler(mcmc_kernel)
     step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
                                      #phi_sequence=phi_sequence,
                                      ess_threshold=0.7, progress_bar=True,
