@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy import SMCSampler
+from smcpy import FixedSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
 
 
@@ -34,7 +34,7 @@ def test_sample(mocker, rank, prog_bar, mcmc_kernel):
     num_steps = 10
     num_mcmc_samples = 2
     phi_sequence = np.ones(num_steps)
-    prog_bar = mocker.patch('smcpy.smc_sampler.tqdm',
+    prog_bar = mocker.patch('smcpy.samplers.tqdm',
                                 return_value=phi_sequence[2:])
     expected_step_list = np.ones((num_steps - 1, num_particles))
     expected_step_list[1:] = expected_step_list[1:] + 2
@@ -47,14 +47,14 @@ def test_sample(mocker, rank, prog_bar, mcmc_kernel):
 
     upd_mock = mocker.Mock()
     upd_mock.resample_if_needed = lambda x: x
-    upd = mocker.patch('smcpy.smc_sampler.Updater', return_value=upd_mock)
+    upd = mocker.patch('smcpy.samplers.Updater', return_value=upd_mock)
 
     mocked_mutator = mocker.Mock()
     mocked_mutator.mutate.return_value = np.array([3] * num_particles)
     mut = mocker.patch('smcpy.sampler_base.Mutator',
                        return_value=mocked_mutator)
 
-    update_bar = mocker.patch('smcpy.smc_sampler.set_bar')
+    update_bar = mocker.patch('smcpy.samplers.set_bar')
 
     mcmc_kernel._mcmc = mocker.Mock()
     mcmc_kernel._mcmc._rank = rank
@@ -62,7 +62,7 @@ def test_sample(mocker, rank, prog_bar, mcmc_kernel):
     mocker.patch.object(comm, 'bcast', new=lambda x, root: x)
     ess_threshold = 0.2
 
-    smc = SMCSampler(mcmc_kernel)
+    smc = FixedSampler(mcmc_kernel)
     mut_ratio = mocker.patch.object(smc, '_compute_mutation_ratio')
     mll_est = mocker.patch.object(smc, '_estimate_marginal_log_likelihoods')
     step_list, mll = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
@@ -85,7 +85,7 @@ def test_sample_with_proposal(mcmc_kernel, mocker):
     mocked_init = mocker.Mock()
     mocker.patch('smcpy.sampler_base.Initializer', return_value=mocked_init)
     mocker.patch('smcpy.sampler_base.Mutator')
-    mocker.patch('smcpy.smc_sampler.Updater')
+    mocker.patch('smcpy.samplers.Updater')
 
     proposal_dist = mocker.Mock()
 
@@ -98,7 +98,7 @@ def test_sample_with_proposal(mcmc_kernel, mocker):
     proposal = ({'x1': np.array([1, 2]), 'x2': np.array([3, 3])},
                 np.array([0.1, 0.1]))
 
-    smc = SMCSampler(mcmc_kernel)
+    smc = FixedSampler(mcmc_kernel)
     mocker.patch.object(smc, '_compute_mutation_ratio')
     mocker.patch.object(smc, '_estimate_marginal_log_likelihoods')
 
@@ -119,7 +119,7 @@ def test_marginal_likelihood_estimator(mocker, steps, mcmc_kernel):
     unnorm_weights = np.ones((5, 1))
     updater._unnorm_log_weights = [np.log(unnorm_weights) for _ in range(steps)]
     expected_Z = [1] + [5 ** (i + 1) for i in range(steps)]
-    smc = SMCSampler(mcmc_kernel)
+    smc = FixedSampler(mcmc_kernel)
     smc._updater = updater
     Z = smc._estimate_marginal_log_likelihoods()
     np.testing.assert_array_almost_equal(Z, np.log(expected_Z))
@@ -136,7 +136,7 @@ def test_calc_mutation_ratio(mocker, new_param, expected_ratio, mcmc_kernel):
     new = mocker.Mock()
     new.params = new_param
 
-    smc = SMCSampler(mcmc_kernel)
+    smc = FixedSampler(mcmc_kernel)
     smc._compute_mutation_ratio(old, new)
 
     assert smc._mutation_ratio == expected_ratio
