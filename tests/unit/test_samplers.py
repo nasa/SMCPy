@@ -1,13 +1,14 @@
 import numpy as np
 import pytest
 
-from smcpy import FixedSampler
+from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
 
 
 @pytest.fixture
 def mcmc_kernel(mocker):
     return mocker.Mock(MCMCKernel)
+
 
 @pytest.fixture
 def phi_sequence():
@@ -29,7 +30,7 @@ def step_list(phi_sequence, mocker):
 
 @pytest.mark.parametrize('rank', [0, 1, 2])
 @pytest.mark.parametrize('prog_bar', [True, False])
-def test_sample(mocker, rank, prog_bar, mcmc_kernel):
+def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel):
     num_particles = 100
     num_steps = 10
     num_mcmc_samples = 2
@@ -140,3 +141,56 @@ def test_calc_mutation_ratio(mocker, new_param, expected_ratio, mcmc_kernel):
     smc._compute_mutation_ratio(old, new)
 
     assert smc._mutation_ratio == expected_ratio
+
+
+@pytest.mark.parametrize('phi_old,target_ess,expected_ess_margin',
+                         [(1, 0.8, 1), (0.5, 0.8, -0.5364679374),
+                          (0, 0.8, -1.8650126), (1, 1, 0)])
+def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
+                             target_ess):
+    phi_new = 1
+    particles = mocker.Mock()
+    particles.log_likes = np.arange(5)
+    particles.num_particles = 5
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles, target_ess)
+
+    assert pytest.approx(ESS_margin == expected_ess_margin)
+
+
+@pytest.mark.parametrize('bisect_return', [0.5, 0.75, 0.8])
+def test_adaptive_step_optimization(mocker, mcmc_kernel, bisect_return):
+    phi_old = 0.2
+    particles = mocker.Mock()
+    bisect = mocker.patch('smcpy.samplers.bisect', return_value=bisect_return)
+
+    smc = AdaptiveSampler(mcmc_kernel)
+
+    assert smc.optimize_step(particles, phi_old) == bisect_return
+    assert bisect.call_args_list[0] == [(smc.predict_ess_margin, 0.2, 1),
+                                        {'args': (0.2, particles, 1)}]
+
+
+@pytest.mark.parametrize('required_phi', [1, 0.5, 1.5])
+def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, required_phi):
+    phi_old = 0.8
+    particles = mocker.Mock()
+    bisect = mocker.patch('smcpy.samplers.bisect', return_value=1.4)
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    smc._required_phi = required_phi
+
+    assert smc.optimize_step(particles, phi_old) == 1
+
+
+@pytest.mark.parametrize('req_phi', (0.77, [0.77], [0.5, 0.77, 0.8],
+                                     [0.8, 0.5, 0.77]))
+def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
+    phi_old = 0.52
+    particles = mocker.Mock()
+    bisect = mocker.patch('smcpy.samplers.bisect', return_value=0.8)
+
+    smc = AdaptiveSampler(mcmc_kernel)
+
+    assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == 0.77

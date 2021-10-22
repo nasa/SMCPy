@@ -94,80 +94,68 @@ class AdaptiveSampler(SamplerBase):
     def __init__(self, mcmc_kernel):
         super().__init__(mcmc_kernel)
 
-    @rank_zero_output_only
-    def sample(self, num_particles, num_mcmc_samples,
-               ess_threshold, proposal=None, progress_bar=False,
-               specified_phi=1.0):
-        '''
-        :param num_particles: number of particles
-        :type num_particles: int
-        :param num_mcmc_samples: number of MCMC samples to draw from the
-            MCMC kernel per iteration per particle
-        :type num_mcmc_samples: int
-        :param ess_threshold: the effective sample size at which resampling
-            should be conducted; given as a fraction of num_particles and must
-            be in the range [0, 1]
-        :type ess_threshold: float
-        :param proposal: tuple of samples from a proposal distribution used to
-            initialize the SMC sampler; first element is a dictionary with keys
-            equal to parameter names and values equal to corresponding samples;
-            second element is array of corresponding proposal PDF values
-        :type proposal: tuple(dict, array)
-        :param progress_bar: display progress bar during sampling
-        :type progress_bar: bool
-        '''
-        # NEED TO CHANGE NORMALIZATION PHI TO SOMETHING MORE GENERIC AND ADD
-        # TO THE DOC STRING
+    #@rank_zero_output_only
+    #def sample(self, num_particles, num_mcmc_samples, target_ess=1,
+    #           proposal=None, required_phi=1):
+    #    '''
+    #    :param num_particles: number of particles
+    #    :type num_particles: int
+    #    :param num_mcmc_samples: number of MCMC samples to draw from the
+    #        MCMC kernel per iteration per particle
+    #    :type num_mcmc_samples: int
+    #    :param target_ess: controls adaptive stepping by picking the next
+    #        phi such that the effective sample size is equal to the threshold.
+    #        Specified as a fraction of total number particles (between 0 and 1).
+    #    :type target_ess: float
+    #    :param proposal: tuple of samples from a proposal distribution used to
+    #        initialize the SMC sampler; first element is a dictionary with keys
+    #        equal to parameter names and values equal to corresponding samples;
+    #        second element is array of corresponding proposal PDF values
+    #    :type proposal: tuple(dict, array)
+    #    :param required_phi: specific values of phi that must be included in
+    #        the phi sequence (regardless of optimized step)
+    #    :type required_phi: float, int, or list
+    #    '''
+    #    self._updater = Updater(ess_threshold=1) # ensure always resampling
 
-        # HACK
-        self._ess_threshold = ess_threshold
+    #    step_list = [self._initialize(num_particles, proposal)]
 
-        # HACK for Bayes factor normalization
-        self._specified_phi = specified_phi
-        self._spec_phi_added = False
-        # HACK for case where algo jumps straight to phi=1 and skips adding
-        # normalization phi, but also needs to account for default = 1
-        if self._specified_phi == 1:
-            self._spec_phi_added = True
+    #    phi_sequence = [0]
+    #    while phi_sequence[-1] < 1:
+    #        phi = self._optimize_step(step_list[-1], phi_sequence[-1],
+    #                                  target_ess, required_phi)
+    #        dphi = phi - phi_sequence[-1]
+    #        step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
+    #                                           num_mcmc_samples))
+    #        phi_sequence.append(phi)
 
-        self._updater = Updater(ess_threshold=1) # ensure always resampling
+    #    # HACK for Bayes factor normalization
+    #    self.phi_sequence = np.array(phi_sequence)
+    #    self.specificed_phi_idx = [i for i, phi in enumerate(phi_sequence) \
+    #                               if phi == self._specified_phi][0]
 
-        step_list = [self._initialize(num_particles, proposal)]
+    #    return step_list, self._estimate_marginal_log_likelihoods()
 
-        phi_sequence = [0]
-        while phi_sequence[-1] < 1:
-            phi = self._optimize_step(step_list[-1], phi_sequence[-1])
-            dphi = phi - phi_sequence[-1]
-            step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
-                                               num_mcmc_samples))
-            phi_sequence.append(phi)
+    def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
+        phi = bisect(self.predict_ess_margin, phi_old, 1,
+                     args=(phi_old, particles, target_ess))
+        proposed_phi_list = self._as_phi_list(required_phi)
+        proposed_phi_list.append(phi)
+        return self._select_phi(proposed_phi_list, phi_old)
 
-        # HACK for Bayes factor normalization
-        self.phi_sequence = np.array(phi_sequence)
-        self.specificed_phi_idx = [i for i, phi in enumerate(phi_sequence) \
-                                   if phi == self._specified_phi][0]
-
-        return step_list, self._estimate_marginal_log_likelihoods()
-
-    def _optimize_step(self, particles, phi_old):
-        # HACKY HACKZ
-        self._phi_old = phi_old
-        self._temp_particles = particles
-        step_to_completion_ESS_margin = self._predict_ess_margin(1)
-        if step_to_completion_ESS_margin > 0 and self._spec_phi_added:
-            return 1
-        else:
-            phi = bisect(self._predict_ess_margin, phi_old, 1)
-            # HACK for Bayes factor normalization
-            if phi > self._specified_phi and not self._spec_phi_added:
-                self._spec_phi_added = True
-                return self._specified_phi
-            return phi
-
-    def _predict_ess_margin(self, phi):
-        phi_old = self._phi_old
-        particles = self._temp_particles
-        beta = np.exp((phi - phi_old) * particles.log_likes)
+    def predict_ess_margin(self, phi_new, phi_old, particles, target_ess=1):
+        beta = np.exp((phi_new - phi_old) * particles.log_likes)
         ESS = np.sum(beta) ** 2 / np.sum(beta ** 2)
-        return ESS - particles.num_particles * self._ess_threshold
+        return ESS - particles.num_particles * target_ess
 
+    @staticmethod
+    def _as_phi_list(phi):
+        if not isinstance(phi, list):
+            phi = [phi]
+        phi = sorted([p for p in phi if p < 1])
+        phi.append(1)
+        return phi
+
+    @staticmethod
+    def _select_phi(proposed_phi_list, phi_old):
+        return min([p for p in proposed_phi_list if p > phi_old])
