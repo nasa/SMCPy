@@ -4,7 +4,7 @@ from scipy.stats import uniform
 
 from spring_mass_model import SpringMassModel
 from smcpy.utils.plotter import plot_pairwise
-from smcpy import FixedSampler as Sampler
+from smcpy import AdaptiveSampler as Sampler
 from smcpy import VectorMCMC, VectorMCMCKernel
 
 
@@ -26,9 +26,7 @@ mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('K', 'g'))
 smc = Sampler(mcmc_kernel)
 step_list, mll_list = smc.sample(num_particles=500,
                                  num_mcmc_samples=5,
-                                 phi_sequence=np.linspace(0, 1, 20),
-                                 ess_threshold=0.8,
-                                 progress_bar=True)
+                                 target_ess=0.8)
 
 # Display results
 print(f'marginal log likelihood = {mll_list[-1]}')
