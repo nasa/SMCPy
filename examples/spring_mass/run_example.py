@@ -34,4 +34,4 @@ print(f'parameter means = {step_list[-1].compute_mean()}')
 print("true parameters = {'K': 1.67, 'g': 4.62}")
 
 plot_pairwise(step_list[-1].params, step_list[-1].weights, save=True,
-              param_labels=['K', 'g'])
+              param_names=['K', 'g'])
