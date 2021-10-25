@@ -4,7 +4,7 @@ import time
 
 from scipy.stats import uniform
 
-from smcpy import SMCSampler
+from smcpy import AdaptiveSampler
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.utils.plotter import plot_pairwise
@@ -24,14 +24,12 @@ if __name__ == '__main__':
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b', 'std'))
 
-    smc = SMCSampler(mcmc_kernel)
-    phi_sequence = np.linspace(0, 1, 20)
+    smc = AdaptiveSampler(mcmc_kernel)
     step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
-                                     phi_sequence=phi_sequence,
-                                     ess_threshold=1.0, progress_bar=True)
+                                     target_ess=0.8)
 
     print('marginal log likelihood = {}'.format(mll_list[-1]))
     print('parameter means = {}'.format(step_list[-1].compute_mean()))
 
     plot_pairwise(step_list[-1].params, step_list[-1].weights,
-                  ['a', 'b', 'std'])
+                  param_names=['a', 'b', 'std'])
