@@ -92,49 +92,50 @@ class FixedSampler(SamplerBase):
 class AdaptiveSampler(SamplerBase):
 
     def __init__(self, mcmc_kernel):
+        self.phi_sequence = None
+        self.req_phi_index = None
         super().__init__(mcmc_kernel)
 
-    #@rank_zero_output_only
-    #def sample(self, num_particles, num_mcmc_samples, target_ess=1,
-    #           proposal=None, required_phi=1):
-    #    '''
-    #    :param num_particles: number of particles
-    #    :type num_particles: int
-    #    :param num_mcmc_samples: number of MCMC samples to draw from the
-    #        MCMC kernel per iteration per particle
-    #    :type num_mcmc_samples: int
-    #    :param target_ess: controls adaptive stepping by picking the next
-    #        phi such that the effective sample size is equal to the threshold.
-    #        Specified as a fraction of total number particles (between 0 and 1).
-    #    :type target_ess: float
-    #    :param proposal: tuple of samples from a proposal distribution used to
-    #        initialize the SMC sampler; first element is a dictionary with keys
-    #        equal to parameter names and values equal to corresponding samples;
-    #        second element is array of corresponding proposal PDF values
-    #    :type proposal: tuple(dict, array)
-    #    :param required_phi: specific values of phi that must be included in
-    #        the phi sequence (regardless of optimized step)
-    #    :type required_phi: float, int, or list
-    #    '''
-    #    self._updater = Updater(ess_threshold=1) # ensure always resampling
+    @rank_zero_output_only
+    def sample(self, num_particles, num_mcmc_samples, target_ess=1,
+               proposal=None, required_phi=1):
+        '''
+        :param num_particles: number of particles
+        :type num_particles: int
+        :param num_mcmc_samples: number of MCMC samples to draw from the
+            MCMC kernel per iteration per particle
+        :type num_mcmc_samples: int
+        :param target_ess: controls adaptive stepping by picking the next
+            phi such that the effective sample size is equal to the threshold.
+            Specified as a fraction of total number particles (between 0 and 1).
+        :type target_ess: float
+        :param proposal: tuple of samples from a proposal distribution used to
+            initialize the SMC sampler; first element is a dictionary with keys
+            equal to parameter names and values equal to corresponding samples;
+            second element is array of corresponding proposal PDF values
+        :type proposal: tuple(dict, array)
+        :param required_phi: specific values of phi that must be included in
+            the phi sequence (regardless of optimized step)
+        :type required_phi: float, int, or list
+        '''
+        self._updater = Updater(ess_threshold=1) # ensure always resampling
 
-    #    step_list = [self._initialize(num_particles, proposal)]
+        step_list = [self._initialize(num_particles, proposal)]
 
-    #    phi_sequence = [0]
-    #    while phi_sequence[-1] < 1:
-    #        phi = self._optimize_step(step_list[-1], phi_sequence[-1],
-    #                                  target_ess, required_phi)
-    #        dphi = phi - phi_sequence[-1]
-    #        step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
-    #                                           num_mcmc_samples))
-    #        phi_sequence.append(phi)
+        phi_sequence = [0]
+        while phi_sequence[-1] < 1:
+            phi = self.optimize_step(step_list[-1], phi_sequence[-1],
+                                     target_ess, required_phi)
+            dphi = phi - phi_sequence[-1]
+            step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
+                                               num_mcmc_samples))
+            phi_sequence.append(phi)
 
-    #    # HACK for Bayes factor normalization
-    #    self.phi_sequence = np.array(phi_sequence)
-    #    self.specificed_phi_idx = [i for i, phi in enumerate(phi_sequence) \
-    #                               if phi == self._specified_phi][0]
+        self.phi_sequence = np.array(phi_sequence)
+        self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
+                              if phi in required_phi]
 
-    #    return step_list, self._estimate_marginal_log_likelihoods()
+        return step_list, self._estimate_marginal_log_likelihoods()
 
     def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
         phi = bisect(self.predict_ess_margin, phi_old, 1,

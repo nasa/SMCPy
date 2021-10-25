@@ -82,7 +82,7 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel):
     np.testing.assert_array_equal(step_list, expected_step_list)
 
 
-def test_sample_with_proposal(mcmc_kernel, mocker):
+def test_fixed_phi_sample_with_proposal(mcmc_kernel, mocker):
     mocked_init = mocker.Mock()
     mocker.patch('smcpy.sampler_base.Initializer', return_value=mocked_init)
     mocker.patch('smcpy.sampler_base.Mutator')
@@ -194,3 +194,29 @@ def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     smc = AdaptiveSampler(mcmc_kernel)
 
     assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == 0.77
+
+
+def test_adaptive_phi_sample(mocker, mcmc_kernel):
+    init_mock = mocker.Mock()
+    init_mock.init_particles_from_prior.return_value = 1
+    mocker.patch('smcpy.sampler_base.Initializer', return_value=init_mock)
+    update_mock = mocker.patch('smcpy.samplers.Updater')
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    mocker.patch.object(smc, 'optimize_step', side_effect=[0.5, 0.6, 1.0])
+    mocker.patch.object(smc, '_do_smc_step', new = lambda w, x, y, z: y)
+    mll_mock = mocker.patch.object(smc, '_estimate_marginal_log_likelihoods')
+
+    step_list, _ = smc.sample(num_particles=5, num_mcmc_samples=5, target_ess=1,
+                              required_phi=[0.6, 0.5])
+
+    mll_mock.assert_called_once()
+    update_mock.assert_called_once_with(ess_threshold=1)
+    init_mock.init_particles_from_prior.assert_called_once_with(5)
+    np.testing.assert_array_equal(smc.phi_sequence, [0, 0.5, 0.6, 1.0])
+    np.testing.assert_array_equal(smc.req_phi_index, [1, 2])
+    np.testing.assert_array_almost_equal(step_list, [1, 0.5, 0.1, 0.4])
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    assert smc.phi_sequence is None
+    assert smc.req_phi_index is None
