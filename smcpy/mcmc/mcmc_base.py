@@ -3,10 +3,8 @@ import numpy as np
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 
-from .mcmc_logger import MCMCLogger
 
-
-class MCMCBase(ABC, MCMCLogger):
+class MCMCBase(ABC):
     
     def __init__(self, model, data, priors, log_like_args, log_like_func,
                  debug):
@@ -31,7 +29,47 @@ class MCMCBase(ABC, MCMCLogger):
         self._log_like_func = log_like_func(self.evaluate_model, data,
                                             log_like_args)
 
-        super().__init__(__name__, debug)
+    def smc_metropolis(self, inputs, num_samples, cov, phi):
+        num_particles = inputs.shape[0]
+        log_priors, log_like = self._initialize_probabilities(inputs)
+
+        for i in range(num_samples):
+
+            inputs, log_like, log_priors, rejected = \
+                self._perform_mcmc_step(inputs, cov, log_like, log_priors, phi)
+
+            num_accepted = num_particles - np.sum(rejected)
+
+            if num_accepted < inputs.shape[0] * 0.2:
+                cov = cov * 1/5
+            if num_accepted > inputs.shape[0] * 0.7:
+                cov = cov * 2
+    
+        return inputs, log_like
+
+    def metropolis(self, inputs, num_samples, cov, adapt_interval=None,
+                   adapt_delay=0, progress_bar=False, **kwargs):
+
+        chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
+        chain[:, :, 0] = inputs
+
+        log_priors, log_like = self._initialize_probabilities(inputs)
+
+        for i in tqdm(range(1, num_samples + 1), disable=not progress_bar):
+    
+            inputs, log_like, log_priors, rejected = \
+                self._perform_mcmc_step(inputs, cov, log_like, log_priors, 1)
+            chain[:, :, i] = inputs
+
+            cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval,
+                                          adapt_delay)
+        return chain
+
+    @abstractmethod
+    def evaluate_model(self, inputs):
+        '''
+        Calls self._model with "inputs" and returns corresponding outputs.
+        '''
 
     def sample_from_priors(self, num_samples):
         samples = []
@@ -45,27 +83,20 @@ class MCMCBase(ABC, MCMCLogger):
         if inputs.shape[1] != sum(prior_dims):
             raise ValueError("Num prior distributions != num input params")
 
-        prior_probs = []
+        prior_probs = np.empty((inputs.shape[0], len(self._priors)))
         in_start_idx = 0
         for i, p in enumerate(self._priors):
-            in_ = inputs.T[in_start_idx:in_start_idx + prior_dims[i]]
-            prior_probs.append(p.pdf(in_.T).reshape(-1, 1))
+            in_ = inputs[:, in_start_idx:in_start_idx + prior_dims[i]]
+            prior_probs[:, i] = p.pdf(in_).squeeze()
             in_start_idx += prior_dims[i]
-        prior_probs = np.hstack(prior_probs)
 
         nonzero_priors = prior_probs != 0
-        log_priors = np.ones(prior_probs.shape) * -np.inf
+        log_priors = np.full(prior_probs.shape, -np.inf)
         log_priors = np.log(prior_probs, where=nonzero_priors, out=log_priors)
         return log_priors
 
     def _get_prior_dims(self):
         return [p.dim if hasattr(p, 'dim') else 1 for p in self._priors]
-
-    @abstractmethod
-    def evaluate_model(self, inputs):
-        '''
-        Calls self._model with "inputs" and returns corresponding outputs.
-        '''
 
     def evaluate_log_likelihood(self, inputs):
         log_like = self._log_like_func(inputs)
@@ -80,9 +111,7 @@ class MCMCBase(ABC, MCMCLogger):
         scale_factor = 1#2.38 ** 2 / cov.shape[0] # From Smith 2014, pg. 172
         cov *= scale_factor
         chol = np.linalg.cholesky(cov)
-        mean = np.zeros(cov.shape[0])
-        eye = np.eye(cov.shape[0])
-        z = np.random.multivariate_normal(mean, eye, inputs.shape[0])
+        z = np.random.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
         return inputs + delta
 
@@ -93,9 +122,9 @@ class MCMCBase(ABC, MCMCLogger):
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
     @staticmethod
-    def selection(new_values, old_values, acceptance_ratios, u):
-        reject = acceptance_ratios < u
-        return np.where(reject, old_values, new_values)
+    def get_rejections(acceptance_ratios):
+        u = np.random.uniform(0, 1, acceptance_ratios.shape)
+        return acceptance_ratios < u
 
     def adapt_proposal_cov(self, cov, chain, idx, adapt_interval, adapt_delay):
 
@@ -107,6 +136,30 @@ class MCMCBase(ABC, MCMCLogger):
                           for i in range(n_param)]
             return np.cov(flat_chain)
         return cov
+
+    def _initialize_probabilities(self, inputs):
+        log_priors = self.evaluate_log_priors(inputs)
+        self._check_log_priors_for_zero_probability(log_priors)
+        log_like = self.evaluate_log_likelihood(inputs)
+        return log_priors, log_like
+
+    def _perform_mcmc_step(self, inputs, cov, log_like, log_priors, phi):
+        new_inputs = self.proposal(inputs, cov)
+        new_log_priors = self.evaluate_log_priors(new_inputs)
+        new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors,
+                                                            new_inputs)
+
+        accpt_ratio = self.acceptance_ratio(new_log_like * phi,
+                                            log_like * phi,
+                                            new_log_priors, log_priors)
+
+        rejected = self.get_rejections(accpt_ratio)
+
+        inputs = np.where(rejected, inputs, new_inputs)
+        log_like = np.where(rejected, log_like, new_log_like)
+        log_priors = np.where(rejected, log_priors, new_log_priors)
+
+        return inputs, log_like, log_priors, rejected
 
     @staticmethod
     def _is_adapt_iteration(adapt_interval, idx, adapt_delay):
@@ -121,80 +174,6 @@ class MCMCBase(ABC, MCMCLogger):
         if idx >= adapt_delay + adapt_interval:
             return adapt_delay + 1
         return max(adapt_delay - adapt_interval + 1, 1)
-
-
-    def smc_metropolis(self, inputs, num_samples, cov, phi):
-        log_priors = self.evaluate_log_priors(inputs)
-        self._check_log_priors_for_zero_probability(log_priors)
-        log_like = self.evaluate_log_likelihood(inputs)
-    
-        for i in range(num_samples):
-
-            new_inputs = self.proposal(inputs, cov)
-            new_log_priors = self.evaluate_log_priors(new_inputs)
-            new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors,
-                                                                new_inputs)
-
-            accpt_ratio = self.acceptance_ratio(new_log_like * phi,
-                                                log_like * phi,
-                                                new_log_priors, log_priors)
-
-            u = np.random.uniform(0, 1, accpt_ratio.shape)
-    
-            num_accepted = np.sum(accpt_ratio > u)
-            if num_accepted < inputs.shape[0] * 0.2:
-                cov = cov * 1/5
-            if num_accepted > inputs.shape[0] * 0.7:
-                cov = cov * 2
-
-            inputs = self.selection(new_inputs, inputs, accpt_ratio, u)
-            log_like = self.selection(new_log_like, log_like, accpt_ratio, u)
-            log_priors = self.selection(new_log_priors, log_priors,
-                                        accpt_ratio, u)
-    
-        return inputs, log_like
-
-    def metropolis(self, inputs, num_samples, cov, adapt_interval=None,
-                   adapt_delay=0, progress_bar=False, **kwargs):
-        chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
-        chain[:, :, 0] = inputs
-
-        log_priors = self.evaluate_log_priors(inputs)
-        self._check_log_priors_for_zero_probability(log_priors)
-        log_like = self.evaluate_log_likelihood(inputs)
-
-        self._write_sample_to_log(inputs, log_like, log_priors, 0, False)
-    
-        for i in tqdm(range(1, num_samples + 1), disable=not progress_bar):
-    
-            new_inputs = self.proposal(inputs, cov)
-            new_log_priors = self.evaluate_log_priors(new_inputs)
-            new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors,
-                                                                new_inputs)
-
-            self._write_sample_to_log(new_inputs, new_log_like, new_log_priors,
-                                      i, True)
-
-            accpt_ratio = self.acceptance_ratio(new_log_like, log_like,
-                                                new_log_priors, log_priors)
-
-            u = np.random.uniform(0, 1, accpt_ratio.shape)
-    
-            inputs = self.selection(new_inputs, inputs, accpt_ratio, u)
-            log_like = self.selection(new_log_like, log_like, accpt_ratio, u)
-            log_priors = self.selection(new_log_priors, log_priors,
-                                        accpt_ratio, u)
-
-            self._write_accpt_to_log(accpt_ratio, u)
-
-            chain[:, :, i] = inputs
-
-            cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval,
-                                          adapt_delay)
-
-            self._write_cov_to_log(cov)
-
-        return chain
 
     def _check_log_priors_for_zero_probability(self, log_priors):
         if any(~self._row_has_nonzero_prior_probability(log_priors)):

@@ -136,8 +136,8 @@ class Particles(Checks):
         '''
         Normalizes log weights, and then transforms back into log space
         '''
-        shifted_weights = np.exp(log_weights - max(log_weights))
-        normalized_weights = shifted_weights / sum(shifted_weights)
+        shifted_weights = np.exp(log_weights - np.max(log_weights))
+        normalized_weights = shifted_weights / np.sum(shifted_weights)
         log_zero_weights = np.ones(normalized_weights.shape) * -np.inf
         return np.log(normalized_weights, out=log_zero_weights,
                       where=normalized_weights > 0)
