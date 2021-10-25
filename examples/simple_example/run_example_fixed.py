@@ -6,9 +6,7 @@ from scipy.stats import uniform
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-# HACK
-from smcpy.smc_sampler_adaptive import AdaptiveSMCSampler
-#from smcpy import SMCSampler
+from smcpy.samplers import FixedSampler as Sampler
 from smcpy.utils.plotter import *
 
 def eval_model(theta):
@@ -39,6 +37,7 @@ if __name__ == '__main__':
 
     np.random.seed(200)
 
+    num_smc_steps = 20
     std_dev = 2
     noisy_data = generate_data(eval_model, std_dev, plot=False)
 
@@ -46,13 +45,10 @@ if __name__ == '__main__':
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b'))
 
-    smc = AdaptiveSMCSampler(mcmc_kernel)
+    smc = Sampler(mcmc_kernel)
+    phi_seq = np.linspace(0, 1, num_smc_steps)
     step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
-                                     #phi_sequence=phi_sequence,
-                                     ess_threshold=0.7, progress_bar=True,
-                                     normalization_phi=0.2)
-    print(f'phi_sequence={smc.phi_sequence}')
-    print(f'fbf norm index={smc.norm_phi_idx}')
+                                     ess_threshold=0.7, phi_sequence=phi_seq)
     print('marginal log likelihood = {}'.format(mll_list[-1]))
     print('parameter means = {}'.format(step_list[-1].compute_mean()))
 

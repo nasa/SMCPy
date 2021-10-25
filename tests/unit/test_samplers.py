@@ -166,6 +166,7 @@ def test_adaptive_step_optimization(mocker, mcmc_kernel, bisect_return):
     bisect = mocker.patch('smcpy.samplers.bisect', return_value=bisect_return)
 
     smc = AdaptiveSampler(mcmc_kernel)
+    mocker.patch.object(smc, 'predict_ess_margin', return_value=-2)
 
     assert smc.optimize_step(particles, phi_old) == bisect_return
     assert bisect.call_args_list[0] == [(smc.predict_ess_margin, 0.2, 1),
@@ -179,9 +180,12 @@ def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, required_phi):
     bisect = mocker.patch('smcpy.samplers.bisect', return_value=1.4)
 
     smc = AdaptiveSampler(mcmc_kernel)
+    ess_predict = mocker.patch.object(smc, 'predict_ess_margin', return_value=2)
     smc._required_phi = required_phi
 
     assert smc.optimize_step(particles, phi_old) == 1
+    assert not bisect.called
+    ess_predict.assert_called_once()
 
 
 @pytest.mark.parametrize('req_phi', (0.77, [0.77], [0.5, 0.77, 0.8],
@@ -192,11 +196,14 @@ def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     bisect = mocker.patch('smcpy.samplers.bisect', return_value=0.8)
 
     smc = AdaptiveSampler(mcmc_kernel)
+    mocker.patch.object(smc, 'predict_ess_margin', return_value=-2)
 
     assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == 0.77
 
 
-def test_adaptive_phi_sample(mocker, mcmc_kernel):
+@pytest.mark.parametrize('required_phi, exp_index',
+                         [([0.6, 0.5], [1, 2]), (0.5, [1])])
+def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index):
     init_mock = mocker.Mock()
     init_mock.init_particles_from_prior.return_value = 1
     mocker.patch('smcpy.sampler_base.Initializer', return_value=init_mock)
@@ -208,13 +215,13 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel):
     mll_mock = mocker.patch.object(smc, '_estimate_marginal_log_likelihoods')
 
     step_list, _ = smc.sample(num_particles=5, num_mcmc_samples=5, target_ess=1,
-                              required_phi=[0.6, 0.5])
+                              required_phi=required_phi)
 
     mll_mock.assert_called_once()
     update_mock.assert_called_once_with(ess_threshold=1)
     init_mock.init_particles_from_prior.assert_called_once_with(5)
     np.testing.assert_array_equal(smc.phi_sequence, [0, 0.5, 0.6, 1.0])
-    np.testing.assert_array_equal(smc.req_phi_index, [1, 2])
+    np.testing.assert_array_equal(smc.req_phi_index, exp_index)
     np.testing.assert_array_almost_equal(step_list, [1, 0.5, 0.1, 0.4])
 
     smc = AdaptiveSampler(mcmc_kernel)

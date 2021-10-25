@@ -7,7 +7,7 @@ from scipy.stats import uniform, multivariate_normal
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy import SMCSampler
+from smcpy import FixedSampler as Sampler
 from smcpy import ImproperUniform
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], '../'))
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b'))
 
-    smc = SMCSampler(mcmc_kernel)
+    smc = Sampler(mcmc_kernel)
     phi_sequence = np.linspace(0, 1, 20)
 
     # initialize from prior

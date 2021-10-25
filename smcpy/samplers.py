@@ -133,11 +133,13 @@ class AdaptiveSampler(SamplerBase):
 
         self.phi_sequence = np.array(phi_sequence)
         self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
-                              if phi in required_phi]
+                              if phi in self._as_phi_list(required_phi)]
 
         return step_list, self._estimate_marginal_log_likelihoods()
 
     def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
+        if self._single_step_has_pos_ess_margin(phi_old, particles, target_ess):
+            return 1
         phi = bisect(self.predict_ess_margin, phi_old, 1,
                      args=(phi_old, particles, target_ess))
         proposed_phi_list = self._as_phi_list(required_phi)
@@ -154,9 +156,11 @@ class AdaptiveSampler(SamplerBase):
         if not isinstance(phi, list):
             phi = [phi]
         phi = sorted([p for p in phi if p < 1])
-        phi.append(1)
         return phi
 
     @staticmethod
     def _select_phi(proposed_phi_list, phi_old):
         return min([p for p in proposed_phi_list if p > phi_old])
+
+    def _single_step_has_pos_ess_margin(self, phi_old, particles, target_ess):
+        return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0
