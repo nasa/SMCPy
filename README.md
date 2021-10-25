@@ -17,6 +17,7 @@ versions of those presented in the following articles, respectively:
 > Nguyen, Thi Le Thu, et al. "Efficient sequential Monte-Carlo samplers for Bayesian
 > inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
 [Link to Article](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7339702) | [BibTeX Reference](https://scholar.googleusercontent.com/scholar.bib?q=info:L7AZJvppx1MJ:scholar.google.com/&output=citation&scisdr=CgUT24-FENXorVVNYK0:AAGBfm0AAAAAXYJIeK1GJKW947imCXoXAkfc7yZjQ7Oo&scisig=AAGBfm0AAAAAXYJIeNYSGEVCrlauowP6jMwVMHB_blTp&scisf=4&ct=citation&cd=-1&hl=en)
+
 > Buchholz, Alexander, Nicolas Chopin, and Pierre E. Jacob. "Adaptive tuning of
 > hamiltonian monte carlo within sequential monte carlo." Bayesian Analysis
 > 1.1 (2021): 1-27.
@@ -55,13 +56,10 @@ mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('K', 'g'))
 
 # SMC sampling
 smc = AdaptiveSampler(mcmc_kernel)
-step_list, mll_list = smc.sample(num_particles=500,
-                                 num_mcmc_samples=5,
-                                 target_ess=0.8)
+step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5, target_ess=0.8)
 
 # Display results
 print(f'parameter means = {step_list[-1].compute_mean()}')
-
 plot_pairwise(step_list[-1].params, step_list[-1].weights, save=True,
               param_labels=['K', 'g'])
 ```
@@ -72,12 +70,12 @@ These estimates are in the form of weighted particles and can be visualized by
 plotting the pairwise weights as shown below. The mean of each parameter is
 marked by the dashed red line. The true values for this example were K = 1.67
 and g = 4.62. More details can be found in the [spring mass
-example](smcpy/examples/spring_mass/). To run this model in parallel using MPI,
-the MCMC kernel just needs to be built with the ParallelMCMC class in place of
-VectorMCMC. More details can be found in the [MPI
-example](smcpy/examples/mpi_example/).
+example](smcpy/examples/spring_mass/run_example.py). To run this model in
+parallel using MPI, the MCMC kernel just needs to be built with the
+ParallelMCMC class in place of VectorMCMC. More details can be found in the
+[MPI example](smcpy/examples/mpi_example/run_example.py).
 
-![Pairwise](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/pairwise.png)
+![Pairwise](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png)
 
 Tests
 -----
