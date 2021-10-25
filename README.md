@@ -70,10 +70,10 @@ These estimates are in the form of weighted particles and can be visualized by
 plotting the pairwise weights as shown below. The mean of each parameter is
 marked by the dashed red line. The true values for this example were K = 1.67
 and g = 4.62. More details can be found in the [spring mass
-example](smcpy/examples/spring_mass/run_example.py). To run this model in
+example](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/run_example.py). To run this model in
 parallel using MPI, the MCMC kernel just needs to be built with the
 ParallelMCMC class in place of VectorMCMC. More details can be found in the
-[MPI example](smcpy/examples/mpi_example/run_example.py).
+[MPI example](https://github.com/nasa/SMCPy/blob/main/examples/mpi_example/run_example.py).
 
 ![Pairwise](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png)
 
