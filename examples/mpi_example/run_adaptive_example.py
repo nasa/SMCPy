@@ -49,11 +49,9 @@ if __name__ == '__main__':
 
     comm = MPI.COMM_WORLD.Clone()
     parallel_mcmc = ParallelMCMC(eval_model, noisy_data, priors, comm, std_dev)
-
-    phi_sequence = np.linspace(0, 1, num_smc_steps)
-
     mcmc_kernel = VectorMCMCKernel(parallel_mcmc, param_order=('a', 'b'))
     smc = AdaptiveSampler(mcmc_kernel)
+
     t0 = time.time()
     step_list, mll_list = smc.sample(num_particles, num_mcmc_samples, tgt_ess)
 
