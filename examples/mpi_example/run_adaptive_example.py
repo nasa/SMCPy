@@ -5,7 +5,7 @@ import time
 from mpi4py import MPI
 from scipy.stats import uniform
 
-from smcpy import FixedSampler, VectorMCMCKernel, ParallelMCMC
+from smcpy import AdaptiveSampler, VectorMCMCKernel, ParallelMCMC
 
 
 def gen_noisy_data(eval_model, std_dev, plot=True):
@@ -54,10 +54,13 @@ if __name__ == '__main__':
     phi_sequence = np.linspace(0, 1, num_smc_steps)
 
     mcmc_kernel = VectorMCMCKernel(parallel_mcmc, param_order=('a', 'b'))
-    smc = FixedSampler(mcmc_kernel)
+    smc = AdaptiveSampler(mcmc_kernel)
     t0 = time.time()
+    print('cp1')
     step_list, mll_list = smc.sample(num_particles, num_mcmc_samples,
-                                     phi_sequence, ess_threshold)
+                                     target_ess=0.8)
+    #step_list, mll_list = smc.sample(num_particles, num_mcmc_samples,
+    #                                 phi_sequence, ess_threshold)
 
     print(f'total time = {time.time() - t0}')
-    print('mean vector = {step_list[-1].compute_mean()}')
+    print(f'mean vector = {step_list[-1].compute_mean()}')
