@@ -118,17 +118,14 @@ class AdaptiveSampler(SamplerBase):
             the phi sequence (regardless of optimized step)
         :type required_phi: float, int, or list
         '''
-        print('cp2', flush=True)
         self._updater = Updater(ess_threshold=1) # ensure always resampling
 
-        print('cp3', flush=True)
         step_list = [self._initialize(num_particles, proposal)]
 
         phi_sequence = [0]
         while phi_sequence[-1] < 1:
             phi = self.optimize_step(step_list[-1], phi_sequence[-1],
                                      target_ess, required_phi)
-            print(f'rank {self._mcmc_kernel._mcmc._rank}: phi={phi}', flush=1)
             dphi = phi - phi_sequence[-1]
             step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
                                                num_mcmc_samples))
@@ -138,7 +135,6 @@ class AdaptiveSampler(SamplerBase):
         self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
                               if phi in self._as_phi_list(required_phi)]
 
-        print('cp4', flush=True)
         return step_list, self._estimate_marginal_log_likelihoods()
 
     @rank_zero_output_only

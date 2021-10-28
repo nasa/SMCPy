@@ -43,9 +43,8 @@ if __name__ == '__main__':
 
     # configure
     num_particles = 10000
-    num_smc_steps = 20
     num_mcmc_samples = 10
-    ess_threshold = 0.8
+    tgt_ess = 0.8
     priors = [uniform(0., 6.), uniform(0., 6.)]
 
     comm = MPI.COMM_WORLD.Clone()
@@ -56,11 +55,7 @@ if __name__ == '__main__':
     mcmc_kernel = VectorMCMCKernel(parallel_mcmc, param_order=('a', 'b'))
     smc = AdaptiveSampler(mcmc_kernel)
     t0 = time.time()
-    print('cp1')
-    step_list, mll_list = smc.sample(num_particles, num_mcmc_samples,
-                                     target_ess=0.8)
-    #step_list, mll_list = smc.sample(num_particles, num_mcmc_samples,
-    #                                 phi_sequence, ess_threshold)
+    step_list, mll_list = smc.sample(num_particles, num_mcmc_samples, tgt_ess)
 
     print(f'total time = {time.time() - t0}')
     print(f'mean vector = {step_list[-1].compute_mean()}')
