@@ -7,7 +7,7 @@ import time
 from numpy.random import multivariate_normal as MVN
 from scipy.stats import uniform
 
-from smcpy import MVNRandomEffects, ImproperUniform, SMCSampler
+from smcpy import MVNRandomEffects, ImproperUniform, AdaptiveSampler
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.priors import InvWishart
@@ -59,7 +59,6 @@ if __name__ == '__main__':
 
     noisy_data, true_rand_eff = gen_data_from_mvn(eval_model, plot=False)
     num_samples = 10000
-    burnin = int(num_samples / 2)
 
     idx1, idx2 = np.triu_indices(TRUE_COV.shape[0])
 
@@ -76,10 +75,8 @@ if __name__ == '__main__':
     priors += [uniform(0, 100) for _ in range(NUM_RAND_EFF)]
 
     idx1, idx2 = np.triu_indices(TRUE_PARAMS.shape[1])
-    log_like_args = (#list(TRUE_COV[idx1, idx2]), # assume known
-                     [None] * len(idx1), # total eff variances/covariances
-                     #[RAND_EFF_NOISE_STD] * NUM_RAND_EFF) # assume known
-                     [None] * NUM_RAND_EFF) # rand eff std deviations
+    log_like_args = ( [None] * len(idx1), # total eff variances/covariances
+                      [None] * NUM_RAND_EFF) # rand eff std deviations
     log_like_func = MVNRandomEffects
 
     param_order = ['a', 'b'] + \
@@ -91,19 +88,12 @@ if __name__ == '__main__':
                              log_like_func)
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
 
-    smc = SMCSampler(mcmc_kernel)
+    smc = AdaptiveSampler(mcmc_kernel)
     n_parts = 20000
     n_mcmc = 10
-    n_steps = 50
-    phi_exp = 2
-    x = np.linspace(0, 1, n_steps)
-    phi_sequence = (np.exp(phi_exp * x) - 1) / (np.exp(phi_exp) - 1)
-    plt.plot(phi_sequence)
-    plt.show()
     step_list, mll_list = smc.sample(num_particles=n_parts,
                                      num_mcmc_samples=n_mcmc,
-                                     phi_sequence=phi_sequence,
-                                     ess_threshold=0.75, progress_bar=True)
+                                     target_ess=0.8)
 
     np.save('smc_samples.npy', step_list[-1].params)
     np.save('smc_weights.npy', step_list[-1].weights)
@@ -116,4 +106,3 @@ if __name__ == '__main__':
     sns.pairplot(df, diag_kind='kde', corner=True, plot_kws={'alpha': 1.0},
                  hue='weights')
     plt.savefig('smc_pairwise.png')
-
