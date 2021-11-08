@@ -137,6 +137,7 @@ class AdaptiveSampler(SamplerBase):
 
         return step_list, self._estimate_marginal_log_likelihoods()
 
+    @rank_zero_output_only
     def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
         if self._single_step_has_pos_ess_margin(phi_old, particles, target_ess):
             return 1
