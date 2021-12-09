@@ -126,11 +126,13 @@ class AdaptiveSampler(SamplerBase):
         while phi_sequence[-1] < 1:
             phi = self.optimize_step(step_list[-1], phi_sequence[-1],
                                      target_ess, required_phi)
+            phi = self._check_phi_sequence(phi_sequence, phi, required_phi)
+
             dphi = phi - phi_sequence[-1]
             step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
                                                num_mcmc_samples))
             phi_sequence.append(phi)
-
+        
         self.phi_sequence = np.array(phi_sequence)
         self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
                               if phi in self._as_phi_list(required_phi)]
@@ -165,3 +167,15 @@ class AdaptiveSampler(SamplerBase):
 
     def _single_step_has_pos_ess_margin(self, phi_old, particles, target_ess):
         return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0
+
+    def _check_phi_sequence(self, phi_sequence, phi, required_phi):
+        
+        if required_phi in phi_sequence:
+            return phi
+
+        elif phi > required_phi:
+            return required_phi
+        
+        else:
+            return phi
+
