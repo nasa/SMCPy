@@ -173,23 +173,22 @@ def test_adaptive_step_optimization(mocker, mcmc_kernel, bisect_return):
                                         {'args': (0.2, particles, 1)}]
 
 
-@pytest.mark.parametrize('required_phi', [1, 0.5, 1.5])
-def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, required_phi):
+@pytest.mark.parametrize('req_phi, phi', [(1, 1), (.5, 1), (1.5, 1), (.9, .9)])
+def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, req_phi, phi):
     phi_old = 0.8
     particles = mocker.Mock()
     bisect = mocker.patch('smcpy.samplers.bisect', return_value=1.4)
 
     smc = AdaptiveSampler(mcmc_kernel)
     ess_predict = mocker.patch.object(smc, 'predict_ess_margin', return_value=2)
-    smc._required_phi = required_phi
 
-    assert smc.optimize_step(particles, phi_old) == 1
+    assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == phi
     assert not bisect.called
     ess_predict.assert_called_once()
 
 
 @pytest.mark.parametrize('req_phi', (0.77, [0.77], [0.5, 0.77, 0.8],
-                                     [0.8, 0.5, 0.77]))
+                                     [0.8, 0.5, 0.77, 0.9]))
 def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     phi_old = 0.52
     particles = mocker.Mock()

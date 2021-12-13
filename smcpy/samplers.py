@@ -139,10 +139,10 @@ class AdaptiveSampler(SamplerBase):
 
     @rank_zero_output_only
     def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
-        if self._single_step_has_pos_ess_margin(phi_old, particles, target_ess):
-            return 1
-        phi = bisect(self.predict_ess_margin, phi_old, 1,
-                     args=(phi_old, particles, target_ess))
+        phi = 1
+        if not self._full_step_meets_target(phi_old, particles, target_ess):
+            phi = bisect(self.predict_ess_margin, phi_old, 1,
+                         args=(phi_old, particles, target_ess))
         proposed_phi_list = self._as_phi_list(required_phi)
         proposed_phi_list.append(phi)
         return self._select_phi(proposed_phi_list, phi_old)
@@ -163,5 +163,5 @@ class AdaptiveSampler(SamplerBase):
     def _select_phi(proposed_phi_list, phi_old):
         return min([p for p in proposed_phi_list if p > phi_old])
 
-    def _single_step_has_pos_ess_margin(self, phi_old, particles, target_ess):
+    def _full_step_meets_target(self, phi_old, particles, target_ess):
         return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0
