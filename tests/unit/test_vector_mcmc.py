@@ -85,23 +85,21 @@ def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
                                     np.array([[0, 1, 0.5]] * 4)))
 def test_vectorized_proposal(vector_mcmc, inputs, mocker):
     chol_mock = mocker.patch('numpy.linalg.cholesky', return_value=2)
-    mvn_mock = mocker.patch('numpy.random.multivariate_normal',
-                            return_value=np.array([1]))
+    norm_mock = mocker.patch('numpy.random.normal',
+                             return_value=np.array([1]))
     matmul_mock = mocker.patch('numpy.matmul',
                                return_value=np.ones(inputs.shape).T)
 
     n_param = inputs.shape[1]
     cov = np.eye(n_param)
-    cov_scale = 2.38 ** 2 / inputs.shape[1]
     expected_proposal = inputs + 1
 
     proposal = vector_mcmc.proposal(inputs, cov=cov)
 
     np.testing.assert_array_equal(proposal, expected_proposal)
-    exp_call = mocker.call(np.zeros(n_param), np.eye(n_param), inputs.shape[0])
-    assert mvn_mock.called_once_with(exp_call)
-    assert matmul_mock.called_once_with(1, 2)
-    assert chol_mock.called_once_with(cov * cov_scale)
+    chol_mock.assert_called_once_with(cov)
+    norm_mock.assert_called_once_with(0, 1, inputs.shape)
+    matmul_mock.assert_called_once_with(2, 1)
 
 
 @pytest.mark.parametrize('new_inputs, old_inputs', (
