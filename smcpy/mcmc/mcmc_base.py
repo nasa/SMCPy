@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 from abc import ABC, abstractmethod
 from tqdm import tqdm
@@ -108,7 +109,15 @@ class MCMCBase(ABC):
 
     @staticmethod
     def proposal(inputs, cov):
-        chol = np.linalg.cholesky(cov)
+        try:
+            chol = np.linalg.cholesky(cov)
+        except:
+            warnings.warn('Covariance matrix is not positive definite; forcing '
+                          'negative eigenvalues to zero.')
+            eigval, eigvec = np.linalg.eigh(cov)
+            eigval[eigval < 0] = 0
+            cov = np.dot(eigvec, np.diag(eigval)).dot(eigvec.T)
+            chol = np.linalg.cholesky(cov)
         z = np.random.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
         return inputs + delta

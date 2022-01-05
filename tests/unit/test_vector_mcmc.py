@@ -102,6 +102,32 @@ def test_vectorized_proposal(vector_mcmc, inputs, mocker):
     matmul_mock.assert_called_once_with(2, 1)
 
 
+@pytest.mark.filterwarnings('ignore: Covariance matrix is')
+@pytest.mark.parametrize('inputs', (np.array([[0, 1, 0.5]]),
+                                    np.array([[0, 1, 0.5]] * 4)))
+def test_vectorized_proposal_non_psd_cov(vector_mcmc, inputs, mocker):
+    eigval = np.array([-1, 1])
+    eigvec = np.array([[1, 2], [1, 2]])
+    cov = np.eye(inputs.shape[1])
+    exp_eigval = np.array([0, 1])
+
+    chol_mock = mocker.patch('numpy.linalg.cholesky',
+                             side_effect=(np.linalg.linalg.LinAlgError, 2))
+    norm_mock = mocker.patch('numpy.random.normal')
+    matmul_mock = mocker.patch('numpy.matmul',
+                               return_value=np.ones(inputs.shape).T)
+    eig_mock = mocker.patch('numpy.linalg.eigh', return_value=(eigval, eigvec))
+    mock = mocker.Mock()
+    dot_mock = mocker.patch('numpy.dot', return_value=mock)
+    diag_mock = mocker.patch('numpy.diag', return_value=1)
+
+    _ = vector_mcmc.proposal(inputs, cov=cov)
+
+    np.testing.assert_array_equal(diag_mock.call_args[0][0], exp_eigval)
+    dot_mock.assert_called_once_with(eigvec, 1)
+    np.testing.assert_array_equal(mock.dot.call_args[0][0], eigvec.T)
+
+
 @pytest.mark.parametrize('new_inputs, old_inputs', (
                         (np.array([[1, 1, 1]]), np.array([[2, 2, 2]])),
                         (np.array([[1, 1, 1]] * 4), np.array([[2, 2, 2]] * 4))))
