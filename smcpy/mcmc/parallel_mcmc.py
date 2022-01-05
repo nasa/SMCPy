@@ -37,17 +37,4 @@ class ParallelMCMC(MCMCBase):
 
         gathered_outputs = self._comm.allgather(scattered_outputs)
         outputs = np.concatenate(gathered_outputs)
-        outputs = self._match_output_and_input_shape(outputs, inputs)
         return outputs
-
-    def _match_output_and_input_shape(self, outputs, inputs):
-        '''
-        Because inputs with zero prior probability are not passed to the
-        evaluate_model function of an MCMCBase-derived class, there can be a
-        mismatch between nonzero rank inputs.shape and the inputs.shape on
-        rank 0. This method corrects for this shape mismatch on return. This is
-        another example of why it is important to only use rank 0 outputs.
-        '''
-        if self._rank == 0:
-            return outputs
-        return np.zeros((inputs.shape[0], self._data.size))
