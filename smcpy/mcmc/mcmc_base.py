@@ -107,17 +107,8 @@ class MCMCBase(ABC):
     def evaluate_log_posterior(log_likelihood, log_priors):
         return np.sum(np.hstack((log_likelihood, log_priors)), axis=1)
 
-    @staticmethod
-    def proposal(inputs, cov):
-        try:
-            chol = np.linalg.cholesky(cov)
-        except:
-            warnings.warn('Covariance matrix is not positive definite; forcing '
-                          'negative eigenvalues to zero.')
-            eigval, eigvec = np.linalg.eigh(cov)
-            eigval[eigval < 0] = 0
-            cov = np.dot(eigvec, np.diag(eigval)).dot(eigvec.T)
-            chol = np.linalg.cholesky(cov)
+    def proposal(self, inputs, cov):
+        chol = self._ensure_psd_cov_and_do_chol_decomp(cov)
         z = np.random.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
         return inputs + delta
@@ -197,3 +188,15 @@ class MCMCBase(ABC):
     @staticmethod
     def _row_has_nonzero_prior_probability(log_priors):
         return ~(log_priors == -np.inf).any(axis=1)
+
+    @staticmethod
+    def _ensure_psd_cov_and_do_chol_decomp(cov):
+        try:
+            return np.linalg.cholesky(cov)
+        except:
+            warnings.warn('Covariance matrix is not positive definite; forcing '
+                          'negative eigenvalues to zero.')
+            eigval, eigvec = np.linalg.eigh(cov)
+            eigval[eigval < 0] = 0
+            cov = np.dot(eigvec, np.diag(eigval)).dot(eigvec.T)
+            return np.linalg.cholesky(cov)
