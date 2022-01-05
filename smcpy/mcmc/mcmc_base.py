@@ -194,8 +194,9 @@ class MCMCBase(ABC):
         try:
             return np.linalg.cholesky(cov)
         except:
-            warnings.warn('Covariance matrix is not positive definite; forcing '
-                          'negative eigenvalues to zero.')
+            warnings.warn('Covariance matrix is not positive semi-definite; '
+                          'forcing negative eigenvalues to zero and rebuilding '
+                          'covariance matrix.')
             eigval, eigvec = np.linalg.eigh(cov)
             eigval[eigval < 0] = 0
             cov = np.dot(eigvec, np.diag(eigval)).dot(eigvec.T)
