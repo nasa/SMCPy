@@ -139,19 +139,3 @@ def test_compute_covariance(mocker):
     assert cov == np.array([[1]])
     assert cov.shape == (1, 1)
     assert cov_mock.called_once_with(expected_call)
-
-
-@pytest.mark.filterwarnings('ignore: Covariance matrix is')
-@pytest.mark.parametrize('params, weights, expected_var',
-        (({'a': [1, 2], 'b': [2, 3]}, [1, 1], np.array([0.25, 0.25])),
-         ({'a': [1, 5/3], 'b': [4, 2]}, [1, 3], np.array([0.083333, 0.75]))))
-def test_non_positive_def_cov_is_independent(params, weights, expected_var,
-                                             mocker):
-    log_likes = np.ones(2)
-    particles = Particles(params, log_likes, np.log(weights))
-    mocker.patch.object(particles, '_is_positive_definite', return_value=False)
-    expected_cov = np.eye(2) * expected_var
-
-    cov = particles.compute_covariance()
-
-    np.testing.assert_array_almost_equal(cov, expected_cov)
