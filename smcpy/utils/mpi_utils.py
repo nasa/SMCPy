@@ -16,7 +16,11 @@ def rank_zero_output_only(func):
         output = func(self, *args, **kwargs)
 
         try:
-            output = self._mcmc_kernel._mcmc._comm.bcast(output, root=0)
+            if hasattr(self, '_comm'):
+                output = self._comm.bcast(output, root=0)
+            else:
+                output = self._mcmc_kernel._mcmc._comm.bcast(output, root=0)
+
         except AttributeError:
             pass
 

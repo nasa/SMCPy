@@ -74,6 +74,7 @@ class MCMCBase(ABC):
         Calls self._model with "inputs" and returns corresponding outputs.
         '''
 
+    @rank_zero_output_only
     def sample_from_priors(self, num_samples):
         samples = []
         for i, p in enumerate(self._priors):
