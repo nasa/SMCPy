@@ -4,6 +4,8 @@ import warnings
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 
+from ..utils.mpi_utils import rank_zero_output_only
+
 
 class MCMCBase(ABC):
     
@@ -108,6 +110,7 @@ class MCMCBase(ABC):
         return np.sum(np.hstack((log_likelihood, log_priors)), axis=1)
 
     @staticmethod
+    @rank_zero_output_only
     def proposal(inputs, cov):
         try:
             chol = np.linalg.cholesky(cov)
@@ -129,6 +132,7 @@ class MCMCBase(ABC):
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
     @staticmethod
+    @rank_zero_output_only
     def get_rejections(acceptance_ratios):
         u = np.random.uniform(0, 1, acceptance_ratios.shape)
         return acceptance_ratios < u
