@@ -196,6 +196,12 @@ class MCMCBase(ABC):
 
     @staticmethod
     def _ensure_psd_cov_and_do_chol_decomp(cov):
+        '''
+        Higham NJ. Computing a nearest symmetric positive semidefinite matrix.
+        Linear Algebra and its Applications. 1988 May;103(C):103-118.
+
+        Code implementation: https://stackoverflow.com/a/63131250/4733085
+        '''
         try:
             return np.linalg.cholesky(cov)
         except:
