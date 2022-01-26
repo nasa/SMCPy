@@ -98,7 +98,7 @@ class AdaptiveSampler(SamplerBase):
 
     @rank_zero_output_only
     def sample(self, num_particles, num_mcmc_samples, target_ess=1,
-               proposal=None, required_phi=1):
+               proposal=None, required_phi=1, progress_bar=False):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -122,6 +122,8 @@ class AdaptiveSampler(SamplerBase):
 
         step_list = [self._initialize(num_particles, proposal)]
 
+        pbar = self._init_progress_bar(progress_bar)
+
         phi_sequence = [0]
         while phi_sequence[-1] < 1:
             phi = self.optimize_step(step_list[-1], phi_sequence[-1],
@@ -130,6 +132,9 @@ class AdaptiveSampler(SamplerBase):
             step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
                                                num_mcmc_samples))
             phi_sequence.append(phi)
+            self._update_progress_bar(pbar, dphi)
+
+        self._close_progress_bar(pbar)
 
         self.phi_sequence = np.array(phi_sequence)
         self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
@@ -165,3 +170,23 @@ class AdaptiveSampler(SamplerBase):
 
     def _full_step_meets_target(self, phi_old, particles, target_ess):
         return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0
+
+    @staticmethod
+    def _init_progress_bar(progress_bar):
+        pbar = False
+        if progress_bar:
+            format_ =  "{desc}: {percentage:.2f}%|{bar}| " + \
+                       "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
+            pbar = tqdm(total=1.0, bar_format = format_)
+            pbar.update(0)
+        return pbar
+
+    @staticmethod
+    def _update_progress_bar(pbar, dphi):
+        if pbar:
+            pbar.update(dphi)
+
+    @staticmethod
+    def _close_progress_bar(pbar):
+        if pbar:
+            pbar.close()
