@@ -156,7 +156,23 @@ def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
     smc = AdaptiveSampler(mcmc_kernel)
     ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles, target_ess)
 
-    assert pytest.approx(ESS_margin == expected_ess_margin)
+    assert pytest.approx(ESS_margin) == expected_ess_margin
+
+
+def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
+    mocker.patch('smcpy.samplers.np.sum', return_value=0)
+
+    phi_old = 0
+    phi_new = 1
+    particles = mocker.Mock()
+    particles.log_likes = np.arange(5)
+    particles.num_particles = 5
+    target_ess = 0.8
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles, target_ess)
+
+    assert ESS_margin == -particles.num_particles * target_ess
 
 
 @pytest.mark.parametrize('bisect_return', [0.5, 0.75, 0.8])

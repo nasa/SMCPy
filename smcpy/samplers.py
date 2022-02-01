@@ -154,7 +154,11 @@ class AdaptiveSampler(SamplerBase):
 
     def predict_ess_margin(self, phi_new, phi_old, particles, target_ess=1):
         beta = np.exp((phi_new - phi_old) * particles.log_likes)
-        ESS = np.sum(beta) ** 2 / np.sum(beta ** 2)
+        numer = np.sum(beta) ** 2
+        denom = np.sum(beta ** 2)
+        ESS = 0
+        if numer > 0 and denom > 0:
+            ESS = numer / denom
         return ESS - particles.num_particles * target_ess
 
     @staticmethod
