@@ -25,13 +25,17 @@ class ParallelMCMC(MCMCBase):
 
         super().__init__(model, data, priors, log_like_args, log_like_func,
                          debug)
+        try:
+            self._output_dim = self._data.shape[1]
+        except:
+            self._output_dim = self._data.size
 
     def evaluate_model(self, inputs):
         partitioned_inputs = np.array_split(inputs, self._size)
         scattered_inputs = []
         scattered_inputs = self._comm.scatter(partitioned_inputs, root=0)
 
-        scattered_outputs = np.array([]).reshape(0, self._data.size)
+        scattered_outputs = np.array([]).reshape(0, self._output_dim)
         if scattered_inputs.shape[0] > 0:
             scattered_outputs = self._eval_model(scattered_inputs)
 

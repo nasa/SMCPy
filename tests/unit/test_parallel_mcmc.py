@@ -18,15 +18,15 @@ def mock_comm(mocker, request):
     return comm
 
 def test_comm_set(mock_comm):
-    pmcmc = ParallelMCMC(model=None, data=None, priors=None, mpi_comm=mock_comm,
-                         log_like_args=None)
+    pmcmc = ParallelMCMC(model=None, data=np.ones(4), priors=None,
+                         mpi_comm=mock_comm, log_like_args=None)
     assert pmcmc._size == mock_comm.size
     assert pmcmc._rank == mock_comm.rank
 
 
 def test_inherit(mock_comm):
-    pmcmc = ParallelMCMC(model=None, data=None, priors=None, mpi_comm=mock_comm,
-                         log_like_args=None)
+    pmcmc = ParallelMCMC(model=None, data=np.ones(4), priors=None,
+                         mpi_comm=mock_comm, log_like_args=None)
     assert isinstance(pmcmc, MCMCBase)
 
 
@@ -57,3 +57,22 @@ def test_mpi_eval_model(mocker, mock_comm):
                                   expected_gather_input)
     assert mock_comm.scatter.call_args[1] == {'root': 0}
     np.testing.assert_array_equal(output, inputs[:, :2])
+
+
+@pytest.mark.parametrize('data_shape', [(10,), (4, 10)])
+def test_mpi_eval_with_zero_scat_input(mocker, mock_comm, data_shape):
+    data = np.ones(data_shape)
+    inputs = np.ones((100, 3))
+    scattered_input = np.array([])
+    gathered_outputs = [np.array([1]), np.array([2])]
+    mocker.patch.object(mock_comm, 'scatter', return_value=scattered_input)
+    allgather = mocker.patch.object(mock_comm, 'allgather',
+                                    return_value=gathered_outputs)
+
+    expected_scattered_output_shape = (0, 10)
+
+    pmcmc = ParallelMCMC(mocker.Mock(), data=data, priors=None,
+                         mpi_comm=mock_comm, log_like_args=None)
+    output = pmcmc.evaluate_model(inputs)
+
+    assert allgather.call_args[0][0].shape == expected_scattered_output_shape
