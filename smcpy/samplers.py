@@ -97,7 +97,7 @@ class AdaptiveSampler(SamplerBase):
         super().__init__(mcmc_kernel)
 
     @rank_zero_output_only
-    def sample(self, num_particles, num_mcmc_samples, target_ess=1,
+    def sample(self, num_particles, num_mcmc_samples, target_ess=0.8,
                proposal=None, required_phi=1, progress_bar=False):
         '''
         :param num_particles: number of particles
