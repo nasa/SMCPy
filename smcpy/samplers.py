@@ -72,7 +72,7 @@ class FixedSampler(SamplerBase):
         '''
         self._updater = Updater(ess_threshold)
 
-        step_list = [self._initialize(num_particles, proposal)]
+        self.step = self._initialize(num_particles, proposal)
 
         phi_iterator = phi_sequence[1:]
         if progress_bar:
@@ -81,11 +81,11 @@ class FixedSampler(SamplerBase):
 
         for i, phi in enumerate(phi_iterator):
             dphi = phi - phi_sequence[i]
-            step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
-                                               num_mcmc_samples))
+            self.step = self._do_smc_step(self.step, phi, dphi,
+                                          num_mcmc_samples)
             set_bar(phi_iterator, i + 2, self._mutation_ratio, self._updater)
 
-        return step_list, self._estimate_marginal_log_likelihoods()
+        return self._step_list, self._estimate_marginal_log_likelihoods()
 
 
 
@@ -120,17 +120,17 @@ class AdaptiveSampler(SamplerBase):
         '''
         self._updater = Updater(ess_threshold=1) # ensure always resampling
 
-        step_list = [self._initialize(num_particles, proposal)]
+        self.step = self._initialize(num_particles, proposal)
 
         pbar = self._init_progress_bar(progress_bar)
 
         phi_sequence = [0]
         while phi_sequence[-1] < 1:
-            phi = self.optimize_step(step_list[-1], phi_sequence[-1],
+            phi = self.optimize_step(self.step, phi_sequence[-1],
                                      target_ess, required_phi)
             dphi = phi - phi_sequence[-1]
-            step_list.append(self._do_smc_step(step_list[-1], phi, dphi,
-                                               num_mcmc_samples))
+            self.step = self._do_smc_step(self.step, phi, dphi,
+                                          num_mcmc_samples)
             phi_sequence.append(phi)
             self._update_progress_bar(pbar, dphi)
 
@@ -140,7 +140,7 @@ class AdaptiveSampler(SamplerBase):
         self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
                               if phi in self._as_phi_list(required_phi)]
 
-        return step_list, self._estimate_marginal_log_likelihoods()
+        return self._step_list, self._estimate_marginal_log_likelihoods()
 
     @rank_zero_output_only
     def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):

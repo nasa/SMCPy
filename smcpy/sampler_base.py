@@ -46,6 +46,15 @@ class SamplerBase:
         self._mutator = Mutator(self._mcmc_kernel)
         self._updater = None
         self._mutation_ratio = 1
+        self._step_list = []
+
+    @property
+    def step(self):
+        return self._step_list[-1]
+
+    @step.setter
+    def step(self, step):
+        self._step_list.append(step)
 
     @abstractmethod
     def sample(self):
