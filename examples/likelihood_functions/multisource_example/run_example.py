@@ -46,7 +46,7 @@ if __name__ == '__main__':
     num_samples = 50000
     burnin = int(num_samples / 2)
     num_params = 5
-    init_inputs = np.array([[1] * num_params, [2] * num_params])
+    init_inputs = np.array([[3] * num_params, [3] * num_params])
     cov = np.eye(num_params)
 
     src_num_pts = (NUM_DATA_PTS, NUM_DATA_PTS, NUM_DATA_PTS)
@@ -60,7 +60,7 @@ if __name__ == '__main__':
                              log_like_func)
 
     chain = vector_mcmc.metropolis(init_inputs, num_samples, cov,
-                                   adapt_interval=200, adapt_delay=5000,
+                                   adapt_interval=200, adapt_delay=200,
                                    progress_bar=True)
 
     plot_mcmc_chain(chain, param_labels=['a', 'b', 'std1', 'std2', 'std3'],
