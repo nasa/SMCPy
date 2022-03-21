@@ -46,7 +46,8 @@ if __name__ == '__main__':
 
     smc = Sampler(mcmc_kernel)
     step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
-                                     target_ess=0.7, required_phi=0.2)
+                                     target_ess=0.7, required_phi=0.2,
+                                     progress_bar=True)
     print(f'phi_sequence={smc.phi_sequence}')
     print(f'fbf norm index={smc.req_phi_index}')
     print('marginal log likelihood = {}'.format(mll_list[-1]))
