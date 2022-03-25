@@ -36,6 +36,8 @@ from abc import ABC, abstractmethod
 
 from .smc.initializer import Initializer
 from .smc.mutator import Mutator
+from .utils.storage import InMemoryStorage
+from .utils.context_manager import ContextManager
 
 
 class SamplerBase:
@@ -47,14 +49,22 @@ class SamplerBase:
         self._updater = None
         self._mutation_ratio = 1
         self._step_list = []
+        self._phi_sequence = []
+
+        try:
+            self._result = ContextManager.get_context()
+        except:
+            self._result = InMemoryStorage()
 
     @property
     def step(self):
-        return self._step_list[-1]
+        return self._step
 
     @step.setter
     def step(self, step):
-        self._step_list.append(step)
+        if step is not None:
+            self._result.save_step(step)
+            self._step = step
 
     @abstractmethod
     def sample(self):
@@ -64,10 +74,12 @@ class SamplerBase:
         '''
 
     def _initialize(self, num_particles, proposal):
-        if proposal is None:
-            return self._initializer.init_particles_from_prior(num_particles)
-        else:
+        if self._result and self._result.is_restart:
+            self._step, self._phi_sequence = self._result.load_for_restart()
+            return None
+        elif proposal:
             return self._initializer.init_particles_from_samples(*proposal)
+        return self._initializer.init_particles_from_prior(num_particles)
 
     def _do_smc_step(self, particles, phi, delta_phi, num_mcmc_samples):
         particles = self._updater.update(particles, delta_phi)
@@ -78,16 +90,3 @@ class SamplerBase:
     def _compute_mutation_ratio(self, old_particles, new_particles):
         mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
         self._mutation_ratio = sum(mutated) / new_particles.params.shape[0]
-
-    def _estimate_marginal_log_likelihoods(self):
-        sum_un_log_wts = [self._logsum(ulw) \
-                          for ulw in self._updater._unnorm_log_weights]
-        num_updates = len(sum_un_log_wts)
-        return [0] + [np.sum(sum_un_log_wts[:i+1]) for i in range(num_updates)]
-
-    @staticmethod
-    def _logsum(Z):
-        Z = -np.sort(-Z, axis=0) # descending
-        Z0 = Z[0, :]
-        Z_shifted = Z[1:, :] - Z0
-        return Z0 + np.log(1 + np.sum(np.exp(Z_shifted), axis=0))

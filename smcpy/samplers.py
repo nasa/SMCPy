@@ -71,28 +71,28 @@ class FixedSampler(SamplerBase):
         :type progress_bar: bool
         '''
         self._updater = Updater(ess_threshold)
+        self._phi_sequence = phi_sequence
 
         self.step = self._initialize(num_particles, proposal)
 
-        phi_iterator = phi_sequence[1:]
+        phi_iterator = self._phi_sequence[1:]
         if progress_bar:
             phi_iterator = tqdm(phi_iterator)
         set_bar(phi_iterator, 1, self._mutation_ratio, self._updater)
 
         for i, phi in enumerate(phi_iterator):
-            dphi = phi - phi_sequence[i]
+            dphi = phi - self._phi_sequence[i]
             self.step = self._do_smc_step(self.step, phi, dphi,
                                           num_mcmc_samples)
             set_bar(phi_iterator, i + 2, self._mutation_ratio, self._updater)
 
-        return self._step_list, self._estimate_marginal_log_likelihoods()
+        return self._result, self._result.estimate_marginal_log_likelihoods()
 
 
 
 class AdaptiveSampler(SamplerBase):
 
     def __init__(self, mcmc_kernel):
-        self.phi_sequence = None
         self.req_phi_index = None
         super().__init__(mcmc_kernel)
 
@@ -119,28 +119,28 @@ class AdaptiveSampler(SamplerBase):
         :type required_phi: float, int, or list
         '''
         self._updater = Updater(ess_threshold=1) # ensure always resampling
+        self._phi_sequence = [0]
 
         self.step = self._initialize(num_particles, proposal)
 
         pbar = self._init_progress_bar(progress_bar)
 
-        phi_sequence = [0]
-        while phi_sequence[-1] < 1:
-            phi = self.optimize_step(self.step, phi_sequence[-1],
+        while self._phi_sequence[-1] < 1:
+            phi = self.optimize_step(self.step, self._phi_sequence[-1],
                                      target_ess, required_phi)
-            dphi = phi - phi_sequence[-1]
+            dphi = phi - self._phi_sequence[-1]
             self.step = self._do_smc_step(self.step, phi, dphi,
                                           num_mcmc_samples)
-            phi_sequence.append(phi)
+            self._phi_sequence.append(phi)
             self._update_progress_bar(pbar, dphi)
 
         self._close_progress_bar(pbar)
 
-        self.phi_sequence = np.array(phi_sequence)
+        phi_sequence = np.array(self._phi_sequence)
         self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
                               if phi in self._as_phi_list(required_phi)]
 
-        return self._step_list, self._estimate_marginal_log_likelihoods()
+        return self._result, self._result.estimate_marginal_log_likelihoods()
 
     @rank_zero_output_only
     def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
@@ -175,14 +175,13 @@ class AdaptiveSampler(SamplerBase):
     def _full_step_meets_target(self, phi_old, particles, target_ess):
         return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0
 
-    @staticmethod
-    def _init_progress_bar(progress_bar):
+    def _init_progress_bar(self, progress_bar):
         pbar = False
         if progress_bar:
             format_ =  "{desc}: {percentage:.2f}%|{bar}| " + \
                        "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
             pbar = tqdm(total=1.0, bar_format = format_)
-            pbar.update(0)
+            pbar.update(self._phi_sequence[-1])
         return pbar
 
     @staticmethod
