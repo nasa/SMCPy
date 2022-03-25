@@ -17,16 +17,16 @@ def test_inmemorystorage_save():
 @pytest.mark.parametrize('steps', [2, 3, 4, 10])
 def test_marginal_log_likelihood_calculation(mocker, steps):
     unnorm_log_weights = np.zeros((5, 1))
-    expected_Z = [1] + [5 ** (i + 1) for i in range(steps)]
+    expected_mll = [1] + [5 ** (i + 1) for i in range(steps)]
 
     mocked_particles = mocker.Mock()
-    mocked_particles.unnorm_log_weights = unnorm_log_weights
+    mocked_particles.compute_total_unnorm_log_wt.return_value = np.log(5)
 
     storage = InMemoryStorage()
     storage._step_list = [mocked_particles for _ in range(steps)]
 
-    Z = storage.estimate_marginal_log_likelihoods()
-    np.testing.assert_array_almost_equal(Z, np.log(expected_Z))
+    mll = storage.estimate_marginal_log_likelihoods()
+    np.testing.assert_array_almost_equal(mll, np.log(expected_mll))
 
 
 def test_inmemorystorage_cannot_restart():

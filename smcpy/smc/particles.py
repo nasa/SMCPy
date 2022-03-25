@@ -109,6 +109,10 @@ class Particles(Checks):
         self._log_likes = log_likes
 
     @property
+    def unnorm_log_weights(self):
+        return self._unnorm_log_weights
+
+    @property
     def log_weights(self):
         return self._log_weights
 
@@ -121,6 +125,7 @@ class Particles(Checks):
         if log_weights.shape[0] != self._num_particles:
             raise ValueError('log_weights.shape[0] != number particles: '
                              f'{log_weights.shape[0]} != {self._num_particles}')
+        self._unnorm_log_weights = log_weights
         self._log_weights = self._normalize_log_weights(log_weights)
         self._weights = np.exp(self._log_weights)
 
@@ -189,3 +194,16 @@ class Particles(Checks):
             cov = cov.reshape(1, 1)
 
         return cov
+
+    def compute_total_unnorm_wt(self):
+        '''
+        Computes the log sum of all particle unnormalized weights.
+        '''
+        return self._logsum(self.unnorm_log_weights)
+
+    @staticmethod
+    def _logsum(Z):
+        Z = -np.sort(-Z, axis=0).flatten() # descending
+        Z0 = Z[0]
+        Z_shifted = Z[1:] - Z0
+        return Z0 + np.log(1 + np.sum(np.exp(Z_shifted), axis=0))

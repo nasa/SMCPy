@@ -37,6 +37,7 @@ def test_set_particles(particles, dummy_params, dummy_log_likes,
     log_likes = np.array(dummy_log_likes).reshape(-1, 1)
     normalized_weights = np.array([0.1] * 10).reshape(-1, 1)
     normalized_log_weights = np.log(normalized_weights)
+    unnormalized_log_weights = np.array([[0.2]] * 10)
 
     assert particles.param_names == ('a', 'b')
     assert particles.num_particles == 10
@@ -44,6 +45,8 @@ def test_set_particles(particles, dummy_params, dummy_log_likes,
     np.testing.assert_array_equal(particles.log_likes, log_likes)
     np.testing.assert_array_equal(particles.log_weights, normalized_log_weights)
     np.testing.assert_array_almost_equal(particles.weights, normalized_weights)
+    np.testing.assert_array_almost_equal(particles.unnorm_log_weights,
+                                         unnormalized_log_weights)
     np.testing.assert_array_equal(particles.param_dict['a'], params[:, 0])
     np.testing.assert_array_equal(particles.param_dict['b'], params[:, 1])
 
@@ -139,3 +142,8 @@ def test_compute_covariance(mocker):
     assert cov == np.array([[1]])
     assert cov.shape == (1, 1)
     assert cov_mock.called_once_with(expected_call)
+
+def test_compute_total_unnorm_weight(particles):
+    weight = particles.compute_total_unnorm_wt()
+    assert isinstance(weight, float)
+    assert weight == pytest.approx(2.50258509)
