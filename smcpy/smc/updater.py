@@ -77,14 +77,19 @@ class Updater:
         new_particles = self.resample_if_needed(new_particles)
         return new_particles
 
-    def resample_if_needed(self, new_particles):
-        eff_sample_size = new_particles.compute_ess()
+    def resample_if_needed(self, particles):
+        eff_sample_size = particles.compute_ess()
         self._ess = eff_sample_size
         self._resampled = False
-        if eff_sample_size < self.ess_threshold * new_particles.num_particles:
+
+        if eff_sample_size < self.ess_threshold * particles.num_particles:
             self._resampled = True
-            return self._resample(new_particles)
-        return new_particles
+            resampled_particles = self._resample(particles)
+            resampled_particles._total_unlw = particles.total_unnorm_log_weight
+
+            return resampled_particles
+
+        return particles
 
     def _compute_new_weights(self, particles, delta_phi):
         un_log_weights = particles.log_weights + particles.log_likes * delta_phi

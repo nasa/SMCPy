@@ -35,6 +35,7 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     mocked_particles.param_dict = 1
     mocked_particles.log_likes = 2
     mocked_particles.log_weights = 3
+    mocked_particles.total_unnorm_log_weight = 99
     mocker.patch.object(mocked_particles, 'compute_covariance',
                         return_value=cov)
 
@@ -48,6 +49,7 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     assert mutated_particles.params == 10
     assert mutated_particles.log_likes == 20
     assert mutated_particles.log_weights == 3
+    assert mutated_particles._total_unlw == 99
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
             mocked_particles.param_dict, mocked_particles.log_likes,

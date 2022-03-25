@@ -20,7 +20,7 @@ def test_marginal_log_likelihood_calculation(mocker, steps):
     expected_mll = [1] + [5 ** (i + 1) for i in range(steps)]
 
     mocked_particles = mocker.Mock()
-    mocked_particles.compute_total_unnorm_log_wt.return_value = np.log(5)
+    mocked_particles.total_unnorm_log_weight = np.log(5)
 
     storage = InMemoryStorage()
     storage._step_list = [mocked_particles for _ in range(steps)]

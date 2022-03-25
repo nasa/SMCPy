@@ -50,8 +50,9 @@ class Mutator:
                                                     particles.log_likes,
                                                     num_samples,
                                                     cov, phi)
-        particles = Particles(mutated[0], mutated[1], particles.log_weights)
-        return particles
+        new_particles = Particles(mutated[0], mutated[1], particles.log_weights)
+        new_particles._total_unlw = particles.total_unnorm_log_weight
+        return new_particles
 
     @property
     def mcmc_kernel(self):

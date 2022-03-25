@@ -57,6 +57,10 @@ class SamplerBase:
             self._result = InMemoryStorage()
 
     @property
+    def phi_sequence(self):
+        return np.array(self._phi_sequence)
+
+    @property
     def step(self):
         return self._step
 

@@ -9,7 +9,7 @@ class BaseStorage:
 
     def estimate_marginal_log_likelihoods(self):
         sum_un_log_wts = [0]
-        sum_un_log_wts += [(p.compute_total_unnorm_log_wt()) for p in self]
+        sum_un_log_wts += [p.total_unnorm_log_weight for p in self]
         return np.cumsum(sum_un_log_wts)
 
 

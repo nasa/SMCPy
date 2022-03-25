@@ -136,8 +136,7 @@ class AdaptiveSampler(SamplerBase):
 
         self._close_progress_bar(pbar)
 
-        phi_sequence = np.array(self._phi_sequence)
-        self.req_phi_index = [i for i, phi in enumerate(phi_sequence) \
+        self.req_phi_index = [i for i, phi in enumerate(self.phi_sequence) \
                               if phi in self._as_phi_list(required_phi)]
 
         return self._result, self._result.estimate_marginal_log_likelihoods()

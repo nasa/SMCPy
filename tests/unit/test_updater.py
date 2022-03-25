@@ -14,6 +14,7 @@ class MockedParticles:
         self.log_weights = log_weights
         self.weights = np.exp(log_weights)
         self.num_particles = len(log_weights)
+        self.total_unnorm_log_weight = 99
 
     def compute_ess(self):
         return 0.5 * self.params.shape[0]
@@ -80,3 +81,5 @@ def test_update_with_resample(mocked_particles, random_samples,
                                   mocked_particles.log_likes[resample_indices])
     np.testing.assert_array_equal(new_particles.params,
                                   mocked_particles.params[resample_indices])
+
+    assert new_particles._total_unlw == 99
