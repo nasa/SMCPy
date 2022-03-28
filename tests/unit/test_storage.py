@@ -20,19 +20,24 @@ def mock_particles(mocker):
     mock_particles.log_likes = np.ones((10, 1))
     mock_particles.log_weights = np.ones((10, 1))
     mock_particles.total_unnorm_log_weight = 99
+    mock_particles.attrs = {'phi': 2}
     return mock_particles
 
 
-def test_inmemorystorage_save():
+def test_inmemorystorage_save(mocker):
+    mocks = [mocker.Mock() for _ in range(3)]
+    for i, mock in enumerate(mocks):
+        mock.attrs = {'phi': i / 10}
+
     storage = InMemoryStorage()
-    storage.save_step(1, phi=0)
-    storage.save_step(2, phi=0.5)
-    storage.save_step(3, phi=1.0)
-    assert storage[0] == 1
-    assert storage[1] == 2
-    assert storage[2] == 3
-    assert all([x == i + 1 for i, x in enumerate(storage)])
-    assert storage.phi_sequence == [0, 0.5, 1.0]
+    storage.save_step(mocks[0])
+    storage.save_step(mocks[1])
+    storage.save_step(mocks[2])
+
+    assert storage[0] == mocks[0]
+    assert storage[1] == mocks[1]
+    assert storage[2] == mocks[2]
+    assert storage.phi_sequence == [0, 0.1, 0.2]
 
 
 @pytest.mark.parametrize('steps', [2, 3, 4, 10])
@@ -73,8 +78,8 @@ def test_hdf5storage_restart(tmpdir):
 
 def test_hdf5storage_save(tmpdir, mock_particles):
     storage = HDF5Storage(filename=tmpdir/'test.h5')
-    storage.save_step(mock_particles, phi=0)
-    storage.save_step(mock_particles, phi=1)
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
 
     def test_particles(p):
         np.testing.assert_array_equal(p.params, mock_particles.params)
@@ -84,16 +89,16 @@ def test_hdf5storage_save(tmpdir, mock_particles):
 
     assert isinstance(storage[0], DummyParticles)
     [test_particles(p) for p in storage]
-    assert storage.phi_sequence == [0, 1]
+    assert storage.phi_sequence == [2, 2]
 
 
 def test_hdf5storage_load_existing(tmpdir, mock_particles):
     storage = HDF5Storage(filename=tmpdir/'test.h5')
-    storage.save_step(mock_particles, phi=0)
-    storage.save_step(mock_particles, phi=1)
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
 
     storage = HDF5Storage(filename=tmpdir/'test.h5')
-    storage.save_step(mock_particles, phi=0)
+    storage.save_step(mock_particles)
 
-    assert storage.phi_sequence == [0, 1, 0]
+    assert storage.phi_sequence == [2, 2, 2]
 

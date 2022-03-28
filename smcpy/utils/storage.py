@@ -57,9 +57,9 @@ class InMemoryStorage(BaseStorage):
         else:
             raise StopIteration
 
-    def save_step(self, step, phi):
+    def save_step(self, step):
         self._step_list.append(step)
-        self._phi_sequence.append(phi)
+        self._phi_sequence.append(step.attrs['phi'])
 
 
 
@@ -79,11 +79,11 @@ class HDF5Storage(BaseStorage):
         h5.close()
         return phi_sequence
 
-    def save_step(self, step, phi):
+    def save_step(self, step):
         h5 = self._open_h5()
         last_index = int(max([i for i in h5.keys()] + ['-1']))
         step_grp = h5.create_group(str(last_index + 1))
-        step_grp.attrs['phi'] = phi
+        step_grp.attrs['phi'] = step.attrs['phi']
         step_grp.attrs['total_unnorm_log_weight'] = step.total_unnorm_log_weight
         step_grp.create_dataset('params', data=step.params)
         step_grp.create_dataset('log_likes', data=step.log_likes)

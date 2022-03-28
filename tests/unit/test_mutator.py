@@ -11,6 +11,7 @@ class DummyParticles:
         self.params = params
         self.log_likes = log_likes
         self.log_weights = log_weights
+        self.attrs = {}
 
     def compute_covariance(self):
         return 4
@@ -50,6 +51,7 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     assert mutated_particles.log_likes == 20
     assert mutated_particles.log_weights == 3
     assert mutated_particles._total_unlw == 99
+    assert mutated_particles.attrs['phi'] == 1
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
             mocked_particles.param_dict, mocked_particles.log_likes,

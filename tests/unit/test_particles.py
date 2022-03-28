@@ -50,6 +50,7 @@ def test_set_particles(particles, dummy_params, dummy_log_likes,
 
     assert isinstance(particles.total_unnorm_log_weight, float)
     assert particles.total_unnorm_log_weight == pytest.approx(2.50258509)
+    assert particles.attrs == dict()
 
 def test_params_value_error():
     params = {'a': [1, 2], 'c': [2], 'b': 4}

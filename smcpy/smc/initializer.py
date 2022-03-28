@@ -69,6 +69,7 @@ class Initializer:
         log_likes = self.mcmc_kernel.get_log_likelihoods(params)
         log_weights = np.array([np.log(1/num_particles)] * num_particles)
         particles = Particles(params, log_likes, log_weights)
+        particles.attrs.update({'phi': 0})
         return particles
 
     def init_particles_from_samples(self, samples, proposal_pdensities):
@@ -90,4 +91,5 @@ class Initializer:
         log_priors = self.mcmc_kernel.get_log_priors(samples)
         log_weights = log_priors - np.log(proposal_pdensities)
         particles = Particles(samples, log_likes, log_weights)
+        particles.attrs.update({'phi': 0})
         return particles

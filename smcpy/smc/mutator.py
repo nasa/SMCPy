@@ -52,6 +52,7 @@ class Mutator:
                                                     cov, phi)
         new_particles = Particles(mutated[0], mutated[1], particles.log_weights)
         new_particles._total_unlw = particles.total_unnorm_log_weight
+        new_particles.attrs.update({'phi': phi})
         return new_particles
 
     @property

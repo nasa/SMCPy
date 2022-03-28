@@ -13,6 +13,7 @@ class StubParticles:
         self.params = params
         self.log_likes = log_likes
         self.log_weights = log_weights
+        self.attrs = {}
 
 
 @pytest.fixture
@@ -42,6 +43,7 @@ def test_initialize_particles_from_prior(initializer, mocker):
                                          expected_log_like)
     np.testing.assert_array_almost_equal(particles.log_weights,
                                          expected_log_weight)
+    assert particles.attrs['phi'] == 0
 
 
 @pytest.mark.parametrize('dataframe', [True, False])
