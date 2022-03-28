@@ -214,7 +214,9 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
 
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, 'optimize_step', side_effect=[0.5, 0.6, 1.0])
-    mocker.patch.object(smc, '_do_smc_step', new = lambda w, x, y, z: y)
+    mocker.patch.object(smc, '_mutator')
+    mocker.patch.object(smc._mutator, 'mutate', return_value=0.4)
+    mocker.patch.object(smc, '_compute_mutation_ratio')
 
     steps, _ = smc.sample(num_particles=5, num_mcmc_samples=5, target_ess=1,
                               required_phi=required_phi)

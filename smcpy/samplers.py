@@ -82,8 +82,7 @@ class FixedSampler(SamplerBase):
 
         for i, phi in enumerate(phi_iterator):
             dphi = phi - self._phi_sequence[i]
-            self.step = self._do_smc_step(self.step, phi, dphi,
-                                          num_mcmc_samples)
+            self._do_smc_step(phi, dphi, num_mcmc_samples)
             set_bar(phi_iterator, i + 2, self._mutation_ratio, self._updater)
 
         return self._result, self._result.estimate_marginal_log_likelihoods()
@@ -129,8 +128,7 @@ class AdaptiveSampler(SamplerBase):
             phi = self.optimize_step(self.step, self._phi_sequence[-1],
                                      target_ess, required_phi)
             dphi = phi - self._phi_sequence[-1]
-            self.step = self._do_smc_step(self.step, phi, dphi,
-                                          num_mcmc_samples)
+            self._do_smc_step(phi, dphi, num_mcmc_samples)
             self._phi_sequence.append(phi)
             self._update_progress_bar(pbar, dphi)
 
