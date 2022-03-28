@@ -79,7 +79,8 @@ class SamplerBase:
 
     def _initialize(self, num_particles, proposal):
         if self._result and self._result.is_restart:
-            self._step, self._phi_sequence = self._result.load_for_restart()
+            self._step = self._result[-1]
+            self._phi_sequence = self._result.phi_sequence
             return None
         elif proposal:
             return self._initializer.init_particles_from_samples(*proposal)

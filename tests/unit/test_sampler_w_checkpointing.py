@@ -5,6 +5,16 @@ from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
 
 
+class DummyResult:
+
+    def __init__(self):
+        self.phi_sequence = [68, 67]
+        self.is_restart = True
+
+    def __getitem__(self, idx):
+        return 66
+
+
 @pytest.fixture
 def mcmc_kernel(mocker):
     return mocker.Mock(MCMCKernel)
@@ -19,14 +29,12 @@ def smc_w_context(mocker, mcmc_kernel):
 
 
 def test_context_initialize_on_restart(smc_w_context):
-    smc_w_context._result.is_restart.return_value = True
-    smc_w_context._result.load_for_restart.return_value = [68, 67]
+    smc_w_context._result = DummyResult()
 
     smc_w_context._initialize(num_particles=1, proposal=None)
 
-    smc_w_context._result.load_for_restart.assert_called_once()
-    assert smc_w_context._step == 68
-    assert smc_w_context._phi_sequence == 67
+    assert smc_w_context._step == 66
+    assert smc_w_context._phi_sequence == [68, 67]
 
 
 def test_context_initialize_no_restart(mocker, smc_w_context):
