@@ -31,6 +31,10 @@ class BaseStorage(ContextManager):
         pass
 
     @abstractmethod
+    def __len__(self):
+        pass
+
+    @abstractmethod
     def save_step(self, step):
         pass
 
@@ -58,6 +62,9 @@ class InMemoryStorage(BaseStorage):
         else:
             raise StopIteration
 
+    def __len__(self):
+        return len(self._step_list)
+
     def save_step(self, step):
         self._step_list.append(step)
         self._phi_sequence.append(step.attrs['phi'])
@@ -70,21 +77,22 @@ class HDF5Storage(BaseStorage):
         super().__init__()
         self._filename = filename
         self._mode = mode
+        self._len = 0
         if os.path.exists(filename) and mode != 'w':
+            self._init_length()
             self.is_restart = True
 
     @property
     def phi_sequence(self):
         h5 = self._open_h5()
-        phi_sequence = [h5[i].attrs['phi'] for i in sorted(h5.keys())]
-        h5.close()
+        phi_sequence = [h5[i].attrs['phi'] for i in sorted(h5.keys(), key=int)]
+        self._close(h5)
         return phi_sequence
 
     def save_step(self, step):
         h5 = self._open_h5()
-        last_index = int(max([i for i in h5.keys()] + ['-1']))
 
-        step_grp = h5.create_group(str(last_index + 1))
+        step_grp = h5.create_group(str(len(self)))
         step_grp.attrs['phi'] = step.attrs['phi']
         step_grp.attrs['total_unnorm_log_weight'] = step.total_unnorm_log_weight
         step_grp.create_dataset('log_likes', data=step.log_likes)
@@ -94,33 +102,49 @@ class HDF5Storage(BaseStorage):
         for key, array in step.param_dict.items():
             param_grp.create_dataset(key, data=array)
 
-        h5.close()
-
-    def _load_existing_phi_sequence(self):
-        h5 = self._open_h5()
+        self._close(h5)
 
     def _open_h5(self):
-        return h5py.File(self._filename, self._mode)
+        h5 = h5py.File(self._filename, self._mode)
+        self._len = len(h5.keys())
+        self._mode = 'r+'
+        return h5
+
+    def _close(self, h5):
+        self._len = len(h5.keys())
+        h5.close()
 
     def __getitem__(self, idx):
         h5 = self._open_h5()
-        step_grp = h5[str(idx)]
+        step_grp = h5[self._format_index(idx)]
 
         total_unlw = step_grp.attrs['total_unnorm_log_weight']
         kwargs = {k: v[:] for k, v in step_grp.items() if k != 'params'}
-        kwargs['param_dict'] = {k: v[:] for k, v in step_grp['params'].items()}
+        kwargs['params'] = {k: v[:] for k, v in step_grp['params'].items()}
         particles = Particles(**kwargs)
-        particles.total_unnorm_log_weight = total_unlw
+        particles._total_unlw = total_unlw
 
-        h5.close()
+        self._close(h5)
         return particles
+
+    def _format_index(self, idx):
+        if idx < 0:
+            idx = len(self) + idx
+        if idx < 0 or idx >= len(self):
+            raise IndexError(f'index {idx} out of range.')
+        return str(idx)
 
     def __next__(self):
         try:
             output = self[self._idx]
             self._idx += 1
             return output
-        except KeyError:
+        except IndexError:
             raise StopIteration
 
+    def __len__(self):
+        return self._len
 
+    def _init_length(self):
+        h5 = self._open_h5()
+        self._close(h5)

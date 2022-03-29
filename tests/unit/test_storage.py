@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import pytest
 
@@ -5,11 +6,11 @@ from smcpy.utils.storage import *
 
 class DummyParticles:
 
-    def __init__(self, param_dict, log_likes, log_weights):
+    def __init__(self, params, log_likes, log_weights):
         self.log_likes = log_likes
         self.log_weights = log_weights
-        self.param_dict = param_dict
-        self.params = np.vstack([val for val in param_dict.values()]).T
+        self.param_dict = params
+        self.params = np.vstack([val for val in params.values()]).T
 
 
 @pytest.fixture
@@ -39,7 +40,14 @@ def test_inmemorystorage_save(mocker):
     assert storage[0] == mocks[0]
     assert storage[1] == mocks[1]
     assert storage[2] == mocks[2]
+    assert storage[-1] == mocks[2]
+    assert len(storage) == 3
     assert storage.phi_sequence == [0, 0.1, 0.2]
+
+    with pytest.raises(IndexError):
+        storage[3]
+    with pytest.raises(IndexError):
+        storage[-4]
 
 
 @pytest.mark.parametrize('steps', [2, 3, 4, 10])
@@ -72,9 +80,10 @@ def test_hdf5storage_no_restart_write_mode(tmpdir):
     storage = HDF5Storage(str(f), mode='w')
     assert not storage.is_restart
 
-def test_hdf5storage_restart(tmpdir):
+def test_hdf5storage_restart(tmpdir, mocker):
     f = tmpdir / 'test.h5'
     f.write_text('test', encoding='ascii')
+    mocker.patch('smcpy.utils.storage.HDF5Storage._init_length')
     storage = HDF5Storage(str(f))
     assert storage.is_restart
 
@@ -89,7 +98,7 @@ def test_hdf5storage_save(tmpdir, mock_particles):
         np.testing.assert_array_equal(p.log_weights, mock_particles.log_weights)
         for key, val in mock_particles.param_dict.items():
             np.testing.assert_array_equal(p.param_dict[key], val)
-        assert p.total_unnorm_log_weight == 99
+        assert p._total_unlw == 99
 
     assert isinstance(storage[0], DummyParticles)
     [test_particles(p) for p in storage]
@@ -98,10 +107,36 @@ def test_hdf5storage_save(tmpdir, mock_particles):
 
 def test_hdf5storage_load_existing(tmpdir, mock_particles):
     storage = HDF5Storage(filename=tmpdir/'test.h5')
-    storage.save_step(mock_particles)
-    storage.save_step(mock_particles)
+    mp2 = copy.deepcopy(mock_particles)
+    mp2.attrs['phi'] = 1
+    [storage.save_step(mock_particles) for _ in range(12)] # 2 digits tests sort
+    storage.save_step(mp2)
 
     storage = HDF5Storage(filename=tmpdir/'test.h5')
     storage.save_step(mock_particles)
 
-    assert storage.phi_sequence == [2, 2, 2]
+    assert storage.phi_sequence == [2] * 12 + [1, 2]
+
+
+def test_hdf5storage_length(tmpdir, mock_particles):
+    storage = HDF5Storage(filename=tmpdir/'test.h5')
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
+
+    assert len(storage) == 2
+
+
+def test_hdf5storage_neg_indexing(tmpdir, mock_particles):
+    storage = HDF5Storage(filename=tmpdir/'test.h5')
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
+
+    assert storage[-1]
+    assert storage[-2]
+    assert storage[0]
+    assert storage[1]
+
+    with pytest.raises(IndexError):
+        storage[2]
+    with pytest.raises(IndexError):
+        storage[-3]
