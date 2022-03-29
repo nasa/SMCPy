@@ -5,11 +5,11 @@ from smcpy.utils.storage import *
 
 class DummyParticles:
 
-    def __init__(self, params, log_likes, log_weights):
+    def __init__(self, param_dict, log_likes, log_weights):
         self.log_likes = log_likes
         self.log_weights = log_weights
-        self.params = params
-
+        self.param_dict = param_dict
+        self.params = np.vstack([val for val in param_dict.values()]).T
 
 
 @pytest.fixture
@@ -17,6 +17,8 @@ def mock_particles(mocker):
     mocker.patch('smcpy.utils.storage.Particles', new=DummyParticles)
     mock_particles = mocker.Mock()
     mock_particles.params = np.ones((10, 3))
+    mock_particles.param_dict = {'0': np.ones(10), '1': np.ones(10),
+                                 '2': np.ones(10)}
     mock_particles.log_likes = np.ones((10, 1))
     mock_particles.log_weights = np.ones((10, 1))
     mock_particles.total_unnorm_log_weight = 99
@@ -85,6 +87,8 @@ def test_hdf5storage_save(tmpdir, mock_particles):
         np.testing.assert_array_equal(p.params, mock_particles.params)
         np.testing.assert_array_equal(p.log_likes, mock_particles.log_likes)
         np.testing.assert_array_equal(p.log_weights, mock_particles.log_weights)
+        for key, val in mock_particles.param_dict.items():
+            np.testing.assert_array_equal(p.param_dict[key], val)
         assert p.total_unnorm_log_weight == 99
 
     assert isinstance(storage[0], DummyParticles)
@@ -101,4 +105,3 @@ def test_hdf5storage_load_existing(tmpdir, mock_particles):
     storage.save_step(mock_particles)
 
     assert storage.phi_sequence == [2, 2, 2]
-

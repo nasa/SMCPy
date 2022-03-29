@@ -5,9 +5,10 @@ import os
 from abc import abstractmethod
 
 from smcpy.smc.particles import Particles
+from .context_manager import ContextManager
 
 
-class BaseStorage:
+class BaseStorage(ContextManager):
 
     def __init__(self):
         self.is_restart = False
@@ -82,12 +83,17 @@ class HDF5Storage(BaseStorage):
     def save_step(self, step):
         h5 = self._open_h5()
         last_index = int(max([i for i in h5.keys()] + ['-1']))
+
         step_grp = h5.create_group(str(last_index + 1))
         step_grp.attrs['phi'] = step.attrs['phi']
         step_grp.attrs['total_unnorm_log_weight'] = step.total_unnorm_log_weight
-        step_grp.create_dataset('params', data=step.params)
         step_grp.create_dataset('log_likes', data=step.log_likes)
         step_grp.create_dataset('log_weights', data=step.log_weights)
+
+        param_grp = step_grp.create_group('params')
+        for key, array in step.param_dict.items():
+            param_grp.create_dataset(key, data=array)
+
         h5.close()
 
     def _load_existing_phi_sequence(self):
@@ -101,7 +107,8 @@ class HDF5Storage(BaseStorage):
         step_grp = h5[str(idx)]
 
         total_unlw = step_grp.attrs['total_unnorm_log_weight']
-        kwargs = {key: val[:] for key, val in step_grp.items()}
+        kwargs = {k: v[:] for k, v in step_grp.items() if k != 'params'}
+        kwargs['param_dict'] = {k: v[:] for k, v in step_grp['params'].items()}
         particles = Particles(**kwargs)
         particles.total_unnorm_log_weight = total_unlw
 
