@@ -32,6 +32,9 @@ def rank_zero_run_only(func):
         try:
             if self._mcmc_kernel._mcmc._rank == 0:
                 func(self, *args, **kwargs)
+                self._mcmc_kernel._mcmc._comm.Barrier()
+            else:
+                self._mcmc_kernel._mcmc._comm.Barrier()
 
         except AttributeError: # no MPI
             func(self, *args, **kwargs)
