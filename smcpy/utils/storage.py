@@ -78,9 +78,12 @@ class HDF5Storage(BaseStorage):
         self._filename = filename
         self._mode = mode
         self._len = 0
-        if os.path.exists(filename) and mode != 'w':
-            self._init_length_on_restart()
-            self.is_restart = True
+        if os.path.exists(filename):
+            if mode != 'w':
+                self._init_length_on_restart()
+                self.is_restart = True
+            else:
+                os.remove(filename)
 
     @property
     def phi_sequence(self):

@@ -78,6 +78,7 @@ def test_hdf5storage_no_restart_write_mode(tmpdir):
     f.write_text('test', encoding='ascii')
     storage = HDF5Storage(str(f), mode='w')
     assert not storage.is_restart
+    assert not f.isfile()
 
 def test_hdf5storage_restart(tmpdir, mocker):
     f = tmpdir / 'test.h5'

@@ -67,3 +67,4 @@ if __name__ == '__main__':
     print('parameter means = {}'.format(results[-1].compute_mean()))
     plot_pairwise(results[-1].params, results[-1].weights,
                   param_names=['a', 'b'])
+
