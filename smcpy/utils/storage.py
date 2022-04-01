@@ -76,7 +76,6 @@ class HDF5Storage(BaseStorage):
     def __init__(self, filename, mode='a'):
         super().__init__()
         self._filename = filename
-        self._mode = mode
         self._len = 0
         if os.path.exists(filename):
             if mode != 'w':
@@ -107,9 +106,7 @@ class HDF5Storage(BaseStorage):
 
         self._close(h5)
 
-    def _open_h5(self, mode=None):
-        if not mode:
-            mode = self._mode
+    def _open_h5(self, mode):
         h5 = h5py.File(self._filename, mode)
         self._len = len(h5.keys())
         return h5
