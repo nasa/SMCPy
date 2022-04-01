@@ -37,6 +37,7 @@ from abc import ABC, abstractmethod
 from .smc.initializer import Initializer
 from .smc.mutator import Mutator
 from .utils.storage import InMemoryStorage
+from .utils.mpi_utils import rank_zero_run_only
 from .utils.context_manager import ContextManager
 
 
@@ -67,7 +68,7 @@ class SamplerBase:
     @step.setter
     def step(self, step):
         if step is not None:
-            self._result.save_step(step)
+            self._save_step(step)
             self._step = step
 
     @abstractmethod
@@ -76,6 +77,7 @@ class SamplerBase:
         Performs SMC sampling. Returns step list and estimates of marginal
         log likelihood at each step.
         '''
+        raise NotImplementedError
 
     def _initialize(self, num_particles, proposal):
         if self._result and self._result.is_restart:
@@ -95,3 +97,7 @@ class SamplerBase:
     def _compute_mutation_ratio(self, old_particles, new_particles):
         mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
         self._mutation_ratio = sum(mutated) / new_particles.params.shape[0]
+
+    @rank_zero_run_only
+    def _save_step(self, step):
+        self._result.save_step(step)

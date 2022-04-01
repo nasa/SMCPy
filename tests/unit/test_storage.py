@@ -64,7 +64,6 @@ def test_marginal_log_likelihood_calculation(mocker, steps):
     mll = storage.estimate_marginal_log_likelihoods()
     np.testing.assert_array_almost_equal(mll, np.log(expected_mll))
 
-
 def test_inmemorystorage_cannot_restart():
     storage = InMemoryStorage()
     assert not storage.is_restart
@@ -83,7 +82,7 @@ def test_hdf5storage_no_restart_write_mode(tmpdir):
 def test_hdf5storage_restart(tmpdir, mocker):
     f = tmpdir / 'test.h5'
     f.write_text('test', encoding='ascii')
-    mocker.patch('smcpy.utils.storage.HDF5Storage._init_length')
+    mocker.patch('smcpy.utils.storage.HDF5Storage._init_length_on_restart')
     storage = HDF5Storage(str(f))
     assert storage.is_restart
 
@@ -140,3 +139,14 @@ def test_hdf5storage_neg_indexing(tmpdir, mock_particles):
         storage[2]
     with pytest.raises(IndexError):
         storage[-3]
+
+
+def test_overwrite_mode(mocker, tmpdir):
+    h5_mock = mocker.patch('smcpy.utils.storage.h5py.File')
+
+    filename = tmpdir/'test.h5'
+    storage = HDF5Storage(filename=filename, mode='a')
+
+    storage._open_h5('w')
+
+    h5_mock.assert_called_once_with(filename, 'w')

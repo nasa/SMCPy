@@ -4,7 +4,7 @@ import os
 
 from abc import abstractmethod
 
-from smcpy.smc.particles import Particles
+from ..smc.particles import Particles
 from .context_manager import ContextManager
 
 
@@ -20,7 +20,7 @@ class BaseStorage(ContextManager):
 
     @abstractmethod
     def __getitem__(self, idx):
-        pass
+        raise NotImplementedError
 
     def __iter__(self):
         self._idx = 0
@@ -28,15 +28,15 @@ class BaseStorage(ContextManager):
 
     @abstractmethod
     def __next__(self):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def __len__(self):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def save_step(self, step):
-        pass
+        raise NotImplementedError
 
 
 
@@ -79,18 +79,18 @@ class HDF5Storage(BaseStorage):
         self._mode = mode
         self._len = 0
         if os.path.exists(filename) and mode != 'w':
-            self._init_length()
+            self._init_length_on_restart()
             self.is_restart = True
 
     @property
     def phi_sequence(self):
-        h5 = self._open_h5()
+        h5 = self._open_h5('r')
         phi_sequence = [h5[i].attrs['phi'] for i in sorted(h5.keys(), key=int)]
         self._close(h5)
         return phi_sequence
 
     def save_step(self, step):
-        h5 = self._open_h5()
+        h5 = self._open_h5('a')
 
         step_grp = h5.create_group(str(len(self)))
         step_grp.attrs['phi'] = step.attrs['phi']
@@ -104,10 +104,11 @@ class HDF5Storage(BaseStorage):
 
         self._close(h5)
 
-    def _open_h5(self):
-        h5 = h5py.File(self._filename, self._mode)
+    def _open_h5(self, mode=None):
+        if not mode:
+            mode = self._mode
+        h5 = h5py.File(self._filename, mode)
         self._len = len(h5.keys())
-        self._mode = 'r+'
         return h5
 
     def _close(self, h5):
@@ -115,7 +116,7 @@ class HDF5Storage(BaseStorage):
         h5.close()
 
     def __getitem__(self, idx):
-        h5 = self._open_h5()
+        h5 = self._open_h5('r')
         step_grp = h5[self._format_index(idx)]
 
         total_unlw = step_grp.attrs['total_unnorm_log_weight']
@@ -145,6 +146,6 @@ class HDF5Storage(BaseStorage):
     def __len__(self):
         return self._len
 
-    def _init_length(self):
-        h5 = self._open_h5()
+    def _init_length_on_restart(self):
+        h5 = self._open_h5('r')
         self._close(h5)

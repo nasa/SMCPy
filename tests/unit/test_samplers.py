@@ -71,7 +71,9 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
     np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[1:])
     update_bar.assert_called()
 
-    assert len(result_mock.save_step.call_args_list) == len(phi_sequence) - 1
+    if rank == 0:
+        num_saves = len(result_mock.save_step.call_args_list)
+        assert num_saves == len(phi_sequence) - 1
     assert mll == 34
     assert smc.step == 3
 

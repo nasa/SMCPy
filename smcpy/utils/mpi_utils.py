@@ -19,3 +19,21 @@ def rank_zero_output_only(func):
         return output
 
     return wrapper
+
+
+def rank_zero_run_only(func):
+    """
+    Wrapper function that detects whether mpi4py is available and prohibits
+    ranks > 0 from performing the decorated function. Only intended for
+    functions that return None (eg operate on internal state).
+    """
+    def wrapper(self, *args, **kwargs):
+
+        try:
+            if self._mcmc_kernel._mcmc._rank == 0:
+                func(self, *args, **kwargs)
+
+        except AttributeError: # no MPI
+            func(self, *args, **kwargs)
+
+    return wrapper
