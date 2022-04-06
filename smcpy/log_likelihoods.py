@@ -208,7 +208,8 @@ class MVNRandomEffects(BaseLogLike):
 
         super().__init__(model, data, args)
 
-        self._randeffs = [Normal(model, data[i], arg_i) \
+        models = self._verify_model_type()
+        self._randeffs = [Normal(models[i], data[i], arg_i) \
                           for i, arg_i in enumerate(args[1])]
 
         self._n_total_eff_nones = self._args[0].count(None)
@@ -237,6 +238,14 @@ class MVNRandomEffects(BaseLogLike):
         log_like.append(total_eff_log_like)
 
         return np.sum(log_like, axis=0)
+
+    def _verify_model_type(self):
+        if isinstance(self._model, list):
+            if len(self._args[1]) != len(self._model):
+                raise ValueError('If multiple models provided, number must be ',
+                                 'equal to number of random effects.')
+            return self._model
+        return [self._model] * len(self._args[1])
 
     def _process_fixed_and_variable_std(self, inputs):
         num_randeff = len(self._args[1])

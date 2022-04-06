@@ -213,3 +213,25 @@ def test_random_effects_dummy_model(mocker):
 
     np.testing.assert_array_equal(mvnre._total_effects_model(np.ones((5, 5))), 
                                   np.ones((5, 5)))
+
+
+def test_random_effects_multi_model(mocker):
+    norm_mock = mocker.patch('smcpy.log_likelihoods.Normal')
+    model = [0, 1, 2]
+    args = ([1], [0, 1, 2])
+    data = [0, 1, 2]
+
+    mvnre = MVNRandomEffects(model, data, args)
+
+    for i in model:
+        assert norm_mock.call_args_list[i][0] == (i, i, i)
+
+
+
+def test_random_effects_multi_model_not_match_num_rand_eff():
+    model = [1]
+    data = []
+    args = ([1], list(range(5)))
+
+    with pytest.raises(ValueError):
+        MVNRandomEffects(model, data, args)
