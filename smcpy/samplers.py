@@ -47,7 +47,7 @@ class FixedSampler(SamplerBase):
         super().__init__(mcmc_kernel)
 
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
-               ess_threshold, proposal=None, progress_bar=False):
+               ess_threshold, proposal=None, progress_bar=True):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -95,7 +95,7 @@ class AdaptiveSampler(SamplerBase):
         super().__init__(mcmc_kernel)
 
     def sample(self, num_particles, num_mcmc_samples, target_ess=0.8,
-               proposal=None, required_phi=1, progress_bar=False):
+               proposal=None, required_phi=1, progress_bar=True):
         '''
         :param num_particles: number of particles
         :type num_particles: int
