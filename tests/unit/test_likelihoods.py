@@ -178,6 +178,7 @@ def test_mvnrandeff_likelihood(mocker, args):
     expected_log_like = np.ones((n_samples, 1)) * (3 + 2 * n_randeff)
 
     mvnre = MVNRandomEffects(model, data, args)
+    mvnre.set_model_wrapper(99)
 
     np.testing.assert_array_equal(mvnre(inputs), expected_log_like)
 
@@ -193,6 +194,7 @@ def test_mvnrandeff_likelihood(mocker, args):
         assert call[0] == mvnre._total_effects_model
         np.testing.assert_array_equal(call[1], te_data)
         assert call[2] == args[0]
+        mvn_like.set_model_wrapper.assert_called_with(99)
 
     # random effects likelihood calls
     for i in range(n_randeff):
@@ -202,6 +204,7 @@ def test_mvnrandeff_likelihood(mocker, args):
         assert call[2] == args[1][i]
         np.testing.assert_array_equal(norm_like.call_args_list[i][0][0],
                                       exp_norm_inputs[i])
+        norm_like.set_model_wrapper.assert_called_with(99)
 
 
 def test_random_effects_dummy_model(mocker):
@@ -222,9 +225,11 @@ def test_random_effects_multi_model(mocker):
     data = [0, 1, 2]
 
     mvnre = MVNRandomEffects(model, data, args)
+    mvnre.set_model_wrapper(4)
 
     for i in model:
         assert norm_mock.call_args_list[i][0] == (i, i, i)
+    assert norm_mock._model_wrapper.called_with(4)
 
 
 

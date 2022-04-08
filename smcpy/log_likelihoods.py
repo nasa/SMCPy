@@ -214,9 +214,7 @@ class MVNRandomEffects(BaseLogLike):
 
         super().__init__(model, data, args)
 
-        models = self._verify_model_type()
-        self._randeffs = [Normal(models[i], data[i], arg_i) \
-                          for i, arg_i in enumerate(args[1])]
+        self._randeffs = self._init_randeffs()
 
         self._n_total_eff_nones = self._args[0].count(None)
         self._n_rand_eff_nones = self._args[1].count(None)
@@ -235,6 +233,7 @@ class MVNRandomEffects(BaseLogLike):
             reff_data_array = np.array([ni[i] for ni in rand_eff_model_inputs])
             total_eff = MVNormal(self._total_effects_model, reff_data_array,
                                  self._args[0])
+            total_eff.set_model_wrapper(self._model_wrapper)
 
             in_ = total_eff_inputs[i].reshape(1, -1)
             total_eff_log_like[i, 0] = total_eff(in_)
@@ -244,6 +243,17 @@ class MVNRandomEffects(BaseLogLike):
         log_like.append(total_eff_log_like)
 
         return np.sum(log_like, axis=0)
+
+    def set_model_wrapper(self, wrapper):
+        self._model_wrapper = wrapper
+        self._init_randeffs()
+
+    def _init_randeffs(self):
+        self._randeffs = []
+        models = self._verify_model_type()
+        for i, arg_i in enumerate(self._args[1]):
+            self._randeffs.append(Normal(models[i], self._data[i], arg_i))
+            self._randeffs[-1].set_model_wrapper(self._model_wrapper)
 
     def _verify_model_type(self):
         if isinstance(self._model, list):
