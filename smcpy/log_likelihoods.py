@@ -7,11 +7,17 @@ class BaseLogLike:
         self._data = data
         self._args = args
 
+        self.set_model_wrapper(lambda model, x: model(x))
+
     def _get_output(self, inputs):
-        output = self._model(inputs)
+        output = self._model_wrapper(self._model, inputs)
         if np.isnan(output).any():
             raise ValueError
         return output
+
+    def set_model_wrapper(self, wrapper):
+        self._model_wrapper = wrapper
+
 
 
 class Normal(BaseLogLike):

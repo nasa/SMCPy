@@ -1,10 +1,10 @@
 import numpy as np
 
-from .mcmc_base import MCMCBase
+from .vector_mcmc import VectorMCMC
 from ..log_likelihoods import Normal
 
 
-class ParallelMCMC(MCMCBase):
+class ParallelMCMC(VectorMCMC):
     '''
     Enables use of MPI to split model evaluations over a distributed memory
     system.
@@ -18,26 +18,28 @@ class ParallelMCMC(MCMCBase):
     '''
 
     def __init__(self, model, data, priors, mpi_comm, log_like_args=None,
-                 log_like_func=Normal, debug=False):
+                 log_like_func=Normal):
         self._comm = mpi_comm
         self._size = mpi_comm.Get_size()
         self._rank = mpi_comm.Get_rank()
 
-        super().__init__(model, data, priors, log_like_args, log_like_func,
-                         debug)
+        super().__init__(model, data, priors, log_like_args, log_like_func)
+
+        self._log_like_func.set_model_wrapper(self.model_wrapper)
+
         try:
             self._output_dim = self._data.shape[1]
         except:
             self._output_dim = self._data.size
 
-    def evaluate_model(self, inputs):
+    def model_wrapper(self, model, inputs):
         partitioned_inputs = np.array_split(inputs, self._size)
         scattered_inputs = []
         scattered_inputs = self._comm.scatter(partitioned_inputs, root=0)
 
         scattered_outputs = np.array([]).reshape(0, self._output_dim)
         if scattered_inputs.shape[0] > 0:
-            scattered_outputs = self._eval_model(scattered_inputs)
+            scattered_outputs = model(scattered_inputs)
 
         gathered_outputs = self._comm.allgather(scattered_outputs)
         outputs = np.concatenate(gathered_outputs)

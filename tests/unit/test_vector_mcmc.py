@@ -149,7 +149,7 @@ def test_vectorized_accept_ratio(vector_mcmc, new_inputs, old_inputs, mocker):
 def test_vectorized_get_rejections(vector_mcmc, mocker):
     acceptance_ratios = np.c_[[0.25, 1.2, 0.25, 0.75]]
     uniform_samples = np.full((4, 1), 0.5)
-    uniform_mock = mocker.patch('smcpy.mcmc.mcmc_base.np.random.uniform',
+    uniform_mock = mocker.patch('smcpy.mcmc.vector_mcmc.np.random.uniform',
                                 return_value=uniform_samples)
     expected = np.c_[[True, False, True, False]]
 
@@ -206,7 +206,7 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, num_accepted,
     accpt_mock = pobj(vector_mcmc, 'acceptance_ratio')
     reject_mock = pobj(vector_mcmc, 'get_rejections', return_value=rejected)
 
-    mocker.patch('smcpy.mcmc.mcmc_base.np.where', new=lambda x, y, z: y)
+    mocker.patch('smcpy.mcmc.vector_mcmc.np.where', new=lambda x, y, z: y)
 
     vector_mcmc.smc_metropolis(inputs, num_samples, cov, phi)
 

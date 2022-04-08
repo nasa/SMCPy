@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy.mcmc.mcmc_base import MCMCBase
+from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.parallel_mcmc import ParallelMCMC
 
 
@@ -27,7 +27,7 @@ def test_comm_set(mock_comm):
 def test_inherit(mock_comm):
     pmcmc = ParallelMCMC(model=None, data=np.ones(4), priors=None,
                          mpi_comm=mock_comm, log_like_args=None)
-    assert isinstance(pmcmc, MCMCBase)
+    assert isinstance(pmcmc, VectorMCMC)
 
 
 def test_mpi_eval_model(mocker, mock_comm):
@@ -48,7 +48,7 @@ def test_mpi_eval_model(mocker, mock_comm):
 
     pmcmc = ParallelMCMC(mock_model, data=inputs[0, :2].flatten(), priors=None,
                          mpi_comm=mock_comm, log_like_args=None)
-    output = pmcmc.evaluate_model(inputs)
+    output = pmcmc.model_wrapper(mock_model, inputs)
 
     np.testing.assert_array_equal(
                               np.concatenate(mock_comm.scatter.call_args[0][0]),
@@ -73,6 +73,6 @@ def test_mpi_eval_with_zero_scat_input(mocker, mock_comm, data_shape):
 
     pmcmc = ParallelMCMC(mocker.Mock(), data=data, priors=None,
                          mpi_comm=mock_comm, log_like_args=None)
-    output = pmcmc.evaluate_model(inputs)
+    output = pmcmc.model_wrapper(mocker.Mock(), inputs)
 
     assert allgather.call_args[0][0].shape == expected_scattered_output_shape

@@ -235,3 +235,15 @@ def test_random_effects_multi_model_not_match_num_rand_eff():
 
     with pytest.raises(ValueError):
         MVNRandomEffects(model, data, args)
+
+
+def test_likelihood_model_wrapper(mocker):
+    model = mocker.Mock(return_value=3)
+    like = Normal(model, data=1, args=None)
+
+    output1 = like._get_output(1)
+    like.set_model_wrapper(lambda model, x: 2 * model(x))
+    output2 = like._get_output(1)
+
+    assert output1 == 3
+    assert output2 == 6
