@@ -214,7 +214,8 @@ class MVNRandomEffects(BaseLogLike):
 
         super().__init__(model, data, args)
 
-        self._randeffs = self._init_randeffs()
+        self._randeffs = None
+        self._init_randeffs()
 
         self._n_total_eff_nones = self._args[0].count(None)
         self._n_rand_eff_nones = self._args[1].count(None)
