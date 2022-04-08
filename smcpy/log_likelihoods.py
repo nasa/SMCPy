@@ -229,7 +229,7 @@ class MVNRandomEffects(BaseLogLike):
         rand_eff_inputs = processed_inputs[1]
         rand_eff_model_inputs = processed_inputs[2]
 
-        total_eff_log_like = np.ones((inputs.shape[0], 1)) * -np.inf
+        total_eff_log_like = np.full((inputs.shape[0], 1), -np.inf)
         for i in range(inputs.shape[0]):
 
             reff_data_array = np.array([ni[i] for ni in rand_eff_model_inputs])
