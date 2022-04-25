@@ -194,7 +194,7 @@ def test_mvnrandeff_likelihood(mocker, args):
         assert call[0] == mvnre._total_effects_model
         np.testing.assert_array_equal(call[1], te_data)
         assert call[2] == args[0]
-        mvn_like.set_model_wrapper.assert_called_with(99)
+        mvn_like.set_model_wrapper.assert_not_called()
 
     # random effects likelihood calls
     for i in range(n_randeff):

@@ -234,7 +234,6 @@ class MVNRandomEffects(BaseLogLike):
             reff_data_array = np.array([ni[i] for ni in rand_eff_model_inputs])
             total_eff = MVNormal(self._total_effects_model, reff_data_array,
                                  self._args[0])
-            total_eff.set_model_wrapper(self._model_wrapper)
 
             in_ = total_eff_inputs[i].reshape(1, -1)
             total_eff_log_like[i, 0] = total_eff(in_)
