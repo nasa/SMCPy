@@ -58,7 +58,7 @@ if __name__ == '__main__':
     np.random.seed(200)
 
     noisy_data, true_rand_eff = gen_data_from_mvn(eval_model, plot=False)
-    num_samples = 10000
+    num_samples = 100
 
     idx1, idx2 = np.triu_indices(TRUE_COV.shape[0])
 

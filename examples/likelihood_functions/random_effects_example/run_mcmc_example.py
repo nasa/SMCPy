@@ -5,7 +5,7 @@ import time
 from numpy.random import multivariate_normal as MVN
 from scipy.stats import uniform
 
-from smcpy import MVNRandomEffects, ImproperUniform, SMCSampler
+from smcpy import MVNRandomEffects, ImproperUniform
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.utils.plotter import plot_mcmc_chain, plot_pairwise
