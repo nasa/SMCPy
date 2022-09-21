@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy.priors import ImproperUniform, InvWishart
+from smcpy.priors import ImproperUniform, InvWishart, ImproperCov
 
 @pytest.mark.parametrize('sign', [-1, 1])
 @pytest.mark.parametrize('x, expected', [(0, np.ones(1)), (1, np.ones(1)),
@@ -91,3 +91,46 @@ def test_invwishart_zero_prob(mocker, num_samples):
     iw = InvWishart(scale=np.eye(3), dof=3)
 
     np.testing.assert_array_equal(iw.pdf(samples), np.zeros((num_samples, 1)))
+
+
+def test_impropcov_dim():
+    p = ImproperCov(2)
+    assert p.dim == 3
+
+
+@pytest.mark.parametrize('cov', [np.ones((2, 4)), np.ones((10, 2, 1))])
+def test_impropcov_bad_shape(cov):
+    p = ImproperCov(2)
+    with pytest.raises(ValueError):
+        p.pdf(cov)
+
+
+@pytest.mark.parametrize('posdefindex', [x for x in range(5)])
+def test_impropcov_probability_nd(posdefindex):
+    expected_prob = np.array([[0]] * 5)
+    cov = np.array([[1., 2, 0]] * 5)
+
+    cov[posdefindex, :] = np.array([1, 0.5, 1.5])
+    expected_prob[posdefindex, 0] = 1
+
+    p = ImproperCov(2)
+    pdf = p.pdf(cov)
+
+    np.testing.assert_array_equal(pdf, expected_prob)
+
+@pytest.mark.parametrize('dof, scale, expdof, expscale',
+                         [(None, None, 2, np.eye(2)),
+                          (3, np.ones((2, 2)), 3, np.ones((2, 2)))])
+def test_impropcov_rvs(mocker, dof, scale, expdof, expscale):
+    mock_invwis = mocker.Mock()
+    mock_invwis.rvs.return_value = np.arange(8).reshape(2, 2, 2)
+    mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
+                                     return_value=mock_invwis)
+    p = ImproperCov(2, dof, scale)
+    samples = p.rvs(5)
+
+    assert mock_invwis_class.call_args[0][0] == expdof
+    np.testing.assert_array_equal(mock_invwis_class.call_args[0][1], expscale)
+    mock_invwis.rvs.asser_called_once_with(5)
+    np.testing.assert_array_equal(samples, np.array([[0, 1, 3], [4, 5, 7]]))
+

@@ -72,3 +72,52 @@ class InvWishart:
         covs[:, idx1, idx2] = samples
         covs += np.transpose(np.triu(covs, 1), axes=(0, 2, 1))
         return np.transpose(covs, axes=(1, 2, 0))
+
+class ImproperCov:
+    '''
+    Improper uniform prior distribution over all positive definite covariance
+    matrices. If sampling using the rvs method, will return samples from an
+    Inverse Wishart distribution with degrees of freedom dof and scale matrix S.
+    '''
+    def __init__(self, num_cov_cols, dof=None, S=None):
+        self._ncols = num_cov_cols
+        self._dim = int(num_cov_cols * (num_cov_cols + 1) / 2)
+        self._iw_dof = dof if dof is not None else num_cov_cols
+        self._iw_scale = S if S is not None else np.eye(self._ncols)
+
+    @property
+    def dim(self):
+        return self._dim
+
+    def pdf(self, samples):
+        self._check_samples_shape(samples)
+        covs = self._assemble_covs(samples)
+        pdf = np.array([self._is_pos_semidef(x) for x in covs]).reshape(-1, 1)
+        return pdf
+
+    def rvs(self, num_samples):
+        cov = invwishart(self._iw_dof, self._iw_scale).rvs(num_samples)
+        idx1, idx2 = np.triu_indices(self._ncols)
+        return cov[:, idx1, idx2]
+
+    def _assemble_covs(self, samples):
+        covs = np.zeros((samples.shape[0], self._ncols, self._ncols))
+        idx1, idx2 = np.triu_indices(self._ncols)
+        covs[:, idx1, idx2] = samples
+        covs += np.transpose(np.triu(covs, 1), axes=(0, 2, 1))
+        return covs
+
+    @staticmethod
+    def _is_pos_semidef(x):
+        try:
+            np.linalg.cholesky(x)
+            return 1
+        except np.linalg.linalg.LinAlgError:
+            return 0
+
+    def _check_samples_shape(self, cov):
+        if len(cov.shape) != 2 or cov.shape[1] != self._dim:
+            raise ValueError('Covariance must be 3D array w/ index 0 '
+                             'representing the sample index and indices 1 and '
+                             '2 representing the 2D covariance indices (which '
+                             'should also be equal size)')
