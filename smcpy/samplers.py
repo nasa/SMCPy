@@ -179,15 +179,16 @@ class AdaptiveSampler(SamplerBase):
     def _init_progress_bar(progress_bar):
         pbar = False
         if progress_bar:
-            format_ =  "{desc}: {percentage:.2f}%|{bar}| " + \
+            bar_format =  "{desc}: {percentage:.2f}%|{bar}| " + \
                        "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
-            pbar = tqdm(total=1.0, bar_format = format_)
+            pbar = tqdm(total=1.0, bar_format = bar_format)
+            pbar.set_description('[ mutation ratio: n/a')
             pbar.update(0)
         return pbar
 
-    @staticmethod
-    def _update_progress_bar(pbar, dphi):
+    def _update_progress_bar(self, pbar, dphi):
         if pbar:
+            pbar.set_description(f'[ mutation ratio: {self._mutation_ratio}')
             pbar.update(dphi)
 
     @staticmethod
