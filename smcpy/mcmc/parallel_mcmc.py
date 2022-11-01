@@ -24,12 +24,9 @@ class ParallelMCMC(VectorMCMC):
         self._rank = mpi_comm.Get_rank()
 
         super().__init__(model, data, priors, log_like_args, log_like_func)
-<<<<<<< HEAD
 
         self._log_like_func.set_model_wrapper(self.model_wrapper)
 
-=======
->>>>>>> develop
         try:
             self._output_dim = self._data.shape[1]
         except:
