@@ -1,2 +1,6 @@
 [run]
-omit = smcpy/mcmc/*.py
+omit = 
+    smcpy/utils/plotter.py
+    smcpy/utils/checks.py
+    smcpy/utils/properties.py
+    smcpy/utils/progres_bar.py
