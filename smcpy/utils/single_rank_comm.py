@@ -20,5 +20,5 @@ class SingleRankComm():
                              "partition")
 
     @staticmethod
-    def gather(scatter_list, *args, **kwargs):
+    def allgather(scatter_list, *args, **kwargs):
         return [scatter_list]
