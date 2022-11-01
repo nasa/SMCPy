@@ -1,5 +1,5 @@
 from .samplers import FixedSampler, AdaptiveSampler
-from .priors import ImproperUniform, InvWishart
+from .priors import ImproperUniform, InvWishart, ImproperCov
 from .log_likelihoods import Normal, MultiSourceNormal, MVNormal
 from .log_likelihoods import MVNRandomEffects
 from .mcmc.vector_mcmc import VectorMCMC

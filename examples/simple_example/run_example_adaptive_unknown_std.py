@@ -9,14 +9,14 @@ from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.utils.plotter import plot_pairwise
 
-from run_example_known_std import *
-
+from run_example_adaptive import generate_data, eval_model
 
 if __name__ == '__main__':
 
     np.random.seed(200)
 
-    noisy_data = generate_data(eval_model, plot=False)
+    std_dev = 2
+    noisy_data = generate_data(eval_model, std_dev, plot=False)
 
     std_dev = None # estimate it; requires prior for std_dev and param_order
 

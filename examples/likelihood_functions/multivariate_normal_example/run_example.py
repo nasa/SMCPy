@@ -1,13 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import time
+import pandas as pd
+import seaborn as sns
 
-from smcpy import MVNormal, ImproperUniform
-from smcpy.mcmc.vector_mcmc import VectorMCMC
+from scipy.stats import uniform
+
+from smcpy import MVNormal, ImproperCov, VectorMCMC, VectorMCMCKernel
+from smcpy.samplers import AdaptiveSampler
 from smcpy.utils.plotter import plot_mcmc_chain, plot_pairwise
-from smcpy.priors import InvWishart
 
-NUM_SNAPSHOTS = 10
+NUM_SNAPSHOTS = 50
 NUM_FEATURES = 3
 TRUE_PARAMS = np.array([[2, 3.5]])
 X = np.arange(NUM_FEATURES)
@@ -46,32 +48,32 @@ if __name__ == '__main__':
 
     np.random.seed(200)
 
+    num_particles = 1000
+
     noisy_data = gen_data_from_mvn(eval_model, plot=True)
-    num_samples = 50000
-    burnin = int(num_samples / 2)
-    init_inputs = np.array([[1, 2]])
-    priors = [ImproperUniform(0., 6.), ImproperUniform(0., 6.)]
-
     idx1, idx2 = np.triu_indices(noisy_data.shape[1])
+    param_order = ["a", "b"] + [f"cov{i}" for i in range(len(idx1))]
     log_like_args = [None] * len(idx1) # estimate all variances/covariances
-    log_like_func = MVNormal
 
-    init_cov = np.eye(noisy_data.shape[1])[idx1, idx2].reshape(1, -1) * 0.5
-    init_inputs = np.concatenate((init_inputs, init_cov), axis=1)
-    priors.append(InvWishart(NUM_FEATURES))
+    priors = [uniform(0., 6.), uniform(0., 6.), 
+              ImproperCov(3, dof=5, S=np.eye(3))]
 
-    vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, log_like_args,
-                             log_like_func)
-
-    cov = np.eye(init_inputs.shape[1]) * 0.001
-    chain = vector_mcmc.metropolis(init_inputs, num_samples, cov,
-                                   adapt_interval=200, adapt_delay=5000,
-                                   progress_bar=True)
+    mcmc = VectorMCMC(eval_model, noisy_data, priors, log_like_args, MVNormal)
+    kernel = VectorMCMCKernel(mcmc, param_order)
+    smc = AdaptiveSampler(kernel)
+    steps, mll = smc.sample(num_particles, 20, progress_bar=True)
 
     #plotting
     ground_truth = np.concatenate((TRUE_PARAMS.flatten(), TRUE_COV[idx1, idx2]))
-    labels = ['a', 'b'] + [f'var{i}' for i in range(init_cov.shape[1])]
-    plot_mcmc_chain(chain, param_labels=labels, burnin=burnin,
-                    include_kde=True)
-    plot_pairwise(chain.squeeze().T[burnin+1:], param_labels=labels,
-                  true_params=ground_truth)
+    ground_truth = pd.DataFrame(ground_truth.reshape(1, -1), columns=param_order)
+    ground_truth['type'] = 'True'
+    samples = pd.DataFrame(steps[-1].param_dict)
+    samples['type'] = 'SMC'
+    data = pd.concat([samples, ground_truth], ignore_index=True)
+    
+    g = sns.pairplot(data[param_order[:2] + ['type']], hue='type', corner=True)
+    g.map_lower(sns.kdeplot, levels=4, palette=['.2', '.2'], warn_singular=0)
+    sns.mpl.pyplot.show()
+    g = sns.pairplot(data[param_order[2:] + ['type']], hue='type', corner=True)
+    g.map_lower(sns.kdeplot, levels=4, palette=['.2', '.2'], warn_singular=0)
+    sns.mpl.pyplot.show()

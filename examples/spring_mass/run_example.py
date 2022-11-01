@@ -1,5 +1,6 @@
 import numpy as np
 
+from pathlib import Path
 from scipy.stats import uniform
 
 from spring_mass_model import SpringMassModel
@@ -15,7 +16,7 @@ model = SpringMassModel(state0, measure_t_grid)
 
 # Load data
 std_dev = 0.5
-displacement_data = np.genfromtxt('noisy_data.txt')
+displacement_data = np.genfromtxt(Path(__file__).parent / 'noisy_data.txt')
 
 # Define prior distributions & MCMC kernel
 priors = [uniform(0, 10), uniform(0, 10)]
