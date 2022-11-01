@@ -23,8 +23,7 @@ class VectorMCMC(MCMCBase):
             data, and hyperparameters and returns log likelihoods
         :type log_like_func: callable
         '''
-        super().__init__(model, data, priors, log_like_args, log_like_func,
-                         debug)
+        super().__init__(model, data, priors, log_like_args, log_like_func)
 
     def evaluate_model(self, inputs):
         return self._eval_model(inputs)

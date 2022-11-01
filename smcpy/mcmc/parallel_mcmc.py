@@ -18,13 +18,12 @@ class ParallelMCMC(MCMCBase):
     '''
 
     def __init__(self, model, data, priors, mpi_comm, log_like_args=None,
-                 log_like_func=Normal, debug=False):
+                 log_like_func=Normal):
         self._comm = mpi_comm
         self._size = mpi_comm.Get_size()
         self._rank = mpi_comm.Get_rank()
 
-        super().__init__(model, data, priors, log_like_args, log_like_func,
-                         debug)
+        super().__init__(model, data, priors, log_like_args, log_like_func)
         try:
             self._output_dim = self._data.shape[1]
         except:
