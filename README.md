@@ -2,21 +2,37 @@ SMCPy - **S**equential **M**onte **C**arlo **S**ampling with **Py**thon
 ==========================================================================
 [![Build Status](https://travis-ci.com/nasa/SMCPy.svg?branch=master)](https://travis-ci.com/nasa/SMCPy) &nbsp;[![Coverage Status](https://coveralls.io/repos/github/nasa/SMCPy/badge.svg?branch=master)](https://coveralls.io/github/nasa/SMCPy?branch=master)
 
-Python module for uncertainty quantification using a parallel sequential Monte
-Carlo sampler.
 
+## Description
+SMCPy is an open-source package for performing uncertainty quantification using
+a parallelized sequential Monte Carlo sampler.
+
+## Key Features
+* Alternative to Markov chain Monte Carlo for Bayesian inference problems
+* Unbiased estimation of marginal likelihood for Bayesian model selection
+* Parallelization through either numpy vectorization or mpi4py
+
+# Quick Start
+
+## Installation
+To install SMCPy, use pip.
+```sh
+pip install smcpy
+```
+
+## Overview
 To operate the code, the user supplies a computational model built in Python
 3.6+, defines prior distributions for each of the model parameters to be
-estimated, and provides data to be used for calibration. SMC sampling can then
-be conducted with ease through instantiation of a Sampler class and a call
-to the sample() method. The output of this process is an approximation of the
-parameter posterior probability distribution conditional on the data provided.
+estimated, and provides data to be used for probabilistic model calibration. SMC
+sampling of the parameter posterior distribution can then be conducted with ease
+through instantiation of a sampler class and a call to the sample() method.
 
 The two primary sampling algorithms implemented in this package are MPI-enabled
 versions of those presented in the following articles, respectively:
 > Nguyen, Thi Le Thu, et al. "Efficient sequential Monte-Carlo samplers for Bayesian
 > inference." IEEE Transactions on Signal Processing 64.5 (2015): 1305-1319.
 [Link to Article](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7339702) | [BibTeX Reference](https://scholar.googleusercontent.com/scholar.bib?q=info:L7AZJvppx1MJ:scholar.google.com/&output=citation&scisdr=CgUT24-FENXorVVNYK0:AAGBfm0AAAAAXYJIeK1GJKW947imCXoXAkfc7yZjQ7Oo&scisig=AAGBfm0AAAAAXYJIeNYSGEVCrlauowP6jMwVMHB_blTp&scisf=4&ct=citation&cd=-1&hl=en)
+
 
 > Buchholz, Alexander, Nicolas Chopin, and Pierre E. Jacob. "Adaptive tuning of
 > hamiltonian monte carlo within sequential monte carlo." Bayesian Analysis
@@ -32,7 +48,6 @@ target effective sample size ([AdaptiveSampler](https://github.com/nasa/SMCPy/bl
 This software was funded by and developed under the High Performance Computing
 Incubator (HPCI) at NASA Langley Research Center.
 
-------------------------------------------------------------------------------
 ## Example Usage
 
 ```python
@@ -77,25 +92,60 @@ ParallelMCMC class in place of VectorMCMC. More details can be found in the
 
 ![Pairwise](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png)
 
-Tests
------
+# Source
 
-The tests can be performed by running "pytest" from the tests/unit directory to ensure a proper installation.
+## Installation from Source
 
-Developers
------------
+Clone the repo and move into the package directory:
 
+```sh
+git clone https://github.com/nasa/SMCPy.git
+cd SMCPy
+```
+
+Install requirements necessary to use SMCPy:
+
+```sh
+pip install -r requirements.txt
+```
+
+Optionally, if you'd like to use the MPI-enabled parallel sampler, install the
+associated requirements:
+
+```sh
+pip install -r requirements_optional.txt
+```
+
+Add SMCPy to your Python path. For example:
+
+```sh
+export PYTHONPATH="$PYTHONPATH:/path/to/smcpy"
+```
+
+Run the tests to ensure proper installation:
+
+```sh
+pytest tests
+```
+
+## Contributing
+1.  Fork (<https://github.com/nasa/SMCPy/fork>)
+2.  Create your feature branch (`git checkout -b feature/fooBar`)
+3.  Commit your changes (`git commit -am 'Add some fooBar'`)
+4.  Push to the branch (`git push origin feature/fooBar`)
+5.  Create a Pull Request
+
+# Development
 NASA Langley Research Center <br /> 
 Hampton, Virginia <br /> 
 
 This software was funded by and developed under the High Performance Computing Incubator (HPCI) at NASA Langley Research Center. <br /> 
 
-Contributors: Patrick Leser (patrick.e.leser@nasa.gov) and Michael Wang
+## Authors
+* Patrick Leser
+* Michael Wang
 
-------------------------------------------------------------------------------
-
-License
------------
+# License
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration. No copyright is claimed in
