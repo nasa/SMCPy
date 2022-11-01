@@ -9,8 +9,7 @@ from ..utils.mpi_utils import rank_zero_output_only
 
 class MCMCBase(ABC):
     
-    def __init__(self, model, data, priors, log_like_args, log_like_func,
-                 debug):
+    def __init__(self, model, data, priors, log_like_args, log_like_func):
         '''
         :param model: maps inputs to outputs
         :type model: callable
