@@ -2,3 +2,5 @@ numpy
 matplotlib
 tqdm
 scipy
+pytest
+pytest-mock
