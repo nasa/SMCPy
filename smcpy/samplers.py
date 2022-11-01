@@ -104,7 +104,6 @@ class AdaptiveSampler(SamplerBase):
         :param mcmc_kernel: a kernel object for conducting particle mutation
         :type mcmc_kernel: MCMCKernel object
         '''
-        self.phi_sequence = None
         self.req_phi_index = None
         super().__init__(mcmc_kernel)
 
