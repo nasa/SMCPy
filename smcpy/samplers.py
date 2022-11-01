@@ -42,8 +42,15 @@ from .utils.mpi_utils import rank_zero_output_only
 
 
 class FixedSampler(SamplerBase):
+    '''
+    SMC sampler using a fixed phi sequence.
+    '''
 
     def __init__(self, mcmc_kernel):
+        '''
+        :param mcmc_kernel: a kernel object for conducting particle mutation
+        :type mcmc_kernel: MCMCKernel object
+        '''
         super().__init__(mcmc_kernel)
 
     @rank_zero_output_only
@@ -90,8 +97,14 @@ class FixedSampler(SamplerBase):
 
 
 class AdaptiveSampler(SamplerBase):
-
+    '''
+    SMC sampler using an adaptive phi sequence.
+    '''
     def __init__(self, mcmc_kernel):
+        '''
+        :param mcmc_kernel: a kernel object for conducting particle mutation
+        :type mcmc_kernel: MCMCKernel object
+        '''
         self.phi_sequence = None
         self.req_phi_index = None
         super().__init__(mcmc_kernel)
