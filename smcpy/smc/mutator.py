@@ -42,6 +42,10 @@ class Mutator:
     Mutates particles using an MCMC kernel.
     '''
     def __init__(self, mcmc_kernel):
+        '''
+        :param mcmc_kernel: a kernel object for conducting particle mutation
+        :type mcmc_kernel: MCMCKernel object
+        '''
         self.mcmc_kernel = mcmc_kernel
 
     def mutate(self, particles, phi, num_samples):

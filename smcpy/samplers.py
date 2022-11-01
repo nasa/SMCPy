@@ -42,8 +42,15 @@ from .utils.mpi_utils import rank_zero_output_only
 
 
 class FixedSampler(SamplerBase):
+    '''
+    SMC sampler using a fixed phi sequence.
+    '''
 
     def __init__(self, mcmc_kernel):
+        '''
+        :param mcmc_kernel: a kernel object for conducting particle mutation
+        :type mcmc_kernel: MCMCKernel object
+        '''
         super().__init__(mcmc_kernel)
 
     def sample(self, num_particles, num_mcmc_samples, phi_sequence,
@@ -89,8 +96,15 @@ class FixedSampler(SamplerBase):
 
 
 class AdaptiveSampler(SamplerBase):
-
+    '''
+    SMC sampler using an adaptive phi sequence.
+    '''
     def __init__(self, mcmc_kernel):
+        '''
+        :param mcmc_kernel: a kernel object for conducting particle mutation
+        :type mcmc_kernel: MCMCKernel object
+        '''
+        self.phi_sequence = None
         self.req_phi_index = None
         super().__init__(mcmc_kernel)
 
@@ -173,15 +187,16 @@ class AdaptiveSampler(SamplerBase):
     def _init_progress_bar(self, progress_bar):
         pbar = False
         if progress_bar:
-            format_ =  "{desc}: {percentage:.2f}%|{bar}| " + \
+            bar_format =  "{desc}: {percentage:.2f}%|{bar}| " + \
                        "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
-            pbar = tqdm(total=1.0, bar_format = format_)
-            pbar.update(self._phi_sequence[-1])
+            pbar = tqdm(total=1.0, bar_format = bar_format)
+            pbar.set_description('[ mutation ratio: n/a')
+            pbar.update(0)
         return pbar
 
-    @staticmethod
-    def _update_progress_bar(pbar, dphi):
+    def _update_progress_bar(self, pbar, dphi):
         if pbar:
+            pbar.set_description(f'[ mutation ratio: {self._mutation_ratio}')
             pbar.update(dphi)
 
     @staticmethod

@@ -30,11 +30,9 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 '''
 
-import importlib
 import numpy as np
 import copy
 import functools
-import warnings
 from smcpy.utils.checks import Checks
 
 

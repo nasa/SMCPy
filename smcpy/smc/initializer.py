@@ -45,6 +45,10 @@ class Initializer:
     or given input samples from a sampling distribution.
     '''
     def __init__(self, mcmc_kernel):
+        '''
+        :param mcmc_kernel: a kernel object for conducting particle mutation
+        :type mcmc_kernel: MCMCKernel object
+        '''
         self.mcmc_kernel = mcmc_kernel
 
     @property
