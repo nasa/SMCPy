@@ -43,11 +43,11 @@ class MCMCBase(ABC):
 
             num_accepted = num_particles - np.sum(rejected)
 
-            if num_accepted < inputs.shape[0] * 0.2:
+            if num_accepted < inputs.shape[0] * 0.3:
                 cov = cov * 1/5
             if num_accepted > inputs.shape[0] * 0.7:
                 cov = cov * 2
-    
+
         return inputs, log_like
 
     def metropolis(self, inputs, num_samples, cov, adapt_interval=None,
