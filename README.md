@@ -90,11 +90,16 @@ parallel using MPI, the MCMC kernel just needs to be built with the
 ParallelMCMC class in place of VectorMCMC. More details can be found in the
 [MPI example](https://github.com/nasa/SMCPy/blob/main/examples/mpi_example/run_example.py).
 
-![Pairwise](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png)
+<p align="center">
+<img src="https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png" width="400" alt="Pairwise plot"/>
+</p>
 
-# Source
+To run this model in parallel using MPI, the MCMC kernel just needs to be built
+with the ParallelMCMC class in place of VectorMCMC. More details can be found
+in the MPI example (smcpy/examples/mpi_example/).
 
-## Installation from Source
+Tests
+-----
 
 Clone the repo and move into the package directory:
 
