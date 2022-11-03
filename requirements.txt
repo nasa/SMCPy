@@ -1,6 +1,9 @@
-numpy
+h5py
 matplotlib
-tqdm
-scipy
+numpy
+pandas
 pytest
 pytest-mock
+scipy
+seaborn
+tqdm
