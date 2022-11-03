@@ -1,6 +1,6 @@
 language: python
 python:
-  - "2.7"
+  - "3.6"
 
 install:
   - sudo apt-get install libcr-dev libopenblas-dev liblapack-dev
@@ -10,7 +10,7 @@ install:
   - pip install coveralls
 
 script:
-  - pytest tests --cov=smcpy
+  - pytest tests/unit --cov=smcpy
 
 after_script:
 - coveralls

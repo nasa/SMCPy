@@ -1,5 +1,6 @@
 numpy
 matplotlib
+scipy
 tqdm
 scipy
 pytest

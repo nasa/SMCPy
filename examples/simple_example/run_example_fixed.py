@@ -9,6 +9,10 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.samplers import FixedSampler as Sampler
 from smcpy.utils.plotter import *
 
+
+TRUE_PARAMS = np.array([[2, 3.5]])
+TRUE_STD = 2
+
 def eval_model(theta):
     time.sleep(0.1) # artificial slowdown to show off progress bar
     a = theta[:, 0, None]
@@ -16,9 +20,9 @@ def eval_model(theta):
     return a * np.arange(100) + b
 
 
-def generate_data(eval_model, std_dev, plot=True):
-    y_true = eval_model(np.array([[2, 3.5]]))
-    noisy_data = y_true + np.random.normal(0, std_dev, y_true.shape)
+def generate_data(eval_model, plot=True):
+    y_true = eval_model(TRUE_PARAMS)
+    noisy_data = y_true + np.random.normal(0, TRUE_STD, y_true.shape)
     if plot:
         plot_noisy_data(x, y_true, noisy_data)
     return noisy_data
@@ -39,7 +43,7 @@ if __name__ == '__main__':
 
     num_smc_steps = 20
     std_dev = 2
-    noisy_data = generate_data(eval_model, std_dev, plot=False)
+    noisy_data = generate_data(eval_model, plot=False)
 
     priors = [uniform(0., 6.), uniform(0., 6.)]
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
