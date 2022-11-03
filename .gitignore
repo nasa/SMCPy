@@ -7,3 +7,5 @@
 *pytest_cache*
 .coverage
 *.cache
+dist
+*.egg-info
