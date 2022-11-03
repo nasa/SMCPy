@@ -68,13 +68,13 @@ marked by the dashed red line. The true values for this example were K = 1.67
 and g = 4.62. More details can be found in the spring mass example
 (smcpy/examples/spring_mass/).
 
-To run this model in parallel using MPI, the MCMC kernel just needs to be built
-with the ParallelMCMC class in place of VectorMCMC. More details can be found
-in the MPI example (smcpy/examples/mpi_example/).
-
 <p align="center">
 <img src="https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png" width="400" alt="Pairwise plot"/>
 </p>
+
+To run this model in parallel using MPI, the MCMC kernel just needs to be built
+with the ParallelMCMC class in place of VectorMCMC. More details can be found
+in the MPI example (smcpy/examples/mpi_example/).
 
 Tests
 -----
