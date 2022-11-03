@@ -73,7 +73,7 @@ with the ParallelMCMC class in place of VectorMCMC. More details can be found
 in the MPI example (smcpy/examples/mpi_example/).
 
 <p style="text-align: center;">
-<img src="http://....jpg](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png" width="200" alt="Pairwise plot"/>
+<img src="https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png" width="200" alt="Pairwise plot"/>
 </p>
 
 Tests
