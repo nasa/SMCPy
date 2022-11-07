@@ -12,7 +12,7 @@ class BaseLogLike:
     def _get_output(self, inputs):
         output = self._model_wrapper(self._model, inputs)
         if np.isnan(output).any():
-            raise ValueError
+            raise ValueError("nan in model output.")
         return output
 
     def set_model_wrapper(self, wrapper):
