@@ -82,6 +82,11 @@ class Updater:
         self._ess = eff_sample_size
         self._resampled = False
 
+        # HACK
+        #if (particles.weights == 1.0).any():
+        #    # DON'T RESAMPLE
+        #    return particles
+
         if eff_sample_size < self.ess_threshold * particles.num_particles:
             self._resampled = True
             resampled_particles = self._resample(particles)
