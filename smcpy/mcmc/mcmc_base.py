@@ -210,4 +210,5 @@ class MCMCBase(ABC):
             eigval, eigvec = np.linalg.eigh(cov)
             eigval[eigval < 0] = 0
             cov = np.dot(eigvec, np.diag(eigval)).dot(eigvec.T)
+            cov += 1e-14 * np.eye(cov.shape[0])
             return np.linalg.cholesky(cov)
