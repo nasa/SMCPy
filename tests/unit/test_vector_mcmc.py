@@ -8,11 +8,13 @@ from smcpy.mcmc.vector_mcmc import *
 @pytest.fixture
 def stub_model():
     x = np.array([1, 2, 3])
+
     def evaluation(q):
         assert q.shape[1] == 3
         output = (q[:, 0, None] * 2 + 3.25 * q[:, 1, None] - \
                   q[:, 2, None] ** 2) * x
         return output
+
     return evaluation
 
 
@@ -50,26 +52,26 @@ def test_vectorized_prior_sampling(vector_mcmc, num_samples):
     np.testing.assert_array_equal(prior_samples, expected_samples)
 
 
-@pytest.mark.parametrize('inputs', (np.array([[0.1, 1, 0.5, 3, 2, 1]]),
-                                    np.array([[0.1, 1, 0.5, 3, 2, 1]] * 4)))
+@pytest.mark.parametrize('inputs', (np.array(
+    [[0.1, 1, 0.5, 3, 2, 1]]), np.array([[0.1, 1, 0.5, 3, 2, 1]] * 4)))
 def test_vectorized_prior(vector_mcmc, inputs):
     log_prior = vector_mcmc.evaluate_log_priors(inputs)
     expected_prior = np.array([[0.1, 2, 2.5, 4.5]] * inputs.shape[0])
     np.testing.assert_array_almost_equal(log_prior, np.log(expected_prior))
 
 
-@pytest.mark.parametrize('inputs', (np.array([[0.1, 0.5]]),
-                                    np.array([[0.1, 1, 1, 0.5]] * 4)))
+@pytest.mark.parametrize(
+    'inputs', (np.array([[0.1, 0.5]]), np.array([[0.1, 1, 1, 0.5]] * 4)))
 def test_prior_input_mismatch_throws_error(vector_mcmc, inputs):
     with pytest.raises(ValueError):
         vector_mcmc.evaluate_log_priors(inputs)
 
 
-@pytest.mark.parametrize('inputs, std_dev', (
-                      ((np.array([[0, 1, 0.5]]), 1/np.sqrt(2 * np.pi)),
-                       (np.array([[0, 1, 0.5]] * 4), 1/np.sqrt(2 * np.pi)),
-                       (np.array([[0, 1, 0.5, 1/np.sqrt(2 * np.pi)]] * 4), None)
-                      )))
+@pytest.mark.parametrize(
+    'inputs, std_dev',
+    (((np.array([[0, 1, 0.5]]), 1 / np.sqrt(2 * np.pi)),
+      (np.array([[0, 1, 0.5]] * 4), 1 / np.sqrt(2 * np.pi)),
+      (np.array([[0, 1, 0.5, 1 / np.sqrt(2 * np.pi)]] * 4), None))))
 def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
     vector_mcmc._log_like_func._args = std_dev
 
@@ -81,12 +83,12 @@ def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
     np.testing.assert_array_almost_equal(log_like, expected_log_like)
 
 
-@pytest.mark.parametrize('inputs', (np.array([[0, 1, 0.5]]),
-                                    np.array([[0, 1, 0.5]] * 4)))
+@pytest.mark.parametrize('inputs',
+                         (np.array([[0, 1, 0.5]]), np.array([[0, 1, 0.5]] * 4))
+                         )
 def test_vectorized_proposal(vector_mcmc, inputs, mocker):
     chol_mock = mocker.patch('numpy.linalg.cholesky', return_value=2)
-    norm_mock = mocker.patch('numpy.random.normal',
-                             return_value=np.array([1]))
+    norm_mock = mocker.patch('numpy.random.normal', return_value=np.array([1]))
     matmul_mock = mocker.patch('numpy.matmul',
                                return_value=np.ones(inputs.shape).T)
 
@@ -103,34 +105,29 @@ def test_vectorized_proposal(vector_mcmc, inputs, mocker):
 
 
 @pytest.mark.filterwarnings('ignore: Covariance matrix is')
-@pytest.mark.parametrize('inputs', (np.array([[0, 1, 0.5]]),
-                                    np.array([[0, 1, 0.5]] * 4)))
-def test_vectorized_proposal_non_psd_cov(vector_mcmc, inputs, mocker):
-    eigval = np.array([-1, 1])
-    eigvec = np.array([[1, 2], [1, 2]])
-    cov = np.eye(inputs.shape[1])
-    exp_eigval = np.array([0, 1])
+def test_vectorized_proposal_non_psd_cov(vector_mcmc, mocker):
+    inputs = np.ones((10, 2))
+    eigval = np.array([-0.25, 2.5])
+    eigvec = np.array([[0.4, -0.9], [-0.9, -0.4]])
+    cov = mocker.Mock()
+    expected_cov = np.array([[2.025, 0.9], [0.9, 0.4]]) + 1e-14 * np.eye(2)
 
     chol_mock = mocker.patch('numpy.linalg.cholesky',
-                             side_effect=(np.linalg.linalg.LinAlgError, 2))
-    norm_mock = mocker.patch('numpy.random.normal')
-    matmul_mock = mocker.patch('numpy.matmul',
-                               return_value=np.ones(inputs.shape).T)
-    eig_mock = mocker.patch('numpy.linalg.eigh', return_value=(eigval, eigvec))
-    mock = mocker.Mock()
-    dot_mock = mocker.patch('numpy.dot', return_value=mock)
-    diag_mock = mocker.patch('numpy.diag', return_value=1)
+                             side_effect=(np.linalg.linalg.LinAlgError,
+                                          np.eye(2)))
+    mocker.patch('numpy.linalg.eigh', return_value=(eigval, eigvec))
 
     _ = vector_mcmc.proposal(inputs, cov=cov)
 
-    np.testing.assert_array_equal(diag_mock.call_args[0][0], exp_eigval)
-    dot_mock.assert_called_once_with(eigvec, 1)
-    np.testing.assert_array_equal(mock.dot.call_args[0][0], eigvec.T)
+    assert chol_mock.call_args_list[0].args[0] == cov
+    np.testing.assert_array_equal(chol_mock.call_args_list[1].args[0],
+                                  expected_cov)
 
 
-@pytest.mark.parametrize('new_inputs, old_inputs', (
-                        (np.array([[1, 1, 1]]), np.array([[2, 2, 2]])),
-                        (np.array([[1, 1, 1]] * 4), np.array([[2, 2, 2]] * 4))))
+@pytest.mark.parametrize(
+    'new_inputs, old_inputs',
+    ((np.array([[1, 1, 1]]), np.array([[2, 2, 2]])),
+     (np.array([[1, 1, 1]] * 4), np.array([[2, 2, 2]] * 4))))
 def test_vectorized_accept_ratio(vector_mcmc, new_inputs, old_inputs, mocker):
     mocked_new_log_likelihood = np.ones([new_inputs.shape[0], 1])
     mocked_old_log_likelihood = np.ones([new_inputs.shape[0], 1])
@@ -159,10 +156,17 @@ def test_vectorized_get_rejections(vector_mcmc, mocker):
     np.testing.assert_array_equal(expected, rejected)
 
 
-@pytest.mark.parametrize('adapt_interval,adapt_delay,adapt',
-                    [(3, 0, False), (4, 0, True), (8, 0, True), (11, 0, False),
-                     (3, 5, True), (4, 5, False), (8, 5, False), (2, 1, False),
-                     (3, 2, True), (None, 1, False), (2, 8, True)])
+@pytest.mark.parametrize('adapt_interval,adapt_delay,adapt', [(3, 0, False),
+                                                              (4, 0, True),
+                                                              (8, 0, True),
+                                                              (11, 0, False),
+                                                              (3, 5, True),
+                                                              (4, 5, False),
+                                                              (8, 5, False),
+                                                              (2, 1, False),
+                                                              (3, 2, True),
+                                                              (None, 1, False),
+                                                              (2, 8, True)])
 def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
                                         adapt_delay, mocker):
     parallel_chains = 3
@@ -199,7 +203,8 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, num_accepted,
 
     pobj = mocker.patch.object
     prior_mock = pobj(vector_mcmc, 'evaluate_log_priors')
-    chk_prior_mock = pobj(vector_mcmc, '_check_log_priors_for_zero_probability')
+    chk_prior_mock = pobj(vector_mcmc,
+                          '_check_log_priors_for_zero_probability')
     like_nz_mock = pobj(vector_mcmc, '_eval_log_like_if_prior_nonzero')
     like_mock = pobj(vector_mcmc, 'evaluate_log_likelihood')
     prop_mock = pobj(vector_mcmc, 'proposal')
@@ -224,7 +229,7 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, num_accepted,
         if num_accepted > 7:
             expected_cov *= 2
         if num_accepted < 2:
-            expected_cov *= 1/5
+            expected_cov *= 1 / 5
 
 
 @pytest.mark.parametrize('num_samples', (1, 2))
@@ -236,9 +241,11 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, mocker):
     expected_chain = np.ones([10, 3, num_samples + 1])
     mock = mocker.Mock()
 
-    init_mock = mocker.patch.object(vector_mcmc, '_initialize_probabilities',
+    init_mock = mocker.patch.object(vector_mcmc,
+                                    '_initialize_probabilities',
                                     return_value=(mock, mock))
-    step_mock = mocker.patch.object(vector_mcmc, '_perform_mcmc_step',
+    step_mock = mocker.patch.object(vector_mcmc,
+                                    '_perform_mcmc_step',
                                     return_value=(inputs, mock, mock, mock))
     adapt_mock = mocker.patch.object(vector_mcmc, 'adapt_proposal_cov')
 
@@ -255,11 +262,14 @@ def test_vectorized_metropolis(vector_mcmc, num_samples, mocker):
 def test_metropolis_inputs_out_of_bounds(mocker, stub_model, data, num_chains,
                                          method):
     vmcmc = VectorMCMC(stub_model, data, priors, log_like_args=1)
-    mocker.patch.object(vmcmc, 'evaluate_log_priors',
+    mocker.patch.object(vmcmc,
+                        'evaluate_log_priors',
                         return_value=np.ones((num_chains, 1)) * -np.inf)
 
     with pytest.raises(ValueError):
-        vmcmc.__getattribute__(method)(np.ones((1, 3)), num_samples=0, cov=None,
+        vmcmc.__getattribute__(method)(np.ones((1, 3)),
+                                       num_samples=0,
+                                       cov=None,
                                        phi=None)
 
 
@@ -271,8 +281,9 @@ def test_multi_dim_priors(mocker):
     inputs = np.tile(np.arange(n_input_params), (n_inputs, 1))
     priors = [mocker.Mock() for i in range(n_priors)]
     expected_priors = np.zeros((inputs.shape[0], n_priors))
-    expected_prior_calls = [inputs[:, 0], inputs[:, 1], inputs[:, 2],
-                            inputs[:, 3:6], inputs[:, 6]]
+    expected_prior_calls = [
+        inputs[:, 0], inputs[:, 1], inputs[:, 2], inputs[:, 3:6], inputs[:, 6]
+    ]
 
     for p in priors:
         p.pdf.return_value = np.array([[1] * inputs.shape[0]])
@@ -289,10 +300,10 @@ def test_multi_dim_priors(mocker):
 
 
 def test_metropolis_no_like_calc_if_zero_prior_prob(mocker, data):
-    mocked_model = mocker.Mock(side_effect=[np.ones((5, 3)),
-                                            np.tile(data, (3, 1))])
-    input_params = np.ones((5,3)) * 0.1
-    
+    mocked_model = mocker.Mock(
+        side_effect=[np.ones((5, 3)), np.tile(data, (3, 1))])
+    input_params = np.ones((5, 3)) * 0.1
+
     some_zero_priors = np.ones((5, 3)) * 2
     some_zero_priors[1, 0] = -np.inf
     some_zero_priors[4, 2] = -np.inf
@@ -303,7 +314,8 @@ def test_metropolis_no_like_calc_if_zero_prior_prob(mocker, data):
     vmcmc = VectorMCMC(mocked_model, data, priors=None, log_like_args=1)
     mocker.patch.object(vmcmc, '_check_log_priors_for_zero_probability')
     mocker.patch.object(vmcmc, 'proposal', return_value=mocked_proposal)
-    mocker.patch.object(vmcmc, 'evaluate_log_priors',
+    mocker.patch.object(vmcmc,
+                        'evaluate_log_priors',
                         side_effect=[np.ones((5, 3)), some_zero_priors])
 
     expected_chain = np.zeros((5, 3, 2))

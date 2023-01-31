@@ -8,7 +8,6 @@ from ..utils.mpi_utils import rank_zero_output_only
 
 
 class MCMCBase(ABC):
-    
     def __init__(self, model, data, priors, log_like_args, log_like_func):
         '''
         :param model: maps inputs to outputs
@@ -43,14 +42,20 @@ class MCMCBase(ABC):
             num_accepted = num_particles - np.sum(rejected)
 
             if num_accepted < inputs.shape[0] * 0.3:
-                cov = cov * 1/5
+                cov = cov * 1 / 5
             if num_accepted > inputs.shape[0] * 0.7:
                 cov = cov * 2
 
         return inputs, log_like
 
-    def metropolis(self, inputs, num_samples, cov, adapt_interval=None,
-                   adapt_delay=0, progress_bar=False, **kwargs):
+    def metropolis(self,
+                   inputs,
+                   num_samples,
+                   cov,
+                   adapt_interval=None,
+                   adapt_delay=0,
+                   progress_bar=False,
+                   **kwargs):
 
         chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
         chain[:, :, 0] = inputs
@@ -58,7 +63,7 @@ class MCMCBase(ABC):
         log_priors, log_like = self._initialize_probabilities(inputs)
 
         for i in tqdm(range(1, num_samples + 1), disable=not progress_bar):
-    
+
             inputs, log_like, log_priors, rejected = \
                 self._perform_mcmc_step(inputs, cov, log_like, log_priors, 1)
             chain[:, :, i] = inputs
@@ -118,8 +123,10 @@ class MCMCBase(ABC):
 
     def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
                          old_log_priors):
-        old_log_post = self.evaluate_log_posterior(old_log_like, old_log_priors)
-        new_log_post = self.evaluate_log_posterior(new_log_like, new_log_priors)
+        old_log_post = self.evaluate_log_posterior(old_log_like,
+                                                   old_log_priors)
+        new_log_post = self.evaluate_log_posterior(new_log_like,
+                                                   new_log_priors)
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
     @staticmethod
@@ -148,11 +155,10 @@ class MCMCBase(ABC):
     def _perform_mcmc_step(self, inputs, cov, log_like, log_priors, phi):
         new_inputs = self.proposal(inputs, cov)
         new_log_priors = self.evaluate_log_priors(new_inputs)
-        new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors,
-                                                            new_inputs)
+        new_log_like = self._eval_log_like_if_prior_nonzero(
+            new_log_priors, new_inputs)
 
-        accpt_ratio = self.acceptance_ratio(new_log_like * phi,
-                                            log_like * phi,
+        accpt_ratio = self.acceptance_ratio(new_log_like * phi, log_like * phi,
                                             new_log_priors, log_priors)
 
         rejected = self.get_rejections(accpt_ratio)
@@ -186,7 +192,8 @@ class MCMCBase(ABC):
         pos_rows = self._row_has_nonzero_prior_probability(log_priors)
         log_likes = np.zeros((log_priors.shape[0], 1))
         if inputs[pos_rows].size != 0:
-            log_likes[pos_rows] = self.evaluate_log_likelihood(inputs[pos_rows])
+            log_likes[pos_rows] = self.evaluate_log_likelihood(
+                inputs[pos_rows])
         return log_likes
 
     @staticmethod
@@ -204,11 +211,12 @@ class MCMCBase(ABC):
         try:
             return np.linalg.cholesky(cov)
         except:
-            warnings.warn('Covariance matrix is not positive semi-definite; '
-                          'forcing negative eigenvalues to zero and rebuilding '
-                          'covariance matrix.')
+            warnings.warn(
+                'Covariance matrix is not positive semi-definite; '
+                'forcing negative eigenvalues to zero and rebuilding '
+                'covariance matrix.')
             eigval, eigvec = np.linalg.eigh(cov)
             eigval[eigval < 0] = 0
-            cov = np.dot(eigvec, np.diag(eigval)).dot(eigvec.T)
-            cov += 1e-14 * np.eye(cov.shape[0])
+            cov = (eigvec @ np.diag(eigval)) @ eigvec.T
+            cov += 1e-14 * np.eye(len(eigval))
             return np.linalg.cholesky(cov)
