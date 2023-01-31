@@ -45,7 +45,6 @@ class FixedSampler(SamplerBase):
     '''
     SMC sampler using a fixed phi sequence.
     '''
-
     def __init__(self, mcmc_kernel):
         '''
         :param mcmc_kernel: a kernel object for conducting particle mutation
@@ -53,8 +52,13 @@ class FixedSampler(SamplerBase):
         '''
         super().__init__(mcmc_kernel)
 
-    def sample(self, num_particles, num_mcmc_samples, phi_sequence,
-               ess_threshold, proposal=None, progress_bar=True):
+    def sample(self,
+               num_particles,
+               num_mcmc_samples,
+               phi_sequence,
+               ess_threshold,
+               proposal=None,
+               progress_bar=True):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -94,7 +98,6 @@ class FixedSampler(SamplerBase):
         return self._result, self._result.estimate_marginal_log_likelihoods()
 
 
-
 class AdaptiveSampler(SamplerBase):
     '''
     SMC sampler using an adaptive phi sequence.
@@ -107,8 +110,13 @@ class AdaptiveSampler(SamplerBase):
         self.req_phi_index = None
         super().__init__(mcmc_kernel)
 
-    def sample(self, num_particles, num_mcmc_samples, target_ess=0.8,
-               proposal=None, required_phi=1, progress_bar=True):
+    def sample(self,
+               num_particles,
+               num_mcmc_samples,
+               target_ess=0.8,
+               proposal=None,
+               required_phi=1,
+               progress_bar=True):
         '''
         :param num_particles: number of particles
         :type num_particles: int
@@ -128,7 +136,7 @@ class AdaptiveSampler(SamplerBase):
             the phi sequence (regardless of optimized step)
         :type required_phi: float, int, or list
         '''
-        self._updater = Updater(ess_threshold=1) # ensure always resampling
+        self._updater = Updater(ess_threshold=1)  # ensure always resampling
         self._phi_sequence = [0]
 
         self.step = self._initialize(num_particles, proposal)
@@ -154,16 +162,20 @@ class AdaptiveSampler(SamplerBase):
     def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
         phi = 1
         if not self._full_step_meets_target(phi_old, particles, target_ess):
-            phi = bisect(self.predict_ess_margin, phi_old, 1,
+            phi = bisect(self.predict_ess_margin,
+                         phi_old,
+                         1,
                          args=(phi_old, particles, target_ess))
         proposed_phi_list = self._as_phi_list(required_phi)
         proposed_phi_list.append(phi)
         return self._select_phi(proposed_phi_list, phi_old)
 
     def predict_ess_margin(self, phi_new, phi_old, particles, target_ess=1):
-        beta = np.exp((phi_new - phi_old) * particles.log_likes)
-        numer = np.sum(beta) ** 2
-        denom = np.sum(beta ** 2)
+        delta_phi = phi_new - phi_old
+        beta = np.exp((delta_phi) * particles.log_likes) if delta_phi > 0 \
+               else np.ones_like(particles.log_likes)
+        numer = np.sum(beta)**2
+        denom = np.sum(beta**2)
         ESS = 0
         if numer > 0 and denom > 0:
             ESS = numer / denom
@@ -188,7 +200,7 @@ class AdaptiveSampler(SamplerBase):
         if progress_bar:
             bar_format =  "{desc}: {percentage:.2f}%|{bar}| " + \
                        "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
-            pbar = tqdm(total=1.0, bar_format = bar_format)
+            pbar = tqdm(total=1.0, bar_format=bar_format)
             pbar.set_description('[ mutation ratio: n/a')
             pbar.update(0)
         return pbar

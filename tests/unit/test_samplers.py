@@ -31,7 +31,7 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
     num_mcmc_samples = 2
     phi_sequence = np.ones(num_steps)
     prog_bar = mocker.patch('smcpy.samplers.tqdm',
-                                return_value=phi_sequence[2:])
+                            return_value=phi_sequence[2:])
 
     init_particles = np.array([1] * num_particles)
     mocked_initializer = mocker.Mock()
@@ -61,8 +61,11 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
 
     smc = FixedSampler(mcmc_kernel)
     mut_ratio = mocker.patch.object(smc, '_compute_mutation_ratio')
-    step_list, mll = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
-                                ess_threshold, progress_bar=prog_bar)
+    step_list, mll = smc.sample(num_particles,
+                                num_mcmc_samples,
+                                phi_sequence,
+                                ess_threshold,
+                                progress_bar=prog_bar)
 
     init.assert_called_once_with(smc._mcmc_kernel)
     upd.assert_called_once_with(ess_threshold)
@@ -95,8 +98,10 @@ def test_fixed_phi_sample_with_proposal(mcmc_kernel, mocker, result_mock):
     ess_threshold = 0.2
     phi_sequence = np.ones(num_steps)
     prog_bar = False
-    proposal = ({'x1': np.array([1, 2]), 'x2': np.array([3, 3])},
-                np.array([0.1, 0.1]))
+    proposal = ({
+        'x1': np.array([1, 2]),
+        'x2': np.array([3, 3])
+    }, np.array([0.1, 0.1]))
 
     smc = FixedSampler(mcmc_kernel)
     mocker.patch.object(smc, '_compute_mutation_ratio')
@@ -140,7 +145,8 @@ def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
     particles.num_particles = 5
 
     smc = AdaptiveSampler(mcmc_kernel)
-    ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles, target_ess)
+    ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles,
+                                        target_ess)
 
     assert pytest.approx(ESS_margin) == expected_ess_margin
 
@@ -156,7 +162,8 @@ def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
     target_ess = 0.8
 
     smc = AdaptiveSampler(mcmc_kernel)
-    ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles, target_ess)
+    ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles,
+                                        target_ess)
 
     assert ESS_margin == -particles.num_particles * target_ess
 
@@ -171,8 +178,9 @@ def test_adaptive_step_optimization(mocker, mcmc_kernel, bisect_return):
     mocker.patch.object(smc, 'predict_ess_margin', return_value=-2)
 
     assert smc.optimize_step(particles, phi_old) == bisect_return
-    assert bisect.call_args_list[0] == [(smc.predict_ess_margin, 0.2, 1),
-                                        {'args': (0.2, particles, 1)}]
+    assert bisect.call_args_list[0] == [(smc.predict_ess_margin, 0.2, 1), {
+        'args': (0.2, particles, 1)
+    }]
 
 
 @pytest.mark.parametrize('req_phi, phi', [(1, 1), (.5, 1), (1.5, 1), (.9, .9)])
@@ -182,15 +190,17 @@ def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, req_phi, phi):
     bisect = mocker.patch('smcpy.samplers.bisect', return_value=1.4)
 
     smc = AdaptiveSampler(mcmc_kernel)
-    ess_predict = mocker.patch.object(smc, 'predict_ess_margin', return_value=2)
+    ess_predict = mocker.patch.object(smc,
+                                      'predict_ess_margin',
+                                      return_value=2)
 
     assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == phi
     assert not bisect.called
     ess_predict.assert_called_once()
 
 
-@pytest.mark.parametrize('req_phi', (0.77, [0.77], [0.5, 0.77, 0.8],
-                                     [0.8, 0.5, 0.77, 0.9]))
+@pytest.mark.parametrize(
+    'req_phi', (0.77, [0.77], [0.5, 0.77, 0.8], [0.8, 0.5, 0.77, 0.9]))
 def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     phi_old = 0.52
     particles = mocker.Mock()
@@ -202,8 +212,8 @@ def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == 0.77
 
 
-@pytest.mark.parametrize('required_phi, exp_index',
-                         [([0.6, 0.5], [1, 2]), (0.5, [1])])
+@pytest.mark.parametrize('required_phi, exp_index', [([0.6, 0.5], [1, 2]),
+                                                     (0.5, [1])])
 def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
                              result_mock):
     init_mock = mocker.Mock()
@@ -220,8 +230,10 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
     mocker.patch.object(smc._mutator, 'mutate', return_value=0.4)
     mocker.patch.object(smc, '_compute_mutation_ratio')
 
-    steps, _ = smc.sample(num_particles=5, num_mcmc_samples=5, target_ess=1,
-                              required_phi=required_phi)
+    steps, _ = smc.sample(num_particles=5,
+                          num_mcmc_samples=5,
+                          target_ess=1,
+                          required_phi=required_phi)
 
     update_mock.assert_called_once_with(ess_threshold=1)
     init_mock.init_particles_from_prior.assert_called_once_with(5)
@@ -234,3 +246,11 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
     smc = AdaptiveSampler(mcmc_kernel)
     assert smc._phi_sequence == []
     assert smc.req_phi_index is None
+
+
+def test_delta_phi_is_zero_and_loglike_neginf(mocker, mcmc_kernel):
+    mock_particles = mocker.Mock()
+    mock_particles.num_particles = 10
+    mock_particles.log_likes = np.full((10, 1), -np.inf)
+    smc = AdaptiveSampler(mcmc_kernel)
+    assert smc.predict_ess_margin(1, 1, mock_particles, target_ess=1) == 0
