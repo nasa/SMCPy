@@ -92,7 +92,7 @@ class FixedSampler(SamplerBase):
 
         for i, phi in enumerate(phi_iterator):
             dphi = phi - self._phi_sequence[i]
-            self._do_smc_step(phi, dphi, num_mcmc_samples)
+            self._do_smc_step(dphi, num_mcmc_samples)
             set_bar(phi_iterator, i + 2, self._mutation_ratio, self._updater)
 
         return self._result, self._result.estimate_marginal_log_likelihoods()
@@ -116,6 +116,7 @@ class AdaptiveSampler(SamplerBase):
                target_ess=0.8,
                proposal=None,
                required_phi=1,
+               min_dphi=None,
                progress_bar=True):
         '''
         :param num_particles: number of particles
@@ -135,6 +136,10 @@ class AdaptiveSampler(SamplerBase):
         :param required_phi: specific values of phi that must be included in
             the phi sequence (regardless of optimized step)
         :type required_phi: float, int, or list
+        :param min_dphi: minimum allowable delta phi for a given SMC step
+        :type min_dphi: float
+        :param progress_bar: display progress bar during sampling
+        :type progress_bar: bool
         '''
         self._updater = Updater(ess_threshold=1)  # ensure always resampling
         self._phi_sequence = [0]
@@ -144,11 +149,13 @@ class AdaptiveSampler(SamplerBase):
         pbar = self._init_progress_bar(progress_bar)
 
         while self._phi_sequence[-1] < 1:
-            phi = self.optimize_step(self.step, self._phi_sequence[-1],
-                                     target_ess, required_phi)
-            dphi = phi - self._phi_sequence[-1]
-            self._do_smc_step(phi, dphi, num_mcmc_samples)
-            self._phi_sequence.append(phi)
+            proposed_phi = self.optimize_step(self.step, self._phi_sequence[-1],
+                                              target_ess, required_phi)
+            dphi = proposed_phi - self._phi_sequence[-1]
+            if min_dphi and dphi < min_dphi:
+                dphi = min_dphi
+            self._do_smc_step(dphi, num_mcmc_samples)
+            self._phi_sequence.append(self._phi_sequence[-1] + dphi)
             self._update_progress_bar(pbar, dphi)
 
         self._close_progress_bar(pbar)

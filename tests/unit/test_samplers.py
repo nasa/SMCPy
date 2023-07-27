@@ -254,3 +254,32 @@ def test_delta_phi_is_zero_and_loglike_neginf(mocker, mcmc_kernel):
     mock_particles.log_likes = np.full((10, 1), -np.inf)
     smc = AdaptiveSampler(mcmc_kernel)
     assert smc.predict_ess_margin(1, 1, mock_particles, target_ess=1) == 0
+
+
+@pytest.mark.parametrize("min_dphi,is_floored", [(0.2, True), (0.1, True),
+                                                 (0.01, False), (None, False)])
+def test_minimum_delta_phi(mocker, mcmc_kernel, result_mock, min_dphi,
+                           is_floored):
+
+    expected_phi_seq = np.cumsum([min_dphi] * int(1 / min_dphi)) if is_floored \
+                       else np.cumsum([0.1] * 10)
+
+    init_mock = mocker.Mock()
+    init_mock.init_particles_from_prior.return_value = 1
+    mocker.patch('smcpy.sampler_base.Initializer', return_value=init_mock)
+    update_mock = mocker.patch('smcpy.samplers.Updater')
+
+    mocker.patch('smcpy.sampler_base.InMemoryStorage',
+                 return_value=result_mock)
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    mocker.patch.object(smc, 'optimize_step',
+                        side_effect=np.linspace(0.1, 1, 10))
+    mocker.patch.object(smc, '_mutator')
+    mocker.patch.object(smc._mutator, 'mutate', return_value=0.4)
+    mocker.patch.object(smc, '_compute_mutation_ratio')
+
+    _, _ = smc.sample(num_particles=5, num_mcmc_samples=5, min_dphi=min_dphi)
+
+    np.testing.assert_array_almost_equal(smc._phi_sequence[1:],
+                                         expected_phi_seq)
