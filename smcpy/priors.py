@@ -121,3 +121,69 @@ class ImproperCov:
                              'representing the sample index and indices 1 and '
                              '2 representing the 2D covariance indices (which '
                              'should also be equal size)')
+
+
+class ConstrainedUniform:
+
+    def __init__(self, constraint_function, dim=None, bounds=None, seed=None,
+                 max_rvs_tries=1000):
+        self._constraint_function = constraint_function
+        self._bounds = bounds
+        self._dim = dim
+        self._seed = seed
+        self._max_rvs_tries = max_rvs_tries
+
+        self._verify_inputs()
+
+    def pdf(self, samples):
+        constr = self._constraint_function(samples).astype(int).reshape(-1, 1)
+        if self._bounds is not None:
+            bnd = self._are_within_bounds(samples)
+            constr *= bnd
+        return constr
+
+    def rvs(self, num_samples):
+        if self._bounds_are_finite():
+            return self._get_constrained_samples(num_samples)
+        raise NotImplementedError('rvs cannot be used without finite bounds.')
+
+    def _get_constrained_samples(self, num_samples):
+        rng = np.random.default_rng(seed=self._seed)
+        samples = []
+        tries = 0
+
+        while len(samples) < num_samples and tries < self._max_rvs_tries:
+            candidates = rng.uniform(*self._bounds, (num_samples, self.dim))
+            samples += list(candidates[self._constraint_function(candidates)])
+            tries += 1
+
+        self._raise_error_if_less_than_requested(samples, num_samples)
+
+        return np.array(samples)[:num_samples]
+
+    def _are_within_bounds(self, samples):
+        in_bounds = (self._bounds[0] <= samples).all(axis=1) * \
+                    (self._bounds[1] >= samples).all(axis=1)
+        return in_bounds.astype(int).reshape(-1, 1)
+
+    def _bounds_are_finite(self):
+        if self._bounds is None:
+            return False
+        return (self._bounds > -np.inf).all() and (self._bounds < np.inf).all()
+
+    @staticmethod
+    def _raise_error_if_less_than_requested(samples, num_samples):
+        if len(samples) < num_samples:
+            raise ValueError('Max rvs tries exceeded; '
+                             f'{len(samples)}/{num_samples} generated')
+
+
+    def _verify_inputs(self):
+        if self._dim is None and self._bounds is None:
+            raise ValueError('Either "bounds" or "dim" must be provided.')
+
+    @property
+    def dim(self):
+        if self._dim:
+            return self._dim
+        return self._bounds.shape[1]

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy.priors import ImproperUniform, InvWishart, ImproperCov
+from smcpy.priors import ImproperUniform, InvWishart, ImproperCov, ConstrainedUniform
 
 @pytest.mark.parametrize('sign', [-1, 1])
 @pytest.mark.parametrize('x, expected', [(0, np.ones(1)), (1, np.ones(1)),
@@ -134,3 +134,77 @@ def test_impropcov_rvs(mocker, dof, scale, expdof, expscale):
     mock_invwis.rvs.asser_called_once_with(5)
     np.testing.assert_array_equal(samples, np.array([[0, 1, 3], [4, 5, 7]]))
 
+
+@pytest.mark.parametrize('bounds,dim,expected_pdf',
+                         [(None, 2, np.c_[[1, 0, 1, 0, 1, 1, 1, 1]]),
+                          (np.array([[-0.2, -2], [5, 5]]), None,
+                           np.c_[[1, 0, 1, 0, 1, 0, 1, 1]])])
+def test_constrainted_uniform_prior(bounds, dim, expected_pdf):
+
+    constraint_func = lambda x: x[:, 0]**2 + x[:, 1]**2 <= 1
+
+    x = np.array([[0, 0],
+                  [1, -2],
+                  [0.5, 0.5],
+                  [1, 1],
+                  [-0.1, 0.2],
+                  [-0.5, -0.5],
+                  [0, 1],
+                  [1, 0]])
+
+    p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func,
+                           dim=dim)
+
+    assert p.dim == 2
+    np.testing.assert_array_equal(p.pdf(x), expected_pdf)
+
+
+def test_constrained_uniform_prior_raise_error_no_dim():
+    with pytest.raises(ValueError):
+        ConstrainedUniform(bounds=None, dim=None, constraint_function=None)
+
+
+@pytest.mark.parametrize('bounds', [None, np.array([[-np.inf], [1]]),
+                                    np.array([[0], [np.inf]])])
+def test_constrained_uniform_prior_raise_error_on_rvs_undefined_bounds(bounds):
+    with pytest.raises(NotImplementedError):
+        p = ConstrainedUniform(bounds=bounds, dim=1, constraint_function=None)
+        p.rvs(2)
+
+
+def test_constrained_uniform_prior_rvs():
+    bounds = np.array([[-2, -2], [2, 2]])
+    constraint_func = lambda x: x[:, 0]**2 + x[:, 1]**2 <= 1
+    p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func)
+    samples = p.rvs(1000)
+
+    assert samples.shape == (1000, 2)
+    assert constraint_func(samples).all()
+
+
+def test_constrained_uniform_prior_rvs_seed(mocker):
+
+    rng_mock = mocker.patch('smcpy.priors.np.random.default_rng')
+    mocker.patch('smcpy.priors.ConstrainedUniform._bounds_are_finite',
+                 return_value=True)
+
+    p = ConstrainedUniform(constraint_function=None, seed=2, dim=1)
+    p.rvs(0)
+
+    rng_mock.assert_called_once_with(seed=2)
+
+
+def test_constrained_uniform_prior_rvs_max_tries(mocker):
+
+    rng_mock = mocker.Mock()
+    rng_mock.uniform.return_value=np.array([[2.5, 2.5]])
+    mocker.patch('smcpy.priors.np.random.default_rng', return_value=rng_mock)
+
+    bounds = np.array([[2, 2], [3, 3]])
+    constraint_func = lambda x: np.product(x, axis=1) < 1
+    p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func,
+                           max_rvs_tries=10)
+
+    with pytest.raises(ValueError):
+        p.rvs(1)
+    assert len(rng_mock.uniform.call_args_list) == 10
