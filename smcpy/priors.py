@@ -127,6 +127,34 @@ class ConstrainedUniform:
 
     def __init__(self, constraint_function, dim=None, bounds=None, seed=None,
                  max_rvs_tries=1000):
+        '''
+        :param constraint_function: a function that takes in an array of
+            parameters with shape = (num_samples, num_params) and returns
+            a boolean array-like with length num_samples. Prior probability will
+            be 1.0 if constraint returns True and 0.0 if False unless point
+            is outside bounds then prior probability is 0.0. See "bounds"
+            for additional information.
+        :type constraint_function: callable
+        :param dim: [optional] number of parameters; calculated from "bounds"
+            if provided. Either "dim" or "bounds" must be provided.
+        :type dim: int
+        :param bounds: [optional] an array with shape (2, num_params) defining
+            the lower and upper bounds for each parameter, respectively. If not
+            provided, "dim" must be provided and only the constraint will be
+            used to determine prior probability (0 if False or 1 if True).
+            Parameter vectors falling outside of the bounds will result in a
+            prior probability of 0.0 and 1.0 otherwise.
+        :type bounds: 2D array
+        :param seed: [optional] random seed passed to the random number
+            generator when generating samples from the prior
+        :type seed: int
+        :param max_rvs_tries: [optional; default=1000] number of tries to
+            generate random samples that satisfy the provided constraint.
+            Samples are generated uniformly within bounds and then pruned via
+            rejection if violating the constraint; this process is repeated
+            until the requested number of samples satisfying the constraint
+            have been generated.
+        '''
         self._constraint_function = constraint_function
         self._bounds = bounds
         self._dim = dim
