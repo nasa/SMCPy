@@ -55,5 +55,6 @@ if __name__ == '__main__':
     t0 = time.time()
     step_list, mll_list = smc.sample(num_particles, num_mcmc_samples, tgt_ess)
 
-    print(f'total time = {time.time() - t0}')
-    print(f'mean vector = {step_list[-1].compute_mean()}')
+    if comm.Get_rank() == 0:
+        print(f'total time = {time.time() - t0}')
+        print(f'mean vector = {step_list[-1].compute_mean()}')
