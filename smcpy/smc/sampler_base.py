@@ -34,11 +34,11 @@ import numpy as np
 
 from abc import ABC, abstractmethod
 
-from .smc.initializer import Initializer
-from .smc.mutator import Mutator
-from .utils.storage import InMemoryStorage
-from .utils.mpi_utils import rank_zero_run_only
-from .utils.context_manager import ContextManager
+from .initializer import Initializer
+from .mutator import Mutator
+from ..utils.storage import InMemoryStorage
+from ..utils.mpi_utils import rank_zero_run_only
+from ..utils.context_manager import ContextManager
 
 
 class SamplerBase:

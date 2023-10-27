@@ -1,4 +1,4 @@
-from .samplers import FixedSampler, AdaptiveSampler
+from .smc.samplers import FixedSampler, AdaptiveSampler
 from .priors import ImproperUniform, InvWishart, ImproperCov
 from .log_likelihoods import Normal, MultiSourceNormal, MVNormal
 from .log_likelihoods import MVNRandomEffects

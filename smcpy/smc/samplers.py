@@ -36,9 +36,9 @@ from scipy.optimize import bisect
 from tqdm import tqdm
 
 from .sampler_base import SamplerBase
-from .smc.updater import Updater
-from .utils.progress_bar import set_bar
-from .utils.mpi_utils import rank_zero_output_only
+from .updater import Updater
+from ..utils.progress_bar import set_bar
+from ..utils.mpi_utils import rank_zero_output_only
 
 
 class FixedSampler(SamplerBase):

@@ -4,6 +4,7 @@ import pytest
 from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
 
+SAMPLER_BASE = 'smcpy.smc.sampler_base'
 
 class DummyResult:
 
@@ -23,7 +24,7 @@ def mcmc_kernel(mocker):
 @pytest.fixture
 def smc_w_context(mocker, mcmc_kernel):
     results = mocker.Mock()
-    context_manager = mocker.patch('smcpy.sampler_base.ContextManager')
+    context_manager = mocker.patch(SAMPLER_BASE + '.ContextManager')
     context_manager.get_context.return_value = results
     return AdaptiveSampler(mcmc_kernel)
 

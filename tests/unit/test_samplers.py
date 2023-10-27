@@ -4,6 +4,9 @@ import pytest
 from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
 
+SAMPLERS = 'smcpy.smc.samplers'
+SAMPLER_BASE = 'smcpy.smc.sampler_base'
+
 
 @pytest.fixture
 def mcmc_kernel(mocker):
@@ -30,28 +33,28 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
     num_steps = 10
     num_mcmc_samples = 2
     phi_sequence = np.ones(num_steps)
-    prog_bar = mocker.patch('smcpy.samplers.tqdm',
+    prog_bar = mocker.patch(SAMPLERS + '.tqdm',
                             return_value=phi_sequence[2:])
 
     init_particles = np.array([1] * num_particles)
     mocked_initializer = mocker.Mock()
     mocked_initializer.init_particles_from_prior.return_value = init_particles
-    init = mocker.patch('smcpy.sampler_base.Initializer',
+    init = mocker.patch(SAMPLER_BASE + '.Initializer',
                         return_value=mocked_initializer)
 
     upd_mock = mocker.Mock()
     upd_mock.resample_if_needed = lambda x: x
-    upd = mocker.patch('smcpy.samplers.Updater', return_value=upd_mock)
+    upd = mocker.patch(SAMPLERS + '.Updater', return_value=upd_mock)
 
     mocked_mutator = mocker.Mock()
     mocked_mutator.mutate.return_value = 3
-    mut = mocker.patch('smcpy.sampler_base.Mutator',
+    mut = mocker.patch(SAMPLER_BASE + '.Mutator',
                        return_value=mocked_mutator)
 
-    mocker.patch('smcpy.sampler_base.InMemoryStorage',
+    mocker.patch(SAMPLER_BASE + '.InMemoryStorage',
                  return_value=result_mock)
 
-    update_bar = mocker.patch('smcpy.samplers.set_bar')
+    update_bar = mocker.patch(SAMPLERS + '.set_bar')
 
     mcmc_kernel._mcmc = mocker.Mock()
     mcmc_kernel._mcmc._rank = rank
@@ -83,11 +86,11 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
 
 def test_fixed_phi_sample_with_proposal(mcmc_kernel, mocker, result_mock):
     mocked_init = mocker.Mock()
-    mocker.patch('smcpy.sampler_base.Initializer', return_value=mocked_init)
-    mocker.patch('smcpy.sampler_base.Mutator')
-    mocker.patch('smcpy.samplers.Updater')
+    mocker.patch(SAMPLER_BASE + '.Initializer', return_value=mocked_init)
+    mocker.patch(SAMPLER_BASE + '.Mutator')
+    mocker.patch(SAMPLERS + '.Updater')
 
-    mocker.patch('smcpy.sampler_base.InMemoryStorage',
+    mocker.patch(SAMPLER_BASE + '.InMemoryStorage',
                  return_value=result_mock)
 
     proposal_dist = mocker.Mock()
@@ -152,7 +155,7 @@ def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
 
 
 def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
-    mocker.patch('smcpy.samplers.np.sum', return_value=0)
+    mocker.patch(SAMPLERS + '.np.sum', return_value=0)
 
     phi_old = 0
     phi_new = 1
@@ -172,7 +175,7 @@ def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
 def test_adaptive_step_optimization(mocker, mcmc_kernel, bisect_return):
     phi_old = 0.2
     particles = mocker.Mock()
-    bisect = mocker.patch('smcpy.samplers.bisect', return_value=bisect_return)
+    bisect = mocker.patch(SAMPLERS + '.bisect', return_value=bisect_return)
 
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, 'predict_ess_margin', return_value=-2)
@@ -187,7 +190,7 @@ def test_adaptive_step_optimization(mocker, mcmc_kernel, bisect_return):
 def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, req_phi, phi):
     phi_old = 0.8
     particles = mocker.Mock()
-    bisect = mocker.patch('smcpy.samplers.bisect', return_value=1.4)
+    bisect = mocker.patch(SAMPLERS + '.bisect', return_value=1.4)
 
     smc = AdaptiveSampler(mcmc_kernel)
     ess_predict = mocker.patch.object(smc,
@@ -204,7 +207,7 @@ def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, req_phi, phi):
 def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     phi_old = 0.52
     particles = mocker.Mock()
-    bisect = mocker.patch('smcpy.samplers.bisect', return_value=0.8)
+    bisect = mocker.patch(SAMPLERS + '.bisect', return_value=0.8)
 
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, 'predict_ess_margin', return_value=-2)
@@ -218,10 +221,10 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
                              result_mock):
     init_mock = mocker.Mock()
     init_mock.init_particles_from_prior.return_value = 1
-    mocker.patch('smcpy.sampler_base.Initializer', return_value=init_mock)
-    update_mock = mocker.patch('smcpy.samplers.Updater')
+    mocker.patch(SAMPLER_BASE + '.Initializer', return_value=init_mock)
+    update_mock = mocker.patch(SAMPLERS + '.Updater')
 
-    mocker.patch('smcpy.sampler_base.InMemoryStorage',
+    mocker.patch(SAMPLER_BASE + '.InMemoryStorage',
                  return_value=result_mock)
 
     smc = AdaptiveSampler(mcmc_kernel)
@@ -266,10 +269,10 @@ def test_minimum_delta_phi(mocker, mcmc_kernel, result_mock, min_dphi,
 
     init_mock = mocker.Mock()
     init_mock.init_particles_from_prior.return_value = 1
-    mocker.patch('smcpy.sampler_base.Initializer', return_value=init_mock)
-    update_mock = mocker.patch('smcpy.samplers.Updater')
+    mocker.patch(SAMPLER_BASE + '.Initializer', return_value=init_mock)
+    update_mock = mocker.patch(SAMPLERS + '.Updater')
 
-    mocker.patch('smcpy.sampler_base.InMemoryStorage',
+    mocker.patch(SAMPLER_BASE + '.InMemoryStorage',
                  return_value=result_mock)
 
     smc = AdaptiveSampler(mcmc_kernel)
