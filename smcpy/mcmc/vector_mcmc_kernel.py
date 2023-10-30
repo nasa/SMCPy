@@ -26,6 +26,10 @@ class VectorMCMCKernel(MCMCKernel):
         param_array = self._mcmc.sample_from_priors(num_samples)
         return self._conv_param_array_to_dict(param_array)
 
+    def sample_from_proposal(self, num_samples):
+        param_array = self._path.proposal.rvs(num_samples)
+        return self._conv_param_array_to_dict(param_array)
+
     def get_log_likelihoods(self, param_dict):
         param_array = self._conv_param_dict_to_array(param_dict)
         return self._mcmc.evaluate_log_likelihood(param_array)

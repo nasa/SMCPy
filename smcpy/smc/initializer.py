@@ -61,6 +61,17 @@ class Initializer:
             raise TypeError
         self._mcmc_kernel = mcmc_kernel
 
+    def initialize_particles(self, num_particles):
+        if self.mcmc_kernel._path._proposal:
+            params = self.mcmc_kernel.sample_from_proposal(num_particles)
+        else:
+            params = self.mcmc_kernel.sample_from_prior(num_particles)
+        log_likes = self.mcmc_kernel.get_log_likelihoods(params)
+        log_weights = np.array([np.log(1/num_particles)] * num_particles)
+        particles = Particles(params, log_likes, log_weights)
+        particles.attrs.update({'phi': 0})
+        return particles
+
     def init_particles_from_prior(self, num_particles):
         '''
         Use model stored in MCMC kernel to sample initial set of particles.

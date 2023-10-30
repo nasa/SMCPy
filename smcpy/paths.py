@@ -6,8 +6,9 @@ ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 
 class PathBase:
 
-    def __init__(self):
+    def __init__(self, proposal):
         self._phi = 0
+        self._proposal = proposal
 
     @property
     def phi(self):
@@ -19,6 +20,10 @@ class PathBase:
             raise ValueError('phi updates must be monotonic.')
         self._phi = phi
 
+    @property
+    def proposal(self):
+        return self._proposal
+
     @abc.abstractmethod
     def __call__(self, inputs, log_like, log_prior):
         return None
@@ -27,8 +32,7 @@ class PathBase:
 class GeometricPath(PathBase):
 
     def __init__(self, proposal=None):
-        super().__init__()
-        self._proposal = proposal
+        super().__init__(proposal)
 
     def __call__(self, inputs, log_like, log_prior):
         log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
