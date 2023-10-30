@@ -134,7 +134,8 @@ def test_vectorized_accept_ratio(vector_mcmc, new_inputs, old_inputs, mocker):
     mocked_new_log_priors = new_inputs
     mocked_old_log_priors = old_inputs
 
-    accpt_ratio = vector_mcmc.acceptance_ratio(mocked_new_log_likelihood,
+    accpt_ratio = vector_mcmc.acceptance_ratio(new_inputs, old_inputs,
+                                               mocked_new_log_likelihood,
                                                mocked_old_log_likelihood,
                                                mocked_new_log_priors,
                                                mocked_old_log_priors)

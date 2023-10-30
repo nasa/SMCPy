@@ -111,7 +111,7 @@ class MCMCBase(ABC):
         return log_like.reshape(-1, 1)
 
     @staticmethod
-    def evaluate_log_posterior(log_likelihood, log_priors):
+    def evaluate_log_posterior(inputs, log_likelihood, log_priors):
         return np.sum(np.hstack((log_likelihood, log_priors)), axis=1)
 
     @rank_zero_output_only
@@ -121,11 +121,13 @@ class MCMCBase(ABC):
         delta = np.matmul(chol, z.T).T
         return inputs + delta
 
-    def acceptance_ratio(self, new_log_like, old_log_like, new_log_priors,
-                         old_log_priors):
-        old_log_post = self.evaluate_log_posterior(old_log_like,
+    def acceptance_ratio(self, new_inputs, old_inputs, new_log_like,
+                         old_log_like, new_log_priors, old_log_priors):
+        old_log_post = self.evaluate_log_posterior(old_inputs,
+                                                   old_log_like,
                                                    old_log_priors)
-        new_log_post = self.evaluate_log_posterior(new_log_like,
+        new_log_post = self.evaluate_log_posterior(new_inputs,
+                                                   new_log_like,
                                                    new_log_priors)
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
@@ -158,7 +160,8 @@ class MCMCBase(ABC):
         new_log_like = self._eval_log_like_if_prior_nonzero(
             new_log_priors, new_inputs)
 
-        accpt_ratio = self.acceptance_ratio(new_log_like * phi, log_like * phi,
+        accpt_ratio = self.acceptance_ratio(new_inputs, inputs,
+                                            new_log_like * phi, log_like * phi,
                                             new_log_priors, log_priors)
 
         rejected = self.get_rejections(accpt_ratio)
