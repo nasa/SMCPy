@@ -193,10 +193,9 @@ def test_vectorized_proposal_adaptation(vector_mcmc, adapt_interval, adapt,
     np.testing.assert_array_equal(cov, expected_cov)
 
 
-@pytest.mark.parametrize('phi', (0.5, 1))
 @pytest.mark.parametrize('num_samples', (1, 2))
 @pytest.mark.parametrize('num_accepted', (0, 5, 10))
-def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, num_accepted,
+def test_vectorized_smc_metropolis(vector_mcmc, num_samples, num_accepted,
                                    mocker):
     inputs = np.ones([10, 3])
     cov = np.eye(3)
@@ -214,7 +213,7 @@ def test_vectorized_smc_metropolis(vector_mcmc, phi, num_samples, num_accepted,
 
     mocker.patch('smcpy.mcmc.vector_mcmc.np.where', new=lambda x, y, z: y)
 
-    vector_mcmc.smc_metropolis(inputs, num_samples, cov, phi)
+    vector_mcmc.smc_metropolis(inputs, num_samples, cov)
 
     assert like_mock.call_count == 1
     assert chk_prior_mock.call_count == 1
@@ -270,8 +269,7 @@ def test_metropolis_inputs_out_of_bounds(mocker, stub_model, data, num_chains,
     with pytest.raises(ValueError):
         vmcmc.__getattribute__(method)(np.ones((1, 3)),
                                        num_samples=0,
-                                       cov=None,
-                                       phi=None)
+                                       cov=None)
 
 
 def test_multi_dim_priors(mocker):

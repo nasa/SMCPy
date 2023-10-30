@@ -30,14 +30,14 @@ class MCMCBase(ABC):
         self._log_like_func = log_like_func(self.evaluate_model, data,
                                             log_like_args)
 
-    def smc_metropolis(self, inputs, num_samples, cov, phi):
+    def smc_metropolis(self, inputs, num_samples, cov):
         num_particles = inputs.shape[0]
         log_priors, log_like = self._initialize_probabilities(inputs)
 
         for i in range(num_samples):
 
             inputs, log_like, log_priors, rejected = \
-                self._perform_mcmc_step(inputs, cov, log_like, log_priors, phi)
+                self._perform_mcmc_step(inputs, cov, log_like, log_priors)
 
             num_accepted = num_particles - np.sum(rejected)
 
@@ -65,7 +65,7 @@ class MCMCBase(ABC):
         for i in tqdm(range(1, num_samples + 1), disable=not progress_bar):
 
             inputs, log_like, log_priors, rejected = \
-                self._perform_mcmc_step(inputs, cov, log_like, log_priors, 1)
+                self._perform_mcmc_step(inputs, cov, log_like, log_priors)
             chain[:, :, i] = inputs
 
             cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval,
@@ -154,14 +154,14 @@ class MCMCBase(ABC):
         log_like = self.evaluate_log_likelihood(inputs)
         return log_priors, log_like
 
-    def _perform_mcmc_step(self, inputs, cov, log_like, log_priors, phi):
+    def _perform_mcmc_step(self, inputs, cov, log_like, log_priors):
         new_inputs = self.proposal(inputs, cov)
         new_log_priors = self.evaluate_log_priors(new_inputs)
         new_log_like = self._eval_log_like_if_prior_nonzero(
             new_log_priors, new_inputs)
 
         accpt_ratio = self.acceptance_ratio(new_inputs, inputs,
-                                            new_log_like * phi, log_like * phi,
+                                            new_log_like, log_like,
                                             new_log_priors, log_priors)
 
         rejected = self.get_rejections(accpt_ratio)
