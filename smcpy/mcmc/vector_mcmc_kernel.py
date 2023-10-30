@@ -2,18 +2,23 @@ from copy import copy
 import numpy as np
 
 from .kernel_base import MCMCKernel
+from ..paths import GeometricPath
 
 class VectorMCMCKernel(MCMCKernel):
 
-    def __init__(self, vector_mcmc_object, param_order):
+    def __init__(self, vector_mcmc_object, param_order, path=None):
         self._mcmc = vector_mcmc_object
         self._param_order = param_order
+        self._path = GeometricPath() if path is None else path
+
+        self._mcmc.evaluate_log_posterior = self._path
 
     def mutate_particles(self, param_dict, num_samples, cov, phi):
+        self._path.phi = phi
         param_array = self._conv_param_dict_to_array(param_dict)
         param_array, log_likes = self._mcmc.smc_metropolis(param_array,
                                                            num_samples,
-                                                           cov, phi)
+                                                           cov)
         param_dict = self._conv_param_array_to_dict(param_array)
         return param_dict, log_likes
 

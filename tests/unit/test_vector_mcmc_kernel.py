@@ -96,5 +96,5 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
     np.testing.assert_array_equal(new_log_likes, expected_log_likes)
 
     calls = smc_metropolis.call_args[0]
-    for i, expect in enumerate([param_array, num_samples, cov, phi]):
+    for i, expect in enumerate([param_array, num_samples, cov]):
         np.testing.assert_array_equal(calls[i], expect)
