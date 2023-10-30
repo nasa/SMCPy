@@ -9,7 +9,7 @@ class VectorMCMCKernel(MCMCKernel):
         self._mcmc = vector_mcmc_object
         self._param_order = param_order
 
-    def mutate_particles(self, param_dict, log_likes, num_samples, cov, phi):
+    def mutate_particles(self, param_dict, num_samples, cov, phi):
         param_array = self._conv_param_dict_to_array(param_dict)
         param_array, log_likes = self._mcmc.smc_metropolis(param_array,
                                                            num_samples,

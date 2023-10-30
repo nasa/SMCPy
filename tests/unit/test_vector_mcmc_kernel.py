@@ -76,7 +76,6 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
 
     param_array = np.array([[1, 2]] * num_vectorized)
     param_dict = dict(zip(['a', 'b'], param_array.T))
-    log_likes = np.ones((num_vectorized, 1)) * 1
 
     mocked_return = (np.array([[2, 3]] * num_vectorized),
                      np.array([[2]] * num_vectorized))
@@ -84,8 +83,7 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
                                          return_value=mocked_return)
 
     vmcmc = VectorMCMCKernel(vector_mcmc, param_order=['a', 'b'])
-    mutated = vmcmc.mutate_particles(param_dict, log_likes, num_samples,
-                                     cov, phi)
+    mutated = vmcmc.mutate_particles(param_dict, num_samples, cov, phi)
     new_param_dict = mutated[0]
     new_log_likes = mutated[1]
 
