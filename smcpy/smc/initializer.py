@@ -42,7 +42,8 @@ from ..utils.single_rank_comm import SingleRankComm
 class Initializer:
     '''
     Generates SMCStep objects based on either samples from a prior distribution
-    or given input samples from a sampling distribution.
+    or a proposal distribution, depending on how the target path is defined in
+    the MCMC kernel (i.e., if a proposal is available, it will be used).
     '''
     def __init__(self, mcmc_kernel):
         '''
@@ -62,49 +63,15 @@ class Initializer:
         self._mcmc_kernel = mcmc_kernel
 
     def initialize_particles(self, num_particles):
-        if self.mcmc_kernel._path._proposal:
-            params = self.mcmc_kernel.sample_from_proposal(num_particles)
+        kernel = self.mcmc_kernel
+        if kernel.has_proposal():
+            params = kernel.sample_from_proposal(num_particles)
         else:
-            params = self.mcmc_kernel.sample_from_prior(num_particles)
-        log_likes = self.mcmc_kernel.get_log_likelihoods(params)
+            params = kernel.sample_from_prior(num_particles)
+
+        log_likes = kernel.get_log_likelihoods(params)
         log_weights = np.array([np.log(1/num_particles)] * num_particles)
+
         particles = Particles(params, log_likes, log_weights)
-        particles.attrs.update({'phi': 0})
-        return particles
-
-    def init_particles_from_prior(self, num_particles):
-        '''
-        Use model stored in MCMC kernel to sample initial set of particles.
-
-        :param num_particles: number of particles to sample (total across all
-            ranks)
-        :type num_particles: int
-        '''
-        params = self.mcmc_kernel.sample_from_prior(num_particles)
-        log_likes = self.mcmc_kernel.get_log_likelihoods(params)
-        log_weights = np.array([np.log(1/num_particles)] * num_particles)
-        particles = Particles(params, log_likes, log_weights)
-        particles.attrs.update({'phi': 0})
-        return particles
-
-    def init_particles_from_samples(self, samples, proposal_pdensities):
-        '''
-        Initialize a set of particles using pre-sampled parameter values and
-        the corresponding prior pdf at those values.
-
-        :param samples: samples of parameters used to initialize particles;
-            must be a dictionary with keys = parameter names and values =
-            parameter values. Can also be a pandas DataFrame object for this
-            reason.
-        :type samples: dict, pandas.DataFrame
-        :param proposal_pdensities: corresponding probability density function
-            values; must be aligned with samples
-        :type proposal_pdensities: list or nd.array
-        '''
-        proposal_pdensities = np.array(proposal_pdensities).reshape(-1, 1)
-        log_likes = self.mcmc_kernel.get_log_likelihoods(samples)
-        log_priors = self.mcmc_kernel.get_log_priors(samples)
-        log_weights = log_priors - np.log(proposal_pdensities)
-        particles = Particles(samples, log_likes, log_weights)
         particles.attrs.update({'phi': 0})
         return particles
