@@ -80,7 +80,7 @@ class FixedSampler(SamplerBase):
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         '''
-        self._updater = Updater(ess_threshold)
+        self._updater = Updater(ess_threshold, self._mcmc_kernel)
         self._phi_sequence = phi_sequence
 
         self.step = self._initialize(num_particles)
@@ -141,7 +141,8 @@ class AdaptiveSampler(SamplerBase):
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         '''
-        self._updater = Updater(ess_threshold=1)  # ensure always resampling
+        self._updater = Updater(ess_threshold=1, # ensures always resampling
+                                mcmc_kernel=self._mcmc_kernel)
         self._phi_sequence = [0]
 
         self.step = self._initialize(num_particles)

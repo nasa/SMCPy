@@ -25,7 +25,11 @@ class PathBase:
         return self._proposal
 
     @abc.abstractmethod
-    def __call__(self, inputs, log_like, log_prior):
+    def log_pdf(self, inputs, log_like, log_prior):
+        return None
+
+    @abc.abstractmethod
+    def inc_weights(self, inputs, log_like, log_prior, delta_phi):
         return None
 
 
@@ -40,4 +44,10 @@ class GeometricPath(PathBase):
             log_like * self.phi,
             log_prior * min(1, self.phi),
             log_p * max(0, 1 - self.phi)
-            )), axis=1)
+        )), axis=1)
+
+    def inc_weights(self, inputs, log_like, log_prior, delta_phi):
+        log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
+        return np.sum(np.hstack((
+            log_like, log_prior, -log_p
+        )), axis=1, keepdims=True) * delta_phi

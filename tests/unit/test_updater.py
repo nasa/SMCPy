@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 
 from smcpy.smc.updater import Updater
+from smcpy import VectorMCMC, VectorMCMCKernel
+from smcpy.paths import GeometricPath
 
 
 class MockedParticles:
@@ -32,13 +34,17 @@ def mocked_particles(mocker):
 @pytest.mark.parametrize('ess_threshold', [-0.1, 1.1])
 def test_ess_threshold_valid(ess_threshold):
     with pytest.raises(ValueError):
-        Updater(ess_threshold)
+        Updater(ess_threshold, mcmc_kernel=None)
 
 
 def test_update_no_proposal(mocked_particles, mocker):
     mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
 
-    updater =  Updater(ess_threshold=0.0)
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ['a', 'b'])
+    mocker.patch.object(kernel, 'get_log_priors', return_value=np.ones((3, 2)))
+
+    updater =  Updater(ess_threshold=0.0, mcmc_kernel=kernel)
     delta_phi = 0.1
 
     expect_log_weights = mocked_particles.log_likes * delta_phi + \
@@ -54,6 +60,36 @@ def test_update_no_proposal(mocked_particles, mocker):
     np.testing.assert_array_equal(new_particles.log_likes,
                                   mocked_particles.log_likes)
 
+
+def test_update_w_proposal(mocked_particles, mocker):
+    mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
+
+    proposal = mocker.Mock()
+    proposal.log_pdf.return_value = np.full((3, 2), 2)
+
+    path = GeometricPath(proposal=proposal)
+
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ['a', 'b'], path)
+    mocker.patch.object(kernel, 'get_log_priors', return_value=np.ones((3, 2)))
+
+    updater =  Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    delta_phi = 0.1
+
+    expect_log_weights = (mocked_particles.log_likes + 2 - 4) * delta_phi + \
+                         mocked_particles.log_weights
+
+    new_particles = updater.update(mocked_particles, delta_phi)
+
+    assert updater.ess > 0
+    assert updater.resampled == False
+
+    np.testing.assert_array_equal(new_particles.log_weights, expect_log_weights)
+    np.testing.assert_array_equal(new_particles.params, mocked_particles.params)
+    np.testing.assert_array_equal(new_particles.log_likes,
+                                  mocked_particles.log_likes)
+
+
 @pytest.mark.parametrize('random_samples, resample_indices',
                          ((np.array([.3, .3, .7]), [1, 1, 2]),
                           (np.array([.3, .05, .05]), [1, 0, 0]),
@@ -65,7 +101,7 @@ def test_update_with_resample(mocked_particles, random_samples,
     mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
     mocker.patch('numpy.random.uniform', return_value=random_samples)
 
-    updater = Updater(ess_threshold=1.0)
+    updater = Updater(ess_threshold=1.0, mcmc_kernel=None)
     new_weights = np.array([0.1, 0.4, 0.5])
     mocker.patch.object(updater, '_compute_new_weights',
                         return_value=np.log(new_weights))
@@ -83,3 +119,4 @@ def test_update_with_resample(mocked_particles, random_samples,
                                   mocked_particles.params[resample_indices])
 
     assert new_particles._total_unlw == 99
+# 

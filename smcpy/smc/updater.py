@@ -40,7 +40,7 @@ class Updater:
     Updates particle weights (and resamples if necessary) based on delta phi
     and particle state.
     '''
-    def __init__(self, ess_threshold):
+    def __init__(self, ess_threshold, mcmc_kernel):
         '''
         :param ess_threshold: threshold on effective sample size (ess); if
             ess < ess_threshold, resampling with replacement is conducted.
@@ -50,6 +50,7 @@ class Updater:
         self._ess = np.nan
         self._resampled = False
         self._unnorm_log_weights = []
+        self._mcmc_kernel = mcmc_kernel
 
     @property
     def ess_threshold(self):
@@ -92,7 +93,16 @@ class Updater:
         return particles
 
     def _compute_new_weights(self, particles, delta_phi):
-        un_log_weights = particles.log_weights + particles.log_likes * delta_phi
+        kernel = self._mcmc_kernel
+        args = (
+            particles.param_dict,
+            particles.log_likes,
+            kernel.get_log_priors(particles.param_dict),
+            delta_phi
+        )
+
+        un_log_weights = particles.log_weights + kernel._path.inc_weights(*args)  
+
         self._unnorm_log_weights.append(un_log_weights)
         return un_log_weights
 
