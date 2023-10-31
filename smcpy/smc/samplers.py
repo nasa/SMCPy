@@ -57,7 +57,6 @@ class FixedSampler(SamplerBase):
                num_mcmc_samples,
                phi_sequence,
                ess_threshold,
-               proposal=None,
                progress_bar=True):
         '''
         :param num_particles: number of particles
@@ -72,11 +71,6 @@ class FixedSampler(SamplerBase):
             should be conducted; given as a fraction of num_particles and must
             be in the range [0, 1]
         :type ess_threshold: float
-        :param proposal: tuple of samples from a proposal distribution used to
-            initialize the SMC sampler; first element is a dictionary with keys
-            equal to parameter names and values equal to corresponding samples;
-            second element is array of corresponding proposal PDF values
-        :type proposal: tuple(dict, array)
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         '''
@@ -114,7 +108,6 @@ class AdaptiveSampler(SamplerBase):
                num_particles,
                num_mcmc_samples,
                target_ess=0.8,
-               proposal=None,
                required_phi=1,
                min_dphi=None,
                progress_bar=True):
@@ -128,11 +121,6 @@ class AdaptiveSampler(SamplerBase):
             phi such that the effective sample size is equal to the threshold.
             Specified as a fraction of total number particles (between 0 and 1).
         :type target_ess: float
-        :param proposal: tuple of samples from a proposal distribution used to
-            initialize the SMC sampler; first element is a dictionary with keys
-            equal to parameter names and values equal to corresponding samples;
-            second element is array of corresponding proposal PDF values
-        :type proposal: tuple(dict, array)
         :param required_phi: specific values of phi that must be included in
             the phi sequence (regardless of optimized step)
         :type required_phi: float, int, or list
