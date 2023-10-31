@@ -35,7 +35,7 @@ def test_ess_threshold_valid(ess_threshold):
         Updater(ess_threshold)
 
 
-def test_update(mocked_particles, mocker):
+def test_update_no_proposal(mocked_particles, mocker):
     mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
 
     updater =  Updater(ess_threshold=0.0)
