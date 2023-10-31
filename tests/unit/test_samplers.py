@@ -3,6 +3,7 @@ import pytest
 
 from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
+from smcpy.paths import GeometricPath
 
 SAMPLERS = 'smcpy.smc.samplers'
 SAMPLER_BASE = 'smcpy.smc.sampler_base'
@@ -73,7 +74,7 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel,
                                 ess_threshold,
                                 progress_bar=prog_bar)
 
-    upd.assert_called_once_with(ess_threshold)
+    upd.assert_called_once_with(ess_threshold, mcmc_kernel)
     mut.assert_called_once_with(smc._mcmc_kernel)
 
     np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[1:])
@@ -110,15 +111,23 @@ def test_calc_mutation_ratio(mocker, new_param, expected_ratio, mcmc_kernel):
     assert smc._mutation_ratio == expected_ratio
 
 
+@pytest.mark.parametrize('proposal', [True, False])
 @pytest.mark.parametrize('phi_old,target_ess,expected_ess_margin',
                          [(1, 0.8, 1), (0.5, 0.8, -0.5364679374),
                           (0, 0.8, -1.8650126), (1, 1, 0)])
 def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
-                             target_ess):
+                             target_ess, proposal):
     phi_new = 1
+    num_particles = 5
     particles = mocker.Mock()
-    particles.log_likes = np.arange(5)
-    particles.num_particles = 5
+    particles.log_likes = np.arange(5).reshape(-1, 1)
+    particles.num_particles = num_particles
+
+    prop_mock = mocker.Mock()
+    prop_mock.log_pdf.return_value = np.ones((num_particles, 1))
+    mcmc_kernel._path = GeometricPath(proposal=prop_mock if proposal else None)
+    mcmc_kernel.has_proposal.return_value = proposal
+    mcmc_kernel.get_log_priors.return_value = np.ones((num_particles, 1))
 
     smc = AdaptiveSampler(mcmc_kernel)
     ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles,
@@ -132,10 +141,15 @@ def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
 
     phi_old = 0
     phi_new = 1
+    num_particles = 5
     particles = mocker.Mock()
-    particles.log_likes = np.arange(5)
-    particles.num_particles = 5
+    particles.log_likes = np.arange(5).reshape(-1, 1)
+    particles.num_particles = num_particles
     target_ess = 0.8
+
+    mcmc_kernel._path = GeometricPath()
+    mcmc_kernel.has_proposal.return_value = False
+    mcmc_kernel.get_log_priors.return_value = np.ones((num_particles, 1))
 
     smc = AdaptiveSampler(mcmc_kernel)
     ESS_margin = smc.predict_ess_margin(phi_new, phi_old, particles,
@@ -217,7 +231,7 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
                           target_ess=1,
                           required_phi=required_phi)
 
-    update_mock.assert_called_once_with(ess_threshold=1)
+    update_mock.assert_called_once_with(ess_threshold=1, mcmc_kernel=mcmc_kernel)
     np.testing.assert_array_equal(smc._phi_sequence, [0, 0.5, 0.6, 1.0])
     np.testing.assert_array_equal(smc.req_phi_index, exp_index)
     assert len(result_mock.save_step.call_args_list) == 4
