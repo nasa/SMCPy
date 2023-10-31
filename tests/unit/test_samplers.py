@@ -134,6 +134,27 @@ def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
                                         target_ess)
 
     assert pytest.approx(ESS_margin) == expected_ess_margin
+    if phi_new - phi_old > 0:
+        if proposal:
+            prop_mock.log_pdf.assert_called_once()
+        mcmc_kernel.get_log_priors.assert_called_once()
+
+
+# def test_adaptive_ess_margin_w_req_phi(mcmc_kernel, mocker):
+    # num_particles = 5
+    # req_phi = [0.7, 1.0]
+    # phi_old = 0.8
+    # phi_new = 1.0
+# 
+    # particles = mocker.Mock()
+    # particles.log_likes = np.full((num_particles, 1), 3)
+# 
+    # mcmc_kernel._path = GeometricPath()
+    # mcmc_kernel.has_proposal.return_value = False
+    # mcmc_kernel.get_log_priors.return_value = np.ones((num_particles, 1))
+# 
+    # smc = AdaptiveSampler(mcmc_kernel)
+    # smc.predict_ess_margin(phi_new, phi_old, particles, target_ess=1)
 
 
 def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
