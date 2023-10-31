@@ -34,7 +34,7 @@ class GeometricPath(PathBase):
     def __init__(self, proposal=None):
         super().__init__(proposal)
 
-    def __call__(self, inputs, log_like, log_prior):
+    def log_pdf(self, inputs, log_like, log_prior):
         log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
         return np.sum(np.hstack((
             log_like * self.phi,

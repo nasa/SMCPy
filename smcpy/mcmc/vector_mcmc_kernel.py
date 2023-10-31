@@ -7,7 +7,7 @@ class VectorMCMCKernel(MCMCKernel):
 
     def __init__(self, vector_mcmc_object, param_order, path=None):
         super().__init__(vector_mcmc_object, param_order, path)
-        self._mcmc.evaluate_log_posterior = self._path
+        self._mcmc.evaluate_log_posterior = self._path.log_pdf
 
     def mutate_particles(self, param_dict, num_samples, cov, phi):
         self._path.phi = phi
