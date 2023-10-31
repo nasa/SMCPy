@@ -79,14 +79,12 @@ class SamplerBase:
         '''
         raise NotImplementedError
 
-    def _initialize(self, num_particles, proposal):
+    def _initialize(self, num_particles):
         if self._result and self._result.is_restart:
             self._step = self._result[-1]
             self._phi_sequence = self._result.phi_sequence
             return None
-        elif proposal:
-            return self._initializer.init_particles_from_samples(*proposal)
-        return self._initializer.init_particles_from_prior(num_particles)
+        return self._initializer.initialize_particles(num_particles)
 
     def _do_smc_step(self, delta_phi, num_mcmc_samples):
         phi = self._phi_sequence[-1] + delta_phi

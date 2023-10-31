@@ -32,7 +32,7 @@ def smc_w_context(mocker, mcmc_kernel):
 def test_context_initialize_on_restart(smc_w_context):
     smc_w_context._result = DummyResult()
 
-    smc_w_context._initialize(num_particles=1, proposal=None)
+    smc_w_context._initialize(num_particles=1)
 
     assert smc_w_context._step == 66
     assert smc_w_context._phi_sequence == [68, 67]
@@ -41,8 +41,8 @@ def test_context_initialize_on_restart(smc_w_context):
 def test_context_initialize_no_restart(mocker, smc_w_context):
     mocker.patch.object(smc_w_context, '_initializer')
     smc_w_context._result.is_restart = False
-    _ = smc_w_context._initialize(num_particles=1, proposal=None)
-    smc_w_context._initializer.init_particles_from_prior.assert_called_once()
+    _ = smc_w_context._initialize(num_particles=1)
+    smc_w_context._initializer.initialize_particles.assert_called_once_with(1)
 
 
 @pytest.mark.parametrize('assigned, expected, write', [(None, 1, 0), (2, 2, 1)])

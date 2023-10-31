@@ -83,7 +83,7 @@ class FixedSampler(SamplerBase):
         self._updater = Updater(ess_threshold)
         self._phi_sequence = phi_sequence
 
-        self.step = self._initialize(num_particles, proposal)
+        self.step = self._initialize(num_particles)
 
         phi_iterator = self._phi_sequence[1:]
         if progress_bar:
@@ -144,7 +144,7 @@ class AdaptiveSampler(SamplerBase):
         self._updater = Updater(ess_threshold=1)  # ensure always resampling
         self._phi_sequence = [0]
 
-        self.step = self._initialize(num_particles, proposal)
+        self.step = self._initialize(num_particles)
 
         pbar = self._init_progress_bar(progress_bar)
 

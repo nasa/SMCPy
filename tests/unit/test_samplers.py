@@ -26,9 +26,11 @@ def result_mock(mocker):
     return result_mock
 
 
+@pytest.mark.parametrize('proposal', [True, False])
 @pytest.mark.parametrize('rank', [0, 1, 2])
 @pytest.mark.parametrize('prog_bar', [True, False])
-def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
+def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel,
+                          result_mock):
     num_particles = 100
     num_steps = 10
     num_mcmc_samples = 2
@@ -36,11 +38,12 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
     prog_bar = mocker.patch(SAMPLERS + '.tqdm',
                             return_value=phi_sequence[2:])
 
-    init_particles = np.array([1] * num_particles)
-    mocked_initializer = mocker.Mock()
-    mocked_initializer.init_particles_from_prior.return_value = init_particles
-    init = mocker.patch(SAMPLER_BASE + '.Initializer',
-                        return_value=mocked_initializer)
+    mcmc_kernel.has_proposal.return_value = proposal
+    mcmc_kernel.get_log_likelihoods.return_value = np.ones((num_particles, 1))
+    mcmc_kernel.sample_from_prior.return_value = \
+        {'a': np.ones(num_particles)}
+    mcmc_kernel.sample_from_proposal.return_value = \
+        {'a': np.ones(num_particles)}
 
     upd_mock = mocker.Mock()
     upd_mock.resample_if_needed = lambda x: x
@@ -70,7 +73,6 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
                                 ess_threshold,
                                 progress_bar=prog_bar)
 
-    init.assert_called_once_with(smc._mcmc_kernel)
     upd.assert_called_once_with(ess_threshold)
     mut.assert_called_once_with(smc._mcmc_kernel)
 
@@ -83,41 +85,12 @@ def test_fixed_phi_sample(mocker, rank, prog_bar, mcmc_kernel, result_mock):
     assert mll == 34
     assert smc.step == 3
 
-
-def test_fixed_phi_sample_with_proposal(mcmc_kernel, mocker, result_mock):
-    mocked_init = mocker.Mock()
-    mocker.patch(SAMPLER_BASE + '.Initializer', return_value=mocked_init)
-    mocker.patch(SAMPLER_BASE + '.Mutator')
-    mocker.patch(SAMPLERS + '.Updater')
-
-    mocker.patch(SAMPLER_BASE + '.InMemoryStorage',
-                 return_value=result_mock)
-
-    proposal_dist = mocker.Mock()
-
-    num_particles = 100
-    num_steps = 10
-    num_mcmc_samples = 2
-    ess_threshold = 0.2
-    phi_sequence = np.ones(num_steps)
-    prog_bar = False
-    proposal = ({
-        'x1': np.array([1, 2]),
-        'x2': np.array([3, 3])
-    }, np.array([0.1, 0.1]))
-
-    smc = FixedSampler(mcmc_kernel)
-    mocker.patch.object(smc, '_compute_mutation_ratio')
-
-    _ = smc.sample(num_particles, num_mcmc_samples, phi_sequence,
-                   ess_threshold, proposal, prog_bar)
-
-    mocked_init.init_particles_from_prior.assert_not_called()
-    mocked_init.init_particles_from_samples.assert_called_once()
-
-    call_args = mocked_init.init_particles_from_samples.call_args[0]
-    for args in zip(call_args, proposal):
-        np.testing.assert_array_equal(*args)
+    if proposal:
+        mcmc_kernel.sample_from_proposal.assert_called_once()
+        mcmc_kernel.sample_from_prior.assert_not_called()
+    else:
+        mcmc_kernel.sample_from_proposal.assert_not_called()
+        mcmc_kernel.sample_from_prior.assert_called_once()
 
 
 @pytest.mark.parametrize('new_param, expected_ratio',
@@ -215,14 +188,20 @@ def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == 0.77
 
 
+@pytest.mark.parametrize('proposal', [True, False])
 @pytest.mark.parametrize('required_phi, exp_index', [([0.6, 0.5], [1, 2]),
                                                      (0.5, [1])])
 def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
-                             result_mock):
-    init_mock = mocker.Mock()
-    init_mock.init_particles_from_prior.return_value = 1
-    mocker.patch(SAMPLER_BASE + '.Initializer', return_value=init_mock)
+                             result_mock, proposal):
+    num_particles = 5
     update_mock = mocker.patch(SAMPLERS + '.Updater')
+
+    mcmc_kernel.has_proposal.return_value = proposal
+    mcmc_kernel.get_log_likelihoods.return_value = np.ones((num_particles, 1))
+    mcmc_kernel.sample_from_prior.return_value = \
+        {'a': np.ones(num_particles)}
+    mcmc_kernel.sample_from_proposal.return_value = \
+        {'a': np.ones(num_particles)}
 
     mocker.patch(SAMPLER_BASE + '.InMemoryStorage',
                  return_value=result_mock)
@@ -233,13 +212,12 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
     mocker.patch.object(smc._mutator, 'mutate', return_value=0.4)
     mocker.patch.object(smc, '_compute_mutation_ratio')
 
-    steps, _ = smc.sample(num_particles=5,
+    steps, _ = smc.sample(num_particles=num_particles,
                           num_mcmc_samples=5,
                           target_ess=1,
                           required_phi=required_phi)
 
     update_mock.assert_called_once_with(ess_threshold=1)
-    init_mock.init_particles_from_prior.assert_called_once_with(5)
     np.testing.assert_array_equal(smc._phi_sequence, [0, 0.5, 0.6, 1.0])
     np.testing.assert_array_equal(smc.req_phi_index, exp_index)
     assert len(result_mock.save_step.call_args_list) == 4
@@ -249,6 +227,13 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
     smc = AdaptiveSampler(mcmc_kernel)
     assert smc._phi_sequence == []
     assert smc.req_phi_index is None
+
+    if proposal:
+        mcmc_kernel.sample_from_proposal.assert_called_once()
+        mcmc_kernel.sample_from_prior.assert_not_called()
+    else:
+        mcmc_kernel.sample_from_proposal.assert_not_called()
+        mcmc_kernel.sample_from_prior.assert_called_once()
 
 
 def test_delta_phi_is_zero_and_loglike_neginf(mocker, mcmc_kernel):
