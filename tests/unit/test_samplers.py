@@ -140,23 +140,6 @@ def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
         mcmc_kernel.get_log_priors.assert_called_once()
 
 
-# def test_adaptive_ess_margin_w_req_phi(mcmc_kernel, mocker):
-    # num_particles = 5
-    # req_phi = [0.7, 1.0]
-    # phi_old = 0.8
-    # phi_new = 1.0
-# 
-    # particles = mocker.Mock()
-    # particles.log_likes = np.full((num_particles, 1), 3)
-# 
-    # mcmc_kernel._path = GeometricPath()
-    # mcmc_kernel.has_proposal.return_value = False
-    # mcmc_kernel.get_log_priors.return_value = np.ones((num_particles, 1))
-# 
-    # smc = AdaptiveSampler(mcmc_kernel)
-    # smc.predict_ess_margin(phi_new, phi_old, particles, target_ess=1)
-
-
 def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
     mocker.patch(SAMPLERS + '.np.sum', return_value=0)
 
@@ -185,6 +168,8 @@ def test_adaptive_step_optimization(mocker, mcmc_kernel, bisect_return):
     particles = mocker.Mock()
     bisect = mocker.patch(SAMPLERS + '.bisect', return_value=bisect_return)
 
+    mcmc_kernel._path = GeometricPath()
+
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, 'predict_ess_margin', return_value=-2)
 
@@ -200,12 +185,14 @@ def test_adaptive_step_optimization_gt_1(mocker, mcmc_kernel, req_phi, phi):
     particles = mocker.Mock()
     bisect = mocker.patch(SAMPLERS + '.bisect', return_value=1.4)
 
+    mcmc_kernel._path = GeometricPath(required_phi=req_phi)
+
     smc = AdaptiveSampler(mcmc_kernel)
     ess_predict = mocker.patch.object(smc,
                                       'predict_ess_margin',
                                       return_value=2)
 
-    assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == phi
+    assert smc.optimize_step(particles, phi_old) == phi
     assert not bisect.called
     ess_predict.assert_called_once()
 
@@ -217,10 +204,12 @@ def test_adaptive_step_optimization_req_phi(mocker, mcmc_kernel, req_phi):
     particles = mocker.Mock()
     bisect = mocker.patch(SAMPLERS + '.bisect', return_value=0.8)
 
+    mcmc_kernel._path = GeometricPath(required_phi=req_phi)
+
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, 'predict_ess_margin', return_value=-2)
 
-    assert smc.optimize_step(particles, phi_old, required_phi=req_phi) == 0.77
+    assert smc.optimize_step(particles, phi_old) == 0.77
 
 
 @pytest.mark.parametrize('proposal', [True, False])
@@ -231,6 +220,8 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
     num_particles = 5
     update_mock = mocker.patch(SAMPLERS + '.Updater')
 
+    mcmc_kernel._path = GeometricPath(required_phi=required_phi)
+    mcmc_kernel.has_proposal.return_value = False
     mcmc_kernel.has_proposal.return_value = proposal
     mcmc_kernel.get_log_likelihoods.return_value = np.ones((num_particles, 1))
     mcmc_kernel.sample_from_prior.return_value = \
@@ -249,8 +240,7 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
 
     steps, _ = smc.sample(num_particles=num_particles,
                           num_mcmc_samples=5,
-                          target_ess=1,
-                          required_phi=required_phi)
+                          target_ess=1,)
 
     update_mock.assert_called_once_with(ess_threshold=1, mcmc_kernel=mcmc_kernel)
     np.testing.assert_array_equal(smc._phi_sequence, [0, 0.5, 0.6, 1.0])
@@ -294,6 +284,8 @@ def test_minimum_delta_phi(mocker, mcmc_kernel, result_mock, min_dphi,
 
     mocker.patch(SAMPLER_BASE + '.InMemoryStorage',
                  return_value=result_mock)
+
+    mcmc_kernel._path = GeometricPath()
 
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, 'optimize_step',

@@ -108,7 +108,6 @@ class AdaptiveSampler(SamplerBase):
                num_particles,
                num_mcmc_samples,
                target_ess=0.8,
-               required_phi=1,
                min_dphi=None,
                progress_bar=True):
         '''
@@ -121,9 +120,6 @@ class AdaptiveSampler(SamplerBase):
             phi such that the effective sample size is equal to the threshold.
             Specified as a fraction of total number particles (between 0 and 1).
         :type target_ess: float
-        :param required_phi: specific values of phi that must be included in
-            the phi sequence (regardless of optimized step)
-        :type required_phi: float, int, or list
         :param min_dphi: minimum allowable delta phi for a given SMC step
         :type min_dphi: float
         :param progress_bar: display progress bar during sampling
@@ -139,7 +135,7 @@ class AdaptiveSampler(SamplerBase):
 
         while self._phi_sequence[-1] < 1:
             proposed_phi = self.optimize_step(self.step, self._phi_sequence[-1],
-                                              target_ess, required_phi)
+                                              target_ess)
             dphi = proposed_phi - self._phi_sequence[-1]
             if min_dphi and dphi < min_dphi:
                 dphi = min_dphi
@@ -149,20 +145,20 @@ class AdaptiveSampler(SamplerBase):
 
         self._close_progress_bar(pbar)
 
-        self.req_phi_index = [i for i, phi in enumerate(self.phi_sequence) \
-                              if phi in self._as_phi_list(required_phi)]
+        self.req_phi_index = [i for i, phi in enumerate(self.phi_sequence) if \
+                              phi in self._mcmc_kernel._path.required_phi_list]
 
         return self._result, self._result.estimate_marginal_log_likelihoods()
 
     @rank_zero_output_only
-    def optimize_step(self, particles, phi_old, target_ess=1, required_phi=1):
+    def optimize_step(self, particles, phi_old, target_ess=1):
         phi = 1
         if not self._full_step_meets_target(phi_old, particles, target_ess):
             phi = bisect(self.predict_ess_margin,
                          phi_old,
                          1,
                          args=(phi_old, particles, target_ess))
-        proposed_phi_list = self._as_phi_list(required_phi)
+        proposed_phi_list = self._mcmc_kernel._path.required_phi_list
         proposed_phi_list.append(phi)
         return self._select_phi(proposed_phi_list, phi_old)
 
@@ -186,14 +182,6 @@ class AdaptiveSampler(SamplerBase):
             delta_phi
         )
         return kernel._path.inc_weights(*args)
-
-
-    @staticmethod
-    def _as_phi_list(phi):
-        if not isinstance(phi, list):
-            phi = [phi]
-        phi = sorted([p for p in phi if p < 1])
-        return phi
 
     @staticmethod
     def _select_phi(proposed_phi_list, phi_old):

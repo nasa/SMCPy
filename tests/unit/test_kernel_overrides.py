@@ -106,3 +106,30 @@ def test_vectormcmc_kernel_geometric_path_overrride_with_proposal(mocker):
 
     # log posterior = 3 * .8 + 2 * 0.2 + 2 * 0.2 = 3.2
     np.testing.assert_array_equal(post, np.full(log_like.shape[0], 3.2))
+
+
+@pytest.mark.parametrize('req_phi', [[1.0], 0.4, [0.1, 0.3]])
+def test_vectormcmc_kernel_geometric_path_overrride_w_req_phi(mocker, req_phi):
+    mock_proposal = mocker.Mock()
+    path = GeometricPath(proposal=mock_proposal, required_phi=req_phi)
+    path.phi = 0.2
+
+    vmcmc = VectorMCMC(model=None, data=None, priors=None)
+    kernel = VectorMCMCKernel(vmcmc, param_order=['a', 'b'], path=path)
+
+    inputs = np.array([[1, 2], [3, 4], [5, 6]])
+    log_like = np.full_like(inputs[:, [0]], 2)
+    log_priors = np.ones_like(inputs)
+    mock_proposal.log_pdf.return_value = np.full_like(log_like, 3)
+
+    post = kernel._mcmc.evaluate_log_posterior(inputs, log_like, log_priors)
+
+    if path.required_phi_list == []:
+        # log posterior = 3 * .8 + 2 * 0.2 + 2 * 0.2 = 3.2
+        np.testing.assert_array_equal(post, np.full(log_like.shape[0], 3.2))
+    elif path.phi < min(path.required_phi_list):
+        # log posterior = 3 * 0.5 + 2 * 0.5 + 2 * 0.2 = 2.9
+        np.testing.assert_array_equal(post, np.full(log_like.shape[0], 2.9))
+    else:
+        # log posterior = 3 * 0 + 2 * 1 + 2 * 0.2 = 2.4 
+        np.testing.assert_array_equal(post, np.full(log_like.shape[0], 2.4))

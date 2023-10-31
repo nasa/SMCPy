@@ -35,15 +35,28 @@ class PathBase:
 
 class GeometricPath(PathBase):
 
-    def __init__(self, proposal=None):
+    def __init__(self, proposal=None, required_phi=1):
         super().__init__(proposal)
+        self._lambda = None
+        self.required_phi_list = required_phi
+
+    @property
+    def required_phi_list(self):
+        return self._required_phi_list
+
+    @required_phi_list.setter
+    def required_phi_list(self, phi):
+        if isinstance(phi, float) or isinstance(phi, int):
+            phi = [phi]
+        self._required_phi_list = sorted([p for p in phi if p < 1])
+        self._lambda = min(self._required_phi_list + [1])
 
     def log_pdf(self, inputs, log_like, log_prior):
         log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
         return np.sum(np.hstack((
             log_like * self.phi,
-            log_prior * min(1, self.phi),
-            log_p * max(0, 1 - self.phi)
+            log_prior * min(1, self.phi / self._lambda),
+            log_p * max(0, (self._lambda - self.phi) / self._lambda)
         )), axis=1)
 
     def inc_weights(self, inputs, log_like, log_prior, delta_phi):
