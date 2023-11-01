@@ -70,7 +70,8 @@ class Updater:
     def resampled(self):
         return self._resampled
 
-    def update(self, particles, delta_phi):
+    def update(self, particles):
+        delta_phi = self._mcmc_kernel._path.delta_phi
         new_log_weights = self._compute_new_weights(particles, delta_phi)
         new_particles = Particles(particles.param_dict, particles.log_likes,
                                   new_log_weights)

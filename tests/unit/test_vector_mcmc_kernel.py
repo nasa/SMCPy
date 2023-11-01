@@ -71,7 +71,6 @@ def test_kernel_log_priors(vector_mcmc, param_dict, expected, mocker):
 @pytest.mark.parametrize('num_vectorized', (1, 5))
 def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
     num_samples = 2
-    phi = 1
     cov = np.eye(2)
 
     param_array = np.array([[1, 2]] * num_vectorized)
@@ -82,8 +81,9 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
     smc_metropolis = mocker.patch.object(vector_mcmc, 'smc_metropolis',
                                          return_value=mocked_return)
 
-    vmcmc = VectorMCMCKernel(vector_mcmc, param_order=['a', 'b'])
-    mutated = vmcmc.mutate_particles(param_dict, num_samples, cov, phi)
+    kernel = VectorMCMCKernel(vector_mcmc, param_order=['a', 'b'])
+    kernel._path.phi = 1
+    mutated = kernel.mutate_particles(param_dict, num_samples, cov)
     new_param_dict = mutated[0]
     new_log_likes = mutated[1]
 

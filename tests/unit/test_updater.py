@@ -46,11 +46,13 @@ def test_update_no_proposal(mocked_particles, mocker):
 
     updater =  Updater(ess_threshold=0.0, mcmc_kernel=kernel)
     delta_phi = 0.1
+    kernel._path.phi = 0.1
+    kernel._path.phi = kernel._path.phi + delta_phi
 
     expect_log_weights = mocked_particles.log_likes * delta_phi + \
                          mocked_particles.log_weights
 
-    new_particles = updater.update(mocked_particles, delta_phi)
+    new_particles = updater.update(mocked_particles)
 
     assert updater.ess > 0
     assert updater.resampled == False
@@ -75,11 +77,13 @@ def test_update_w_proposal(mocked_particles, mocker):
 
     updater =  Updater(ess_threshold=0.0, mcmc_kernel=kernel)
     delta_phi = 0.1
+    kernel._path.phi = 0.1
+    kernel._path.phi = kernel._path.phi + delta_phi
 
     expect_log_weights = (mocked_particles.log_likes + 2 - 4) * delta_phi + \
                          mocked_particles.log_weights
 
-    new_particles = updater.update(mocked_particles, delta_phi)
+    new_particles = updater.update(mocked_particles)
 
     assert updater.ess > 0
     assert updater.resampled == False
@@ -101,12 +105,19 @@ def test_update_with_resample(mocked_particles, random_samples,
     mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
     mocker.patch('numpy.random.uniform', return_value=random_samples)
 
-    updater = Updater(ess_threshold=1.0, mcmc_kernel=None)
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ['a', 'b'])
+
+    updater = Updater(ess_threshold=1.0, mcmc_kernel=kernel)
+    delta_phi = 0.1
+    kernel._path.phi = 0.1
+    kernel._path.phi = kernel._path.phi + delta_phi
+
     new_weights = np.array([0.1, 0.4, 0.5])
     mocker.patch.object(updater, '_compute_new_weights',
                         return_value=np.log(new_weights))
 
-    new_particles = updater.update(mocked_particles, delta_phi=None)
+    new_particles = updater.update(mocked_particles)
 
     assert updater.ess < len(mocked_particles.params)
     assert updater.resampled == True

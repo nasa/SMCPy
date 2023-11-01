@@ -4,6 +4,7 @@ import pytest
 
 from smcpy.smc.mutator import Mutator
 from smcpy.smc.particles import Particles
+from smcpy.paths import GeometricPath
 
 class DummyParticles:
 
@@ -24,13 +25,12 @@ def mutator(stub_mcmc_kernel):
 
 def test_mcmc_kernel_not_kernel_instance():
     with pytest.raises(TypeError):
-        initializer = Mutator(None)
+        Mutator(None)
 
 
 def test_mutate(mutator, stub_mcmc_kernel, mocker):
     num_samples = 100
     cov = 0
-    phi = 1
 
     mocked_particles = mocker.Mock(Particles, autospec=True)
     mocked_particles.param_dict = 1
@@ -42,10 +42,11 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
 
     mocker.patch('smcpy.smc.mutator.Particles', new=DummyParticles)
 
-    mocker.patch.object(stub_mcmc_kernel, 'mutate_particles',
-                        return_value=[10, 20])
+    stub_mcmc_kernel.mutate_particles.return_value = [10, 20]
+    stub_mcmc_kernel._path = GeometricPath()
+    stub_mcmc_kernel._path.phi = 1
 
-    mutated_particles = mutator.mutate(mocked_particles, phi, num_samples)
+    mutated_particles = mutator.mutate(mocked_particles, num_samples)
 
     assert mutated_particles.params == 10
     assert mutated_particles.log_likes == 20
@@ -55,4 +56,4 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
             mocked_particles.param_dict, mocked_particles.log_likes,
-            num_samples, cov, phi)
+            num_samples, cov)

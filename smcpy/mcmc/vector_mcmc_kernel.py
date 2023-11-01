@@ -9,8 +9,7 @@ class VectorMCMCKernel(MCMCKernel):
         super().__init__(vector_mcmc_object, param_order, path)
         self._mcmc.evaluate_log_posterior = self._path.log_pdf
 
-    def mutate_particles(self, param_dict, num_samples, cov, phi):
-        self._path.phi = phi
+    def mutate_particles(self, param_dict, num_samples, cov):
         param_array = self._conv_param_dict_to_array(param_dict)
         param_array, log_likes = self._mcmc.smc_metropolis(param_array,
                                                            num_samples,

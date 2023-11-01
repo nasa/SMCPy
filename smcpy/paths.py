@@ -8,6 +8,7 @@ class PathBase:
 
     def __init__(self, proposal):
         self._phi = 0
+        self._previous_phi = None
         self._proposal = proposal
 
     @property
@@ -16,9 +17,14 @@ class PathBase:
 
     @phi.setter
     def phi(self, phi):
-        if phi <= self._phi: 
+        self._previous_phi = self.phi
+        if phi <= self._previous_phi: 
             raise ValueError('phi updates must be monotonic.')
         self._phi = phi
+
+    @property
+    def delta_phi(self):
+        return self.phi - self._previous_phi
 
     @property
     def proposal(self):

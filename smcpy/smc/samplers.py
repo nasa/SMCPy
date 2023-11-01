@@ -85,8 +85,7 @@ class FixedSampler(SamplerBase):
         set_bar(phi_iterator, 1, self._mutation_ratio, self._updater)
 
         for i, phi in enumerate(phi_iterator):
-            dphi = phi - self._phi_sequence[i]
-            self._do_smc_step(dphi, num_mcmc_samples)
+            self._do_smc_step(phi, num_mcmc_samples)
             set_bar(phi_iterator, i + 2, self._mutation_ratio, self._updater)
 
         return self._result, self._result.estimate_marginal_log_likelihoods()
@@ -136,12 +135,10 @@ class AdaptiveSampler(SamplerBase):
         while self._phi_sequence[-1] < 1:
             proposed_phi = self.optimize_step(self.step, self._phi_sequence[-1],
                                               target_ess)
-            dphi = proposed_phi - self._phi_sequence[-1]
-            if min_dphi and dphi < min_dphi:
-                dphi = min_dphi
-            self._do_smc_step(dphi, num_mcmc_samples)
-            self._phi_sequence.append(self._phi_sequence[-1] + dphi)
-            self._update_progress_bar(pbar, dphi)
+            proposed_phi = self._verify_min_dphi(proposed_phi, min_dphi)
+            self._do_smc_step(proposed_phi, num_mcmc_samples)
+            self._phi_sequence.append(proposed_phi)
+            self._update_progress_bar(pbar, self._mcmc_kernel._path.delta_phi)
 
         self._close_progress_bar(pbar)
 
@@ -186,6 +183,12 @@ class AdaptiveSampler(SamplerBase):
     @staticmethod
     def _select_phi(proposed_phi_list, phi_old):
         return min([p for p in proposed_phi_list if p > phi_old])
+
+    def _verify_min_dphi(self, phi, min_dphi):
+        dphi = phi - self._phi_sequence[-1]
+        if min_dphi and dphi < min_dphi:
+           return self._phi_sequence[-1] + min_dphi
+        return phi
 
     def _full_step_meets_target(self, phi_old, particles, target_ess):
         return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0

@@ -35,9 +35,11 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel,
     num_particles = 100
     num_steps = 10
     num_mcmc_samples = 2
-    phi_sequence = np.ones(num_steps)
+    phi_sequence = np.arange(num_steps)
     prog_bar = mocker.patch(SAMPLERS + '.tqdm',
                             return_value=phi_sequence[2:])
+
+    path = GeometricPath()
 
     mcmc_kernel.has_proposal.return_value = proposal
     mcmc_kernel.get_log_likelihoods.return_value = np.ones((num_particles, 1))
@@ -45,6 +47,7 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel,
         {'a': np.ones(num_particles)}
     mcmc_kernel.sample_from_proposal.return_value = \
         {'a': np.ones(num_particles)}
+    mcmc_kernel._path = path
 
     upd_mock = mocker.Mock()
     upd_mock.resample_if_needed = lambda x: x

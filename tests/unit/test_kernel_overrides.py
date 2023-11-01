@@ -1,7 +1,8 @@
 import pytest
 
-from smcpy.mcmc.vector_mcmc import *
 from smcpy import VectorMCMCKernel
+from smcpy.mcmc.vector_mcmc import *
+from smcpy.smc.sampler_base import SamplerBase
 from smcpy.paths import GeometricPath
 
 
@@ -58,16 +59,34 @@ def test_vectormcmc_kernel_geometric_path_overrride_manual_updates():
     np.testing.assert_array_equal(post, np.full(log_like.shape[0], 4))
 
 
-def test_vectormcmc_kernel_updates_phi(mocker):
+def test_smc_step_updates_phi(mocker):
     path = GeometricPath()
+    kernel = VectorMCMCKernel(mocker.Mock(), ['a', 'b'], path=path)
 
-    vmcmc_mock = mocker.Mock()
-    vmcmc_mock.smc_metropolis.return_value = (np.ones((1, 2)), None)
+    sampler = SamplerBase(mcmc_kernel=kernel)
+    mocker.patch.object(sampler, '_updater')
+    mocker.patch.object(sampler, '_mutator')
+    mocker.patch.object(sampler, '_compute_mutation_ratio')
+    sampler.step = 1
 
-    kernel = VectorMCMCKernel(vmcmc_mock, ['a', 'b'], path=path)
-    kernel.mutate_particles({'a': [2], 'b': [2]}, 1, None, phi=0.1)
+    sampler._do_smc_step(phi=0.1, num_mcmc_samples=1)
 
     assert path.phi == 0.1
+
+
+def test_vectormcmc_kernel_phi_update_must_be_monotonic(mocker):
+    path = GeometricPath()
+    path.phi = 0.5
+    kernel = VectorMCMCKernel(mocker.Mock(), ['a', 'b'], path=path)
+
+    sampler = SamplerBase(mcmc_kernel=kernel)
+    mocker.patch.object(sampler, '_updater')
+    mocker.patch.object(sampler, '_mutator')
+    mocker.patch.object(sampler, '_compute_mutation_ratio')
+    sampler.step = 1
+
+    with pytest.raises(ValueError):
+        sampler._do_smc_step(phi=0.49, num_mcmc_samples=1)
 
 
 def test_vectormcmc_kernel_default_path_is_geometric(mocker):
@@ -75,18 +94,6 @@ def test_vectormcmc_kernel_default_path_is_geometric(mocker):
 
     assert kernel._path.phi == 0
     assert isinstance(kernel._path, GeometricPath)
-
-
-def test_vectormcmc_kernel_phi_update_must_be_monotonic(mocker):
-    path = GeometricPath()
-    path.phi = 0.5
-
-    vmcmc_mock = mocker.Mock()
-    vmcmc_mock.smc_metropolis.return_value = (np.ones((1, 2)), None)
-
-    kernel = VectorMCMCKernel(vmcmc_mock, ['a', 'b'], path=path)
-    with pytest.raises(ValueError):
-        kernel.mutate_particles({'a': [2], 'b': [2]}, 1, None, phi=0.49)
 
 
 def test_vectormcmc_kernel_geometric_path_overrride_with_proposal(mocker):

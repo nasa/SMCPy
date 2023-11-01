@@ -48,15 +48,15 @@ class Mutator:
         '''
         self.mcmc_kernel = mcmc_kernel
 
-    def mutate(self, particles, phi, num_samples):
+    def mutate(self, particles, num_samples):
         cov = particles.compute_covariance()
         mutated = self.mcmc_kernel.mutate_particles(particles.param_dict,
                                                     particles.log_likes,
                                                     num_samples,
-                                                    cov, phi)
+                                                    cov)
         new_particles = Particles(mutated[0], mutated[1], particles.log_weights)
         new_particles._total_unlw = particles.total_unnorm_log_weight
-        new_particles.attrs.update({'phi': phi})
+        new_particles.attrs.update({'phi': self._mcmc_kernel._path.phi})
         return new_particles
 
     @property
