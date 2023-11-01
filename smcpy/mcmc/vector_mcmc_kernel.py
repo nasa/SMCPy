@@ -7,7 +7,7 @@ class VectorMCMCKernel(MCMCKernel):
 
     def __init__(self, vector_mcmc_object, param_order, path=None):
         super().__init__(vector_mcmc_object, param_order, path)
-        self._mcmc.evaluate_log_posterior = self._path.log_pdf
+        self._mcmc.evaluate_log_posterior = self.path.log_pdf
 
     def mutate_particles(self, param_dict, num_samples, cov):
         param_array = self._conv_param_dict_to_array(param_dict)
@@ -22,7 +22,7 @@ class VectorMCMCKernel(MCMCKernel):
         return self._conv_param_array_to_dict(param_array)
 
     def sample_from_proposal(self, num_samples):
-        param_array = self._path.proposal.rvs(num_samples)
+        param_array = self.path.proposal.rvs(num_samples)
         return self._conv_param_array_to_dict(param_array)
 
     def get_log_likelihoods(self, param_dict):

@@ -92,8 +92,8 @@ def test_vectormcmc_kernel_phi_update_must_be_monotonic(mocker):
 def test_vectormcmc_kernel_default_path_is_geometric(mocker):
     kernel = VectorMCMCKernel(mocker.Mock(), ['a', 'b'], path=None)
 
-    assert kernel._path.phi == 0
-    assert isinstance(kernel._path, GeometricPath)
+    assert kernel.path.phi == 0
+    assert isinstance(kernel.path, GeometricPath)
 
 
 def test_vectormcmc_kernel_geometric_path_overrride_with_proposal(mocker):

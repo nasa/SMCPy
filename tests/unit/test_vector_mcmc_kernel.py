@@ -82,7 +82,7 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
                                          return_value=mocked_return)
 
     kernel = VectorMCMCKernel(vector_mcmc, param_order=['a', 'b'])
-    kernel._path.phi = 1
+    kernel.path.phi = 1
     mutated = kernel.mutate_particles(param_dict, num_samples, cov)
     new_param_dict = mutated[0]
     new_log_likes = mutated[1]

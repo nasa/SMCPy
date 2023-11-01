@@ -46,8 +46,8 @@ def test_update_no_proposal(mocked_particles, mocker):
 
     updater =  Updater(ess_threshold=0.0, mcmc_kernel=kernel)
     delta_phi = 0.1
-    kernel._path.phi = 0.1
-    kernel._path.phi = kernel._path.phi + delta_phi
+    kernel.path.phi = 0.1
+    kernel.path.phi = kernel.path.phi + delta_phi
 
     expect_log_weights = mocked_particles.log_likes * delta_phi + \
                          mocked_particles.log_weights
@@ -77,8 +77,8 @@ def test_update_w_proposal(mocked_particles, mocker):
 
     updater =  Updater(ess_threshold=0.0, mcmc_kernel=kernel)
     delta_phi = 0.1
-    kernel._path.phi = 0.1
-    kernel._path.phi = kernel._path.phi + delta_phi
+    kernel.path.phi = 0.1
+    kernel.path.phi = kernel.path.phi + delta_phi
 
     expect_log_weights = (mocked_particles.log_likes + 2 - 4) * delta_phi + \
                          mocked_particles.log_weights
@@ -110,8 +110,8 @@ def test_update_with_resample(mocked_particles, random_samples,
 
     updater = Updater(ess_threshold=1.0, mcmc_kernel=kernel)
     delta_phi = 0.1
-    kernel._path.phi = 0.1
-    kernel._path.phi = kernel._path.phi + delta_phi
+    kernel.path.phi = 0.1
+    kernel.path.phi = kernel.path.phi + delta_phi
 
     new_weights = np.array([0.1, 0.4, 0.5])
     mocker.patch.object(updater, '_compute_new_weights',

@@ -43,8 +43,8 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     mocker.patch('smcpy.smc.mutator.Particles', new=DummyParticles)
 
     stub_mcmc_kernel.mutate_particles.return_value = [10, 20]
-    stub_mcmc_kernel._path = GeometricPath()
-    stub_mcmc_kernel._path.phi = 1
+    stub_mcmc_kernel.path = GeometricPath()
+    stub_mcmc_kernel.path.phi = 1
 
     mutated_particles = mutator.mutate(mocked_particles, num_samples)
 

@@ -87,7 +87,7 @@ class SamplerBase:
         return self._initializer.initialize_particles(num_particles)
 
     def _do_smc_step(self, phi, num_mcmc_samples):
-        self._mcmc_kernel._path.phi = phi
+        self._mcmc_kernel.path.phi = phi
         particles = self._updater.update(self.step)
         mut_particles = self._mutator.mutate(particles, phi, num_mcmc_samples)
         self._compute_mutation_ratio(particles, mut_particles)

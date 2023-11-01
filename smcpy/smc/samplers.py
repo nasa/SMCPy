@@ -138,12 +138,12 @@ class AdaptiveSampler(SamplerBase):
             proposed_phi = self._verify_min_dphi(proposed_phi, min_dphi)
             self._do_smc_step(proposed_phi, num_mcmc_samples)
             self._phi_sequence.append(proposed_phi)
-            self._update_progress_bar(pbar, self._mcmc_kernel._path.delta_phi)
+            self._update_progress_bar(pbar, self._mcmc_kernel.path.delta_phi)
 
         self._close_progress_bar(pbar)
 
         self.req_phi_index = [i for i, phi in enumerate(self.phi_sequence) if \
-                              phi in self._mcmc_kernel._path.required_phi_list]
+                              phi in self._mcmc_kernel.path.required_phi_list]
 
         return self._result, self._result.estimate_marginal_log_likelihoods()
 
@@ -155,7 +155,7 @@ class AdaptiveSampler(SamplerBase):
                          phi_old,
                          1,
                          args=(phi_old, particles, target_ess))
-        proposed_phi_list = self._mcmc_kernel._path.required_phi_list
+        proposed_phi_list = self._mcmc_kernel.path.required_phi_list
         proposed_phi_list.append(phi)
         return self._select_phi(proposed_phi_list, phi_old)
 
@@ -178,7 +178,7 @@ class AdaptiveSampler(SamplerBase):
             kernel.get_log_priors(particles.param_dict),
             delta_phi
         )
-        return kernel._path.inc_weights(*args)
+        return kernel.path.inc_weights(*args)
 
     @staticmethod
     def _select_phi(proposed_phi_list, phi_old):

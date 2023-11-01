@@ -10,10 +10,10 @@ class MCMCKernel(ABC):
     def __init__(self, mcmc_object, param_order, path):
         self._mcmc = mcmc_object
         self._param_order = param_order
-        self._path = GeometricPath() if path is None else path
+        self.path = GeometricPath() if path is None else path
 
     def has_proposal(self):
-        return self._path.proposal
+        return self.path.proposal
 
     @abc.abstractmethod
     def mutate_particles(self, particles, num_samples, proposal_cov, phi):

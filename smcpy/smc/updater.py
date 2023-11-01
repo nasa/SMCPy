@@ -71,7 +71,7 @@ class Updater:
         return self._resampled
 
     def update(self, particles):
-        delta_phi = self._mcmc_kernel._path.delta_phi
+        delta_phi = self._mcmc_kernel.path.delta_phi
         new_log_weights = self._compute_new_weights(particles, delta_phi)
         new_particles = Particles(particles.param_dict, particles.log_likes,
                                   new_log_weights)
@@ -102,7 +102,7 @@ class Updater:
             delta_phi
         )
 
-        un_log_weights = particles.log_weights + kernel._path.inc_weights(*args)  
+        un_log_weights = particles.log_weights + kernel.path.inc_weights(*args)  
 
         self._unnorm_log_weights.append(un_log_weights)
         return un_log_weights
