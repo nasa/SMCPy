@@ -58,15 +58,19 @@ class GeometricPath(PathBase):
         self._lambda = min(self._required_phi_list + [1])
 
     def log_pdf(self, inputs, log_like, log_prior):
-        log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
-        return np.sum(np.hstack((
-            log_like * self.phi,
-            log_prior * min(1, self.phi / self._lambda),
-            log_p * max(0, (self._lambda - self.phi) / self._lambda)
-        )), axis=1)
+        args = inputs, log_like, log_prior
+        return np.sum(self._eval_target(*args, self.phi), axis=1)
 
-    def inc_weights(self, inputs, log_like, log_prior, delta_phi):
+    def inc_weights(self, inputs, log_like, log_prior):
+        args = inputs, log_like, log_prior
+        numer = self._eval_target(*args, self.phi)
+        denom = self._eval_target(*args, self._previous_phi)
+        return np.sum(np.hstack((numer, -denom)), axis=1, keepdims=True)
+
+    def _eval_target(self, inputs, log_like, log_prior, phi):
         log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
-        return np.sum(np.hstack((
-            log_like, log_prior, -log_p
-        )), axis=1, keepdims=True) * delta_phi
+        return np.hstack((
+            log_like * phi,
+            log_prior * min(1, phi / self._lambda),
+            log_p * max(0, (self._lambda - phi) / self._lambda)
+        ))

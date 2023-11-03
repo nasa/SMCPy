@@ -88,10 +88,47 @@ def test_update_w_proposal(mocked_particles, mocker):
     assert updater.ess > 0
     assert updater.resampled == False
 
-    np.testing.assert_array_equal(new_particles.log_weights, expect_log_weights)
-    np.testing.assert_array_equal(new_particles.params, mocked_particles.params)
-    np.testing.assert_array_equal(new_particles.log_likes,
-                                  mocked_particles.log_likes)
+    np.testing.assert_array_almost_equal(new_particles.log_weights,
+                                         expect_log_weights)
+    np.testing.assert_array_almost_equal(new_particles.params,
+                                         mocked_particles.params)
+    np.testing.assert_array_almost_equal(new_particles.log_likes,
+                                         mocked_particles.log_likes)
+
+
+def test_update_w_proposal_and_req_phi(mocked_particles, mocker):
+    mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
+
+    proposal = mocker.Mock()
+    proposal.log_pdf.return_value = np.full((3, 2), 2)
+
+    path = GeometricPath(proposal=proposal, required_phi=0.15)
+
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ['a', 'b'], path)
+    mocker.patch.object(kernel, 'get_log_priors', return_value=np.ones((3, 2)))
+
+    updater =  Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    delta_phi = 0.1
+    kernel.path.phi = 0.1
+    kernel.path.phi = kernel.path.phi + delta_phi
+
+    log_numer = 4 * 0 + 2 * 1 + mocked_particles.log_likes * 0.2
+    log_denom = 4 * (0.05 / 0.15) + 2 * (0.1 / 0.15) + \
+                mocked_particles.log_likes * 0.1
+    exp_log_weights = mocked_particles.log_weights + log_numer - log_denom
+
+    new_particles = updater.update(mocked_particles)
+
+    assert updater.ess > 0
+    assert updater.resampled == False
+
+    np.testing.assert_array_almost_equal(new_particles.log_weights,
+                                         exp_log_weights)
+    np.testing.assert_array_almost_equal(new_particles.params,
+                                         mocked_particles.params)
+    np.testing.assert_array_almost_equal(new_particles.log_likes,
+                                         mocked_particles.log_likes)
 
 
 @pytest.mark.parametrize('random_samples, resample_indices',
