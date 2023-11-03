@@ -19,7 +19,8 @@ class PathBase:
     def phi(self, phi):
         self._previous_phi = self.phi
         if phi <= self._previous_phi: 
-            raise ValueError('phi updates must be monotonic.')
+            raise ValueError('phi updates must be monotonic; '
+                             f'tried {self._previous_phi} -> {phi}')
         self._phi = phi
 
     @property
