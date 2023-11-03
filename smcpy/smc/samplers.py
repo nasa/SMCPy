@@ -161,7 +161,7 @@ class AdaptiveSampler(SamplerBase):
 
     def predict_ess_margin(self, phi_new, phi_old, particles, target_ess=1):
         delta_phi = phi_new - phi_old
-        beta = np.exp(self._get_inc_weights(particles, delta_phi)) \
+        beta = np.exp(self._get_inc_weights(particles, phi_new)) \
                if delta_phi > 0 else np.ones_like(particles.log_likes)
         numer = np.sum(beta)**2
         denom = np.sum(beta**2)
@@ -170,15 +170,21 @@ class AdaptiveSampler(SamplerBase):
             ESS = numer / denom
         return ESS - particles.num_particles * target_ess
 
-    def _get_inc_weights(self, particles, delta_phi):
+    def _get_inc_weights(self, particles, phi_new):
         kernel = self._mcmc_kernel
+        orig_prev_phi = kernel.path._previous_phi
+        orig_phi = kernel.path.phi
+        kernel.path.phi = phi_new
         args = (
             particles.param_dict,
             particles.log_likes,
             kernel.get_log_priors(particles.param_dict),
-            delta_phi
         )
-        return kernel.path.inc_weights(*args)
+        inc_weights = kernel.path.inc_weights(*args)
+        # RESET PHI (HACKY)
+        kernel.path._previous_phi = orig_prev_phi
+        kernel.path._phi = orig_phi
+        return inc_weights
 
     @staticmethod
     def _select_phi(proposed_phi_list, phi_old):
