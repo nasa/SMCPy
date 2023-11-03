@@ -107,7 +107,7 @@ def test_vectormcmc_kernel_geometric_path_overrride_with_proposal(mocker):
     inputs = np.array([[1, 2], [3, 4], [5, 6]])
     log_like = np.full_like(inputs[:, [0]], 2)
     log_priors = np.ones_like(inputs)
-    mock_proposal.log_pdf.return_value = np.full_like(log_like, 3)
+    mock_proposal.logpdf.return_value = np.full_like(log_like, 3)
 
     post = kernel._mcmc.evaluate_log_posterior(inputs, log_like, log_priors)
 
@@ -127,7 +127,7 @@ def test_vectormcmc_kernel_geometric_path_overrride_w_req_phi(mocker, req_phi):
     inputs = np.array([[1, 2], [3, 4], [5, 6]])
     log_like = np.full_like(inputs[:, [0]], 2)
     log_priors = np.ones_like(inputs)
-    mock_proposal.log_pdf.return_value = np.full_like(log_like, 3)
+    mock_proposal.logpdf.return_value = np.full_like(log_like, 3)
 
     post = kernel._mcmc.evaluate_log_posterior(inputs, log_like, log_priors)
 
