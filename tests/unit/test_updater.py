@@ -67,7 +67,7 @@ def test_update_w_proposal(mocked_particles, mocker):
     mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
 
     proposal = mocker.Mock()
-    proposal.log_pdf.return_value = np.full((3, 2), 2)
+    proposal.logpdf.return_value = np.full((3, 1), 4)
 
     path = GeometricPath(proposal=proposal)
 
@@ -100,7 +100,7 @@ def test_update_w_proposal_and_req_phi(mocked_particles, mocker):
     mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
 
     proposal = mocker.Mock()
-    proposal.log_pdf.return_value = np.full((3, 2), 2)
+    proposal.logpdf.return_value = np.full((3, 1), 4)
 
     path = GeometricPath(proposal=proposal, required_phi=0.15)
 
