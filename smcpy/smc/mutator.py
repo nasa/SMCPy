@@ -51,7 +51,6 @@ class Mutator:
     def mutate(self, particles, num_samples):
         cov = particles.compute_covariance()
         mutated = self.mcmc_kernel.mutate_particles(particles.param_dict,
-                                                    particles.log_likes,
                                                     num_samples,
                                                     cov)
         new_particles = Particles(mutated[0], mutated[1], particles.log_weights)

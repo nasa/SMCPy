@@ -55,5 +55,4 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     assert mutated_particles.attrs['phi'] == 1
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
-            mocked_particles.param_dict, mocked_particles.log_likes,
-            num_samples, cov)
+            mocked_particles.param_dict, num_samples, cov)
