@@ -95,7 +95,7 @@ class Updater:
     def _compute_new_weights(self, particles):
         kernel = self._mcmc_kernel
         args = (
-            particles.param_dict,
+            particles.params,
             particles.log_likes,
             kernel.get_log_priors(particles.param_dict),
         )
