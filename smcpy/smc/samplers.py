@@ -172,8 +172,6 @@ class AdaptiveSampler(SamplerBase):
 
     def _get_inc_weights(self, particles, phi_new):
         kernel = self._mcmc_kernel
-        orig_prev_phi = kernel.path._previous_phi
-        orig_phi = kernel.path.phi
         kernel.path.phi = phi_new
         args = (
             particles.param_dict,
@@ -181,9 +179,7 @@ class AdaptiveSampler(SamplerBase):
             kernel.get_log_priors(particles.param_dict),
         )
         inc_weights = kernel.path.inc_weights(*args)
-        # RESET PHI (HACKY)
-        kernel.path._previous_phi = orig_prev_phi
-        kernel.path._phi = orig_phi
+        kernel.path.undo_phi_set()
         return inc_weights
 
     @staticmethod

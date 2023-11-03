@@ -129,7 +129,7 @@ def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
     prop_mock = mocker.Mock()
     prop_mock.log_pdf.return_value = np.ones((num_particles, 1))
     mcmc_kernel.path = GeometricPath(proposal=prop_mock if proposal else None)
-    mcmc_kernel.path._phi = phi_old
+    mcmc_kernel.path._phi_list = [0, phi_old]
     mcmc_kernel.has_proposal.return_value = proposal
     mcmc_kernel.get_log_priors.return_value = np.ones((num_particles, 1))
 

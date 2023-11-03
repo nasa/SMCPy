@@ -7,25 +7,36 @@ ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 class PathBase:
 
     def __init__(self, proposal):
-        self._phi = 0
-        self._previous_phi = None
+        self._phi_list = [0]
         self._proposal = proposal
 
     @property
     def phi(self):
-        return self._phi
+        return self._phi_list[-1]
 
     @phi.setter
     def phi(self, phi):
-        self._previous_phi = self.phi
-        if phi <= self._previous_phi: 
+        if phi <= self._phi_list[-1]: 
             raise ValueError('phi updates must be monotonic; '
-                             f'tried {self._previous_phi} -> {phi}')
-        self._phi = phi
+                             f'tried {self.phi} -> {phi}')
+        self._phi_list.append(phi)
+
+    @property
+    def previous_phi(self):
+        try:
+            return self._phi_list[-2]
+        except IndexError:
+            return None
 
     @property
     def delta_phi(self):
-        return self.phi - self._previous_phi
+        try:
+            return self._phi_list[-1] - self._phi_list[-2]
+        except IndexError:
+            return None
+
+    def undo_phi_set(self):
+        self._phi_list = self._phi_list[:-1]
 
     @property
     def proposal(self):
@@ -67,7 +78,7 @@ class GeometricPath(PathBase):
         log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
         args = log_like, log_prior, log_p
         numer = self._eval_target(*args, self.phi)
-        denom = self._eval_target(*args, self._previous_phi)
+        denom = self._eval_target(*args, self.previous_phi)
         return np.sum(np.hstack((numer, -denom)), axis=1, keepdims=True)
 
     def _eval_target(self, log_like, log_prior, log_p, phi):
