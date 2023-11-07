@@ -100,7 +100,8 @@ class Updater:
             kernel.get_log_priors(particles.param_dict),
         )
 
-        un_log_weights = particles.log_weights + kernel.path.inc_weights(*args)  
+        un_log_weights = particles.log_weights + \
+                         kernel.path.inc_log_weights(*args)  
 
         self._unnorm_log_weights.append(un_log_weights)
         return un_log_weights
