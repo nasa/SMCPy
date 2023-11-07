@@ -43,11 +43,11 @@ class PathBase:
         return self._proposal
 
     @abc.abstractmethod
-    def log_pdf(self, inputs, log_like, log_prior):
+    def logpdf(self, inputs, log_like, log_prior):
         return None
 
     @abc.abstractmethod
-    def inc_weights(self, inputs, log_like, log_prior, delta_phi):
+    def inc_log_weights(self, inputs, log_like, log_prior, delta_phi):
         return None
 
 
@@ -69,21 +69,32 @@ class GeometricPath(PathBase):
         self._required_phi_list = sorted([p for p in phi if p < 1])
         self._lambda = min(self._required_phi_list + [1])
 
-    def log_pdf(self, inputs, log_like, log_prior):
-        log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
+    def logpdf(self, inputs, log_like, log_prior):
+        log_p = self._get_proposal_logpdf(inputs, log_prior)
         args = log_like, log_prior, log_p
-        return np.sum(self._eval_target(*args, self.phi), axis=1)
+        return self._log_prob_sum(self._eval_target(*args, self.phi))
 
-    def inc_weights(self, inputs, log_like, log_prior):
-        log_p = self._proposal.log_pdf(inputs) if self._proposal else log_prior
+    def inc_log_weights(self, inputs, log_like, log_prior):
+        log_p = self._get_proposal_logpdf(inputs, log_prior)
         args = log_like, log_prior, log_p
         numer = self._eval_target(*args, self.phi)
         denom = self._eval_target(*args, self.previous_phi)
-        return np.sum(np.hstack((numer, -denom)), axis=1, keepdims=True)
+        return self._log_prob_sum(np.hstack((numer, -denom)))
 
     def _eval_target(self, log_like, log_prior, log_p, phi):
-        return np.hstack((
+        target =  np.hstack((
             log_like * phi,
             log_prior * min(1, phi / self._lambda),
             log_p * max(0, (self._lambda - phi) / self._lambda)
         ))
+        return target
+
+    def _get_proposal_logpdf(self, inputs, log_prior):
+        return self._proposal.logpdf(inputs).reshape(-1, 1) \
+               if self._proposal else log_prior
+
+    @staticmethod
+    def _log_prob_sum(x):
+        y = np.sum(x, axis=1, keepdims=True)
+        y[np.isnan(y)] = 0 # -inf * 0 = nan; inf - inf = nan
+        return y

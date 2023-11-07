@@ -131,6 +131,41 @@ def test_update_w_proposal_and_req_phi(mocked_particles, mocker):
                                          mocked_particles.log_likes)
 
 
+def test_update_w_zero_prob_proposal(mocked_particles, mocker):
+    mocker.patch('smcpy.smc.updater.Particles', new=MockedParticles)
+
+    proposal = mocker.Mock()
+    proposal.logpdf.side_effect = [np.array(([4], [4], [-np.inf])),
+                                   np.array(([4], [4], [4]))]
+
+    path = GeometricPath(proposal=proposal)
+
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ['a', 'b'], path)
+    mocker.patch.object(kernel, 'get_log_priors', return_value=np.ones((3, 2)))
+
+    updater = Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    delta_phi = 0.1
+    kernel.path.phi = 0.1
+    kernel.path.phi = kernel.path.phi + delta_phi
+
+    exp_log_weights = (mocked_particles.log_likes + 2 - 4) * delta_phi + \
+                       mocked_particles.log_weights
+    exp_log_weights[-1] = mocked_particles.log_weights[-1]
+
+    new_particles = updater.update(mocked_particles)
+
+    assert updater.ess > 0
+    assert updater.resampled == False
+
+    np.testing.assert_array_almost_equal(new_particles.log_weights,
+                                         exp_log_weights)
+    np.testing.assert_array_almost_equal(new_particles.params,
+                                         mocked_particles.params)
+    np.testing.assert_array_almost_equal(new_particles.log_likes,
+                                         mocked_particles.log_likes)
+
+
 @pytest.mark.parametrize('random_samples, resample_indices',
                          ((np.array([.3, .3, .7]), [1, 1, 2]),
                           (np.array([.3, .05, .05]), [1, 0, 0]),
