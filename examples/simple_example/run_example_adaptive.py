@@ -4,9 +4,8 @@ import time
 
 from scipy.stats import uniform
 
-from smcpy.mcmc.vector_mcmc import VectorMCMC
-from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy.samplers import AdaptiveSampler as Sampler
+from smcpy import AdaptiveSampler, VectorMCMC, VectorMCMCKernel
+from smcpy.paths import GeometricPath
 from smcpy.utils.plotter import *
 
 def eval_model(theta):
@@ -40,14 +39,16 @@ if __name__ == '__main__':
     std_dev = 2
     noisy_data = generate_data(eval_model, std_dev, plot=False)
 
+    # require phi=0.2 be included in adaptive sequence
+    path = GeometricPath(required_phi=0.2)
+
     priors = [uniform(0., 6.), uniform(0., 6.)]
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
-    mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b'))
+    mcmc_kernel = VectorMCMCKernel(vector_mcmc, ('a', 'b'), path=path)
 
-    smc = Sampler(mcmc_kernel)
+    smc = AdaptiveSampler(mcmc_kernel)
     step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
-                                     target_ess=0.7, required_phi=0.2,
-                                     progress_bar=True)
+                                     target_ess=0.7, progress_bar=True)
     print(f'phi_sequence={smc.phi_sequence}')
     print(f'fbf norm index={smc.req_phi_index}')
     print('marginal log likelihood = {}'.format(mll_list[-1]))

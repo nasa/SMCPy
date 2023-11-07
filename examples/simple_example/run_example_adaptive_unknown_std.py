@@ -1,12 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import time
 
 from scipy.stats import uniform
 
-from smcpy import AdaptiveSampler
-from smcpy.mcmc.vector_mcmc import VectorMCMC
-from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
+from smcpy import AdaptiveSampler, VectorMCMC, VectorMCMCKernel
 from smcpy.utils.plotter import plot_pairwise
 
 from run_example_adaptive import generate_data, eval_model

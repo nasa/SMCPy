@@ -4,9 +4,7 @@ import time
 
 from scipy.stats import uniform
 
-from smcpy.mcmc.vector_mcmc import VectorMCMC
-from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy.samplers import FixedSampler as Sampler
+from smcpy import FixedSampler, VectorMCMCKernel, VectorMCMC
 from smcpy.utils.plotter import *
 
 
@@ -49,7 +47,7 @@ if __name__ == '__main__':
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('a', 'b'))
 
-    smc = Sampler(mcmc_kernel)
+    smc = FixedSampler(mcmc_kernel)
     phi_seq = np.linspace(0, 1, num_smc_steps)
     step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5,
                                      ess_threshold=0.7, phi_sequence=phi_seq)
