@@ -178,7 +178,7 @@ class AdaptiveSampler(SamplerBase):
             particles.log_likes,
             kernel.get_log_priors(particles.param_dict),
         )
-        inc_weights = kernel.inc_log_weights(*args)
+        inc_weights = kernel.path.inc_log_weights(*args)
         kernel.path.undo_phi_set()
         return inc_weights
 
