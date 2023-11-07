@@ -35,7 +35,7 @@ def test_vectormcmc_kernel_geometric_path_overrride():
 
     post = kernel._mcmc.evaluate_log_posterior(inputs, log_like, log_priors)
 
-    np.testing.assert_array_equal(post, np.full(log_like.shape[0], 2))
+    np.testing.assert_array_equal(post, np.full(log_like.shape, 2))
 
 
 def test_vectormcmc_kernel_geometric_path_overrride_manual_updates():
@@ -51,12 +51,12 @@ def test_vectormcmc_kernel_geometric_path_overrride_manual_updates():
     path.phi = 0.5
     post = kernel._mcmc.evaluate_log_posterior(inputs, log_like, log_priors)
 
-    np.testing.assert_array_equal(post, np.full(log_like.shape[0], 3))
+    np.testing.assert_array_equal(post, np.full(log_like.shape, 3))
 
     path.phi = 1
     post = kernel._mcmc.evaluate_log_posterior(inputs, log_like, log_priors)
 
-    np.testing.assert_array_equal(post, np.full(log_like.shape[0], 4))
+    np.testing.assert_array_equal(post, np.full(log_like.shape, 4))
 
 
 def test_smc_step_updates_phi(mocker):
@@ -112,7 +112,7 @@ def test_vectormcmc_kernel_geometric_path_overrride_with_proposal(mocker):
     post = kernel._mcmc.evaluate_log_posterior(inputs, log_like, log_priors)
 
     # log posterior = 3 * .8 + 2 * 0.2 + 2 * 0.2 = 3.2
-    np.testing.assert_array_equal(post, np.full(log_like.shape[0], 3.2))
+    np.testing.assert_array_equal(post, np.full(log_like.shape, 3.2))
 
 
 @pytest.mark.parametrize('req_phi', [[1.0], 0.4, [0.1, 0.3]])
@@ -133,10 +133,10 @@ def test_vectormcmc_kernel_geometric_path_overrride_w_req_phi(mocker, req_phi):
 
     if path.required_phi_list == []:
         # log posterior = 3 * .8 + 2 * 0.2 + 2 * 0.2 = 3.2
-        np.testing.assert_array_equal(post, np.full(log_like.shape[0], 3.2))
+        np.testing.assert_array_equal(post, np.full(log_like.shape, 3.2))
     elif path.phi < min(path.required_phi_list):
         # log posterior = 3 * 0.5 + 2 * 0.5 + 2 * 0.2 = 2.9
-        np.testing.assert_array_equal(post, np.full(log_like.shape[0], 2.9))
+        np.testing.assert_array_equal(post, np.full(log_like.shape, 2.9))
     else:
         # log posterior = 3 * 0 + 2 * 1 + 2 * 0.2 = 2.4 
-        np.testing.assert_array_equal(post, np.full(log_like.shape[0], 2.4))
+        np.testing.assert_array_equal(post, np.full(log_like.shape, 2.4))

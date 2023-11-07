@@ -50,6 +50,12 @@ class PathBase:
     def inc_log_weights(self, inputs, log_like, log_prior, delta_phi):
         return None
 
+    @staticmethod
+    def _log_prob_sum(x):
+        y = x.sum(axis=1, keepdims=True)
+        y[np.isnan(y)] = -np.inf # probability 0/0 => 0
+        return y
+
 
 class GeometricPath(PathBase):
 
@@ -84,17 +90,12 @@ class GeometricPath(PathBase):
     def _eval_target(self, log_like, log_prior, log_p, phi):
         target =  np.hstack((
             log_like * phi,
-            log_prior * min(1, phi / self._lambda),
-            log_p * max(0, (self._lambda - phi) / self._lambda)
+            log_prior * min(1., phi / self._lambda),
+            log_p * max(0., (self._lambda - phi) / self._lambda)
         ))
+        target[np.isnan(target)] = 0 # np.inf * 0 = 0
         return target
 
     def _get_proposal_logpdf(self, inputs, log_prior):
         return self._proposal.logpdf(inputs).reshape(-1, 1) \
                if self._proposal else log_prior
-
-    @staticmethod
-    def _log_prob_sum(x):
-        y = np.sum(x, axis=1, keepdims=True)
-        y[np.isnan(y)] = 0 # -inf * 0 = nan; inf - inf = nan
-        return y
