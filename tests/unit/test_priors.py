@@ -69,7 +69,7 @@ def test_invwishart_pdf(mocker, num_samples):
     cov_sample = np.array([[0, 1, 2], [1, 3, 4], [2, 4, 5]])
     expected_cov = np.tile(cov_sample, (num_samples, 1, 1))
     expected_cov = np.transpose(expected_cov, axes=(1, 2, 0))
-    expected_prior_probs = np.ones(num_samples)
+    expected_prior_probs = np.ones((num_samples, 1))
 
     mock_invwis = mocker.Mock()
     mock_invwis.pdf.return_value = np.ones(num_samples)
@@ -89,7 +89,7 @@ def test_invwishart_logpdf(mocker, num_samples):
     cov_sample = np.array([[0, 1, 2], [1, 3, 4], [2, 4, 5]])
     expected_cov = np.tile(cov_sample, (num_samples, 1, 1))
     expected_cov = np.transpose(expected_cov, axes=(1, 2, 0))
-    expected_prior_probs = np.zeros(num_samples)
+    expected_prior_probs = np.zeros((num_samples, 1))
 
     mock_invwis = mocker.Mock()
     mock_invwis.logpdf.return_value = np.zeros(num_samples)

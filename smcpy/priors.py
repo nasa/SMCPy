@@ -69,7 +69,7 @@ class InvWishart:
         '''
         covs = self._assemble_covs(x)
         try:
-            return self._invwishart.pdf(covs)
+            return self._invwishart.pdf(covs).reshape(-1, 1)
         except np.linalg.LinAlgError:
             return np.zeros((x.shape[0], 1))
 
@@ -80,7 +80,7 @@ class InvWishart:
         '''
         covs = self._assemble_covs(x)
         try:
-            return self._invwishart.logpdf(covs)
+            return self._invwishart.logpdf(covs).reshape(-1, 1)
         except np.linalg.LinAlgError:
             return np.full((x.shape[0], 1), -np.inf)
 
