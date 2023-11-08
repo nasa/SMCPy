@@ -27,4 +27,4 @@ class MultivarIndependent:
         return [d.rvs(1).size for d in self._dist_list]
 
     def _partition_inputs(self, inputs):
-        return np.split(inputs, np.cumsum(self._dims), axis=1)
+        return np.split(inputs, np.cumsum(self._dims)[:-1], axis=1)
