@@ -4,6 +4,11 @@ from scipy.stats import invwishart
 
 
 class ImproperUniform:
+    '''
+    Improper uniform prior distribution over the provided bounds. Sampling from
+    this distribution is not possible and thus a proposal distribution should be
+    used (see smcpy.proposals).
+    '''
 
     def __init__(self, lower_bound=None, upper_bound=None):
         self._lower = lower_bound
@@ -68,6 +73,17 @@ class InvWishart:
         except np.linalg.LinAlgError:
             return np.zeros((x.shape[0], 1))
 
+    def logpdf(self, x):
+        '''
+        :param x: input array
+        :type x: 2D array (# samples, # unique covariances)
+        '''
+        covs = self._assemble_covs(x)
+        try:
+            return self._invwishart.logpdf(covs)
+        except np.linalg.LinAlgError:
+            return np.full((x.shape[0], 1), -np.inf)
+
     def _assemble_covs(self, samples):
         covs = np.zeros((samples.shape[0], self._cov_dim, self._cov_dim))
         idx1, idx2 = np.triu_indices(self._cov_dim)
@@ -78,14 +94,12 @@ class InvWishart:
 class ImproperCov:
     '''
     Improper uniform prior distribution over all positive definite covariance
-    matrices. If sampling using the rvs method, will return samples from an
-    Inverse Wishart distribution with degrees of freedom dof and scale matrix S.
+    matrices. Sampling from this distribution is not possible and thus a
+    proposal distribution should be used (see smcpy.proposals).
     '''
-    def __init__(self, num_cov_cols, dof=None, S=None):
+    def __init__(self, num_cov_cols):
         self._ncols = num_cov_cols
         self._dim = int(num_cov_cols * (num_cov_cols + 1) / 2)
-        self._iw_dof = dof if dof is not None else num_cov_cols
-        self._iw_scale = S if S is not None else np.eye(self._ncols)
 
     @property
     def dim(self):
@@ -96,11 +110,6 @@ class ImproperCov:
         covs = self._assemble_covs(samples)
         pdf = np.array([self._is_pos_semidef(x) for x in covs]).reshape(-1, 1)
         return pdf
-
-    def rvs(self, num_samples):
-        cov = invwishart(self._iw_dof, self._iw_scale).rvs(num_samples)
-        idx1, idx2 = np.triu_indices(self._ncols)
-        return cov[:, idx1, idx2]
 
     def _assemble_covs(self, samples):
         covs = np.zeros((samples.shape[0], self._ncols, self._ncols))

@@ -39,7 +39,7 @@ def test_invwishart_dim(n):
     assert iw.dim == (n + 1) * n / 2
 
 
-@pytest.mark.parametrize('num_samples', [1, 5, 10])
+@pytest.mark.parametrize('num_samples', [5, 10])
 def test_invwishart_sample(mocker, num_samples):
     cov_dim = 3
     cov_sample = np.array([[0, 1, 2], [1, 3, 4], [2, 4, 5]])
@@ -58,6 +58,9 @@ def test_invwishart_sample(mocker, num_samples):
     assert iw_class_call[0] == cov_dim
     np.testing.assert_array_equal(iw_class_call[1], np.eye(cov_dim))
 
+def test_invwishart_single_sample():
+    iw = InvWishart(scale=np.eye(3), dof=3)
+    assert iw.rvs(1).shape == (1, 6)
 
 @pytest.mark.parametrize('num_samples', [1, 5, 10])
 def test_invwishart_pdf(mocker, num_samples):
@@ -79,6 +82,27 @@ def test_invwishart_pdf(mocker, num_samples):
     np.testing.assert_array_equal(mock_invwis.pdf.call_args[0][0], expected_cov)
 
 
+@pytest.mark.parametrize('num_samples', [1, 5, 10])
+def test_invwishart_logpdf(mocker, num_samples):
+    cov_dim = 3
+    samples = np.tile(np.arange(6), (num_samples, 1))
+    cov_sample = np.array([[0, 1, 2], [1, 3, 4], [2, 4, 5]])
+    expected_cov = np.tile(cov_sample, (num_samples, 1, 1))
+    expected_cov = np.transpose(expected_cov, axes=(1, 2, 0))
+    expected_prior_probs = np.zeros(num_samples)
+
+    mock_invwis = mocker.Mock()
+    mock_invwis.logpdf.return_value = np.zeros(num_samples)
+    mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
+                                     return_value=mock_invwis)
+
+    iw = InvWishart(scale=np.eye(cov_dim), dof=cov_dim)
+
+    np.testing.assert_array_equal(iw.logpdf(samples), expected_prior_probs)
+    np.testing.assert_array_equal(mock_invwis.logpdf.call_args[0][0],
+                                  expected_cov)
+
+
 @pytest.mark.parametrize('num_samples', [1, 5])
 def test_invwishart_zero_prob(mocker, num_samples):
     samples = np.tile(np.arange(6), (num_samples, 1))
@@ -93,9 +117,19 @@ def test_invwishart_zero_prob(mocker, num_samples):
     np.testing.assert_array_equal(iw.pdf(samples), np.zeros((num_samples, 1)))
 
 
-def test_invwishart_single_sample():
+@pytest.mark.parametrize('num_samples', [1, 5])
+def test_invwishart_zero_logprob(mocker, num_samples):
+    samples = np.tile(np.arange(6), (num_samples, 1))
+
+    mock_invwis = mocker.Mock()
+    mock_invwis.logpdf.side_effect = np.linalg.LinAlgError
+    mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
+                                     return_value=mock_invwis)
+
     iw = InvWishart(scale=np.eye(3), dof=3)
-    assert iw.rvs(1).shape == (1, 6)
+
+    np.testing.assert_array_equal(iw.logpdf(samples),
+                                  np.full((num_samples, 1), -np.inf))
 
 
 def test_impropcov_dim():
@@ -122,22 +156,6 @@ def test_impropcov_probability_nd(posdefindex):
     pdf = p.pdf(cov)
 
     np.testing.assert_array_equal(pdf, expected_prob)
-
-@pytest.mark.parametrize('dof, scale, expdof, expscale',
-                         [(None, None, 2, np.eye(2)),
-                          (3, np.ones((2, 2)), 3, np.ones((2, 2)))])
-def test_impropcov_rvs(mocker, dof, scale, expdof, expscale):
-    mock_invwis = mocker.Mock()
-    mock_invwis.rvs.return_value = np.arange(8).reshape(2, 2, 2)
-    mock_invwis_class = mocker.patch('smcpy.priors.invwishart',
-                                     return_value=mock_invwis)
-    p = ImproperCov(2, dof, scale)
-    samples = p.rvs(5)
-
-    assert mock_invwis_class.call_args[0][0] == expdof
-    np.testing.assert_array_equal(mock_invwis_class.call_args[0][1], expscale)
-    mock_invwis.rvs.asser_called_once_with(5)
-    np.testing.assert_array_equal(samples, np.array([[0, 1, 3], [4, 5, 7]]))
 
 
 @pytest.mark.parametrize('bounds,dim,expected_pdf',
