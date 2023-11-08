@@ -23,6 +23,9 @@ def dist2(mocker):
 def test_multivarindp_proposal_logpdf(dist1, dist2):
     inputs = np.array([[5, 6, 6]] * 3)
 
+    dist1.rvs.return_value = np.ones(1)
+    dist2.rvs.return_value = np.ones((1, 2))
+
     cp = MultivarIndependent(dist1, dist2)
     logpdf = cp.logpdf(inputs)
 
