@@ -24,7 +24,7 @@ class MultivarIndependent:
         return np.sum(indv_logpdf, axis=1, keepdims=True) 
 
     def _get_dims(self):
-        return [d.rvs(1).shape[0] for d in self._dist_list]
+        return [d.rvs(1).size for d in self._dist_list]
 
     def _partition_inputs(self, inputs):
         return np.split(inputs, np.cumsum(self._dims), axis=1)
