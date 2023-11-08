@@ -52,6 +52,8 @@ class InvWishart:
         :type num_samples: int
         '''
         cov = self._invwishart.rvs(num_samples)
+        if num_samples == 1:
+            cov = np.expand_dims(cov, 0)
         idx1, idx2 = np.triu_indices(self._cov_dim)
         return cov[:, idx1, idx2]
 

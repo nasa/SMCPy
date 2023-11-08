@@ -93,6 +93,11 @@ def test_invwishart_zero_prob(mocker, num_samples):
     np.testing.assert_array_equal(iw.pdf(samples), np.zeros((num_samples, 1)))
 
 
+def test_invwishart_single_sample():
+    iw = InvWishart(scale=np.eye(3), dof=3)
+    assert iw.rvs(1).shape == (1, 6)
+
+
 def test_impropcov_dim():
     p = ImproperCov(2)
     assert p.dim == 3
