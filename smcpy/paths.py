@@ -1,5 +1,6 @@
 import abc
 import numpy as np
+import warnings
 
 # compatible with Python 2 *and* 3:
 ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
@@ -52,8 +53,10 @@ class PathBase:
 
     @staticmethod
     def _log_prob_sum(x):
-        y = x.sum(axis=1, keepdims=True)
-        y[np.isnan(y)] = -np.inf # probability 0/0 => 0
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            y = x.sum(axis=1, keepdims=True)
+            y[np.isnan(y)] = -np.inf # probability 0/0 => 0
         return y
 
 
@@ -88,12 +91,15 @@ class GeometricPath(PathBase):
         return self._log_prob_sum(np.hstack((numer, -denom)))
 
     def _eval_target(self, log_like, log_prior, log_p, phi):
+        prior_exp = min(1., phi / self._lambda)
+        prop_exp = max(0., (self._lambda - phi) / self._lambda)
+
         target =  np.hstack((
             log_like * phi,
-            log_prior * min(1., phi / self._lambda),
-            log_p * max(0., (self._lambda - phi) / self._lambda)
+            log_prior * prior_exp if prior_exp > 0 else np.zeros_like(log_p),
+            log_p * prop_exp if prop_exp > 0 else np.zeros_like(log_p)
         ))
-        target[np.isnan(target)] = 0 # np.inf * 0 = 0
+
         return target
 
     def _get_proposal_logpdf(self, inputs, log_prior):
