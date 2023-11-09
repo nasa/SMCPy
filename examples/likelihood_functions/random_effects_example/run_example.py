@@ -2,18 +2,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import time
 
 from numpy.random import multivariate_normal as MVN
+from pathlib import Path
 from scipy.stats import uniform
 
-from smcpy import MVNRandomEffects, ImproperUniform, AdaptiveSampler
-from smcpy.mcmc.vector_mcmc import VectorMCMC
-from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy.priors import InvWishart
+from smcpy import MVNRandomEffects, AdaptiveSampler, VectorMCMC, VectorMCMCKernel
+from smcpy.priors import InvWishart, ImproperCov
+from smcpy.paths import GeometricPath
+from smcpy.proposals import MultivarIndependent
 
-NUM_RAND_EFF = 5
-NUM_DATA_PTS = 60
+FILEPATH = Path(__file__).parent / 'smc_samples.csv'
+NUM_RAND_EFF = 100
+NUM_DATA_PTS = 5
 TRUE_PARAMS = np.array([[2, 3.5]])
 RAND_EFF_NOISE_STD = 2.0
 X = np.linspace(2, 8, NUM_DATA_PTS)
@@ -71,8 +72,15 @@ if __name__ == '__main__':
 
     priors = [uniform(-10., 20), uniform(-10., 20)]
     priors += [uniform(-10., 20) for _ in range(NUM_RAND_EFF * 2)]
-    priors += [InvWishart(dof=7, scale=np.eye(TRUE_COV.shape[0]) * 5)]
+    priors += [ImproperCov(TRUE_COV.shape[0])]
     priors += [uniform(0, 100) for _ in range(NUM_RAND_EFF)]
+
+    proposal = MultivarIndependent(
+        *priors[:(2 + NUM_RAND_EFF * 2)],
+        InvWishart(dof=7, scale=np.eye(TRUE_COV.shape[0]) * 5),
+        *priors[-NUM_RAND_EFF:])
+
+    path = GeometricPath(proposal=proposal)
 
     idx1, idx2 = np.triu_indices(TRUE_PARAMS.shape[1])
     log_like_args = ( [None] * len(idx1), # total eff variances/covariances
@@ -86,23 +94,12 @@ if __name__ == '__main__':
 
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, log_like_args,
                              log_like_func)
-    mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
+    mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order, path)
 
     smc = AdaptiveSampler(mcmc_kernel)
-    n_parts = 20000
-    n_mcmc = 10
-    step_list, mll_list = smc.sample(num_particles=n_parts,
-                                     num_mcmc_samples=n_mcmc,
-                                     target_ess=0.8)
+    step_list, mll_list = smc.sample(num_particles=5000,
+                                     num_mcmc_samples=5)
 
-    np.save('smc_samples.npy', step_list[-1].params)
-    np.save('smc_weights.npy', step_list[-1].weights)
-
-    #plotting
-    ground_truth = init_inputs.flatten()
-    labels = param_order
     df = pd.DataFrame(dict(zip(param_order, step_list[-1].params.T)))
-    df['weights'] = step_list[-1].weights
-    sns.pairplot(df, diag_kind='kde', corner=True, plot_kws={'alpha': 1.0},
-                 hue='weights')
-    plt.savefig('smc_pairwise.png')
+    df.to_csv(FILEPATH)
+    import pdb; pdb.set_trace()
