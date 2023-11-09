@@ -5,8 +5,7 @@ from scipy.stats import uniform
 
 from spring_mass_model import SpringMassModel
 from smcpy.utils.plotter import plot_pairwise
-from smcpy import AdaptiveSampler as Sampler
-from smcpy import VectorMCMC, VectorMCMCKernel
+from smcpy import AdaptiveSampler, VectorMCMC, VectorMCMCKernel
 
 
 # Initialize model
@@ -24,7 +23,7 @@ vector_mcmc = VectorMCMC(model.evaluate, displacement_data, priors, std_dev)
 mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('K', 'g'))
 
 # SMC sampling
-smc = Sampler(mcmc_kernel)
+smc = AdaptiveSampler(mcmc_kernel)
 step_list, mll_list = smc.sample(num_particles=500,
                                  num_mcmc_samples=5,
                                  target_ess=0.8)
