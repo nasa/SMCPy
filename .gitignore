@@ -1,6 +1,7 @@
 *swp*
 *.pyc
 *.png
+*.gif
 *.h5
 *.sh
 *.npy
