@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from smcpy.smc.particles import Particles
 from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
 from smcpy.paths import GeometricPath
@@ -125,6 +126,7 @@ def test_adaptive_ess_margin(mocker, mcmc_kernel, phi_old, expected_ess_margin,
     particles = mocker.Mock()
     particles.log_likes = np.arange(5).reshape(-1, 1)
     particles.num_particles = num_particles
+    particles._logsum = Particles._logsum
 
     prop_mock = mocker.Mock()
     prop_mock.logpdf.return_value = np.ones((num_particles, 1))
@@ -153,6 +155,7 @@ def test_adaptive_ess_margin_nan(mocker, mcmc_kernel):
     particles = mocker.Mock()
     particles.log_likes = np.arange(5).reshape(-1, 1)
     particles.num_particles = num_particles
+    particles._logsum.return_value = -np.inf
     target_ess = 0.8
 
     mcmc_kernel.path = GeometricPath()
@@ -269,8 +272,10 @@ def test_delta_phi_is_zero_and_loglike_neginf(mocker, mcmc_kernel):
     mock_particles = mocker.Mock()
     mock_particles.num_particles = 10
     mock_particles.log_likes = np.full((10, 1), -np.inf)
+    mock_particles._logsum = Particles._logsum
     smc = AdaptiveSampler(mcmc_kernel)
-    assert smc.predict_ess_margin(1, 1, mock_particles, target_ess=1) == 0
+    ess_margin = smc.predict_ess_margin(1, 1, mock_particles, target_ess=1)
+    assert ess_margin == pytest.approx(0)
 
 
 @pytest.mark.parametrize("min_dphi,is_floored", [(0.2, True), (0.1, True),

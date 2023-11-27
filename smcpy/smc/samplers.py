@@ -161,13 +161,13 @@ class AdaptiveSampler(SamplerBase):
 
     def predict_ess_margin(self, phi_new, phi_old, particles, target_ess=1):
         delta_phi = phi_new - phi_old
-        beta = np.exp(self._get_inc_weights(particles, phi_new)) \
-               if delta_phi > 0 else np.ones_like(particles.log_likes)
-        numer = np.sum(beta)**2
-        denom = np.sum(beta**2)
+        log_beta = self._get_inc_weights(particles, phi_new) \
+                   if delta_phi > 0 else np.zeros_like(particles.log_likes)
+        numer = 2 * particles._logsum(log_beta)
+        denom = particles._logsum(2 * log_beta)
         ESS = 0
-        if numer > 0 and denom > 0:
-            ESS = numer / denom
+        if numer > -np.inf and denom > -np.inf:
+            ESS = np.exp(numer - denom)
         return ESS - particles.num_particles * target_ess
 
     def _get_inc_weights(self, particles, phi_new):
