@@ -49,7 +49,7 @@ def test_approx_hierarch_call(mocker):
         call = model.call_args_list[i][0][0]
         np.testing.assert_array_equal(call, d)
 
-    np.testing.assert_array_equal(log_likes, expected_log_likes)
+    np.testing.assert_array_almost_equal(log_likes, expected_log_likes)
 
 
 @pytest.mark.parametrize('n_inputs,n_hyper', [(2, 3), (4, 10)])

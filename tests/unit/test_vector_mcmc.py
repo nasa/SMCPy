@@ -119,8 +119,8 @@ def test_vectorized_proposal_non_psd_cov(vector_mcmc, mocker):
 
     _ = vector_mcmc.proposal(inputs, cov=cov)
 
-    assert chol_mock.call_args_list[0].args[0] == cov
-    np.testing.assert_array_equal(chol_mock.call_args_list[1].args[0],
+    assert chol_mock.call_args_list[0][0][0] == cov
+    np.testing.assert_array_equal(chol_mock.call_args_list[1][0][0],
                                   expected_cov)
 
 
