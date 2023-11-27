@@ -65,7 +65,7 @@ class MVNHierarchModel:
         self._term1, self._term2, self._VI = self._compute_likelihood_consts()
 
     def __call__(self, data):
-        term3 = self._compute_squared_mahalanobis(self._cov, data)
+        term3 = self._compute_squared_mahalanobis(data)
         return -1/2 * (self._term1 + self._term2 + term3)
 
     def build_cov_array(self):
@@ -77,7 +77,7 @@ class MVNHierarchModel:
         cov[:, k, l] = self._hyperparams
         return cov
 
-    def _compute_squared_mahalanobis(self, cov, data):
+    def _compute_squared_mahalanobis(self, data):
         delta = data - np.expand_dims(self._inputs, 1)
         return np.einsum('inj,ijk,ink->in', delta, self._VI, delta)
 
