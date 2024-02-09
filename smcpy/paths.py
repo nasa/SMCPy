@@ -69,7 +69,7 @@ class GeometricPath(PathBase):
 
     @property
     def required_phi_list(self):
-        return self._required_phi_list
+        return self._required_phi_list.copy()
 
     @required_phi_list.setter
     def required_phi_list(self, phi):

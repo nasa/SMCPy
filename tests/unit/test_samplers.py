@@ -307,3 +307,15 @@ def test_minimum_delta_phi(mocker, mcmc_kernel, result_mock, min_dphi,
 
     np.testing.assert_array_almost_equal(smc._phi_sequence[1:],
                                          expected_phi_seq)
+
+
+def test_optimize_step_does_not_alter_req_phi_list(mocker, mcmc_kernel):
+    mocker.patch(SAMPLERS + '.bisect', return_value=0.5)
+    mcmc_kernel.path = GeometricPath(required_phi=0.2)
+    smc = AdaptiveSampler(mcmc_kernel)
+    mocker.patch.object(smc, '_full_step_meets_target', return_value=False)
+
+    phi = smc.optimize_step(None, 0.21)
+    
+    assert smc._mcmc_kernel.path.required_phi_list == [0.2]
+    assert phi == 0.5
