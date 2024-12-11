@@ -56,3 +56,25 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
             mocked_particles.param_dict, num_samples, cov)
+
+
+def test_hidden_turn_off_cov_calculation(mocker, mutator, stub_mcmc_kernel):
+  
+    mocked_particles = mocker.Mock(Particles, autospec=True)
+    mocked_particles.param_dict = {}
+    mocker.patch.object(mocked_particles, 'compute_covariance')
+
+    stub_mcmc_kernel.path = mocker.Mock()
+
+    mocker.patch.object(
+        mutator.mcmc_kernel,
+        'mutate_particles',
+        return_value=[1, 1]
+    )
+
+    mocker.patch('smcpy.smc.mutator.Particles', new=DummyParticles)
+
+    mutator._compute_cov = False
+    mutator.mutate(mocked_particles, 1)
+
+    mocked_particles.compute_covariance.assert_not_called()

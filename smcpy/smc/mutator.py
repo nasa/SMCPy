@@ -47,9 +47,10 @@ class Mutator:
         :type mcmc_kernel: MCMCKernel object
         '''
         self.mcmc_kernel = mcmc_kernel
+        self._compute_cov = True # hidden option to turn off cov (used for objs)
 
     def mutate(self, particles, num_samples):
-        cov = particles.compute_covariance()
+        cov = particles.compute_covariance() if self._compute_cov else None
         mutated = self.mcmc_kernel.mutate_particles(particles.param_dict,
                                                     num_samples,
                                                     cov)
