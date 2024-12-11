@@ -45,8 +45,8 @@ def test_sample_from_prior(vector_mcmc, mocker):
 
 
 @pytest.mark.parametrize('param_dict, expected',
-                         ([{'a': 1, 'b': 2}, np.array([[1]])],
-                          [{'a': [1, 1], 'b': [1, 2]}, np.array([[1], [1]])]))
+    ([{'a': np.array([1]), 'b': np.array([2])}, np.array([[1]])],
+     [{'a': np.array([1, 1]), 'b': np.array([1, 2])}, np.array([[1], [1]])]))
 def test_kernel_log_likelihoods(vector_mcmc, param_dict, expected, mocker):
     mocker.patch.object(vector_mcmc, 'evaluate_log_likelihood',
                         new=lambda x: x[:, 0].reshape(-1, 1))
@@ -57,8 +57,8 @@ def test_kernel_log_likelihoods(vector_mcmc, param_dict, expected, mocker):
 
 
 @pytest.mark.parametrize('param_dict, expected',
-                         ([{'a': 1, 'b': 2}, np.array([[3]])],
-                          [{'a': [1, 1], 'b': [1, 2]}, np.array([[2], [3]])]))
+    ([{'a': np.array([1]), 'b': np.array([2])}, np.array([[3]])],
+     [{'a': np.array([1, 1]), 'b': np.array([1, 2])}, np.array([[2], [3]])]))
 def test_kernel_log_priors(vector_mcmc, param_dict, expected, mocker):
     mocker.patch.object(vector_mcmc, 'evaluate_log_priors',
                         new=lambda x: x)
