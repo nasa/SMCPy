@@ -44,5 +44,7 @@ class VectorMCMCKernel(MCMCKernel):
         param_array = np.zeros((dim0, len(self._param_order)))
 
         for i, k in enumerate(self._param_order):
+            if param_dict[k].dtype == 'object':
+                param_array = param_array.astype('object')
             param_array[:, i] = param_dict[k]
         return param_array

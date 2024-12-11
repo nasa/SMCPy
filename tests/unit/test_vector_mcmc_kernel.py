@@ -98,3 +98,13 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
     calls = smc_metropolis.call_args[0]
     for i, expect in enumerate([param_array, num_samples, cov]):
         np.testing.assert_array_equal(calls[i], expect)
+
+
+def test_convert_dict_to_array_when_objects(vector_mcmc):
+    kernel = VectorMCMCKernel(vector_mcmc, param_order=['a', 'b'])
+    param_dict = {
+        "a": np.array([np.array] * 3),
+        "b": np.array([np.array] * 3),
+    }
+    array = kernel._conv_param_dict_to_array(param_dict)
+    np.testing.assert_array_equal(array, np.array([[np.array, np.array]]*3))
