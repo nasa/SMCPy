@@ -37,7 +37,7 @@ def test_approx_hierarch_call(mocker):
     args = (marginal_log_likes, data_log_priors)
     inputs = np.ones((n_samples, 5))
 
-    expected_like = np.product([1 / 3 * 6 / 5, 2 / 3 * 6 / 7, 3 / 5 * 15 / 9])
+    expected_like = np.prod([1 / 3 * 6 / 5, 2 / 3 * 6 / 7, 3 / 5 * 15 / 9])
     expected_log_like = np.log(expected_like)
     expected_log_likes = np.tile(expected_log_like, (n_samples, 1))
 

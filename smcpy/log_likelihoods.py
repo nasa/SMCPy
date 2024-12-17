@@ -236,7 +236,7 @@ class MVNRandomEffects(BaseLogLike):
                                  self._args[0])
 
             in_ = total_eff_inputs[i].reshape(1, -1)
-            total_eff_log_like[i, 0] = total_eff(in_)
+            total_eff_log_like[i, 0] = total_eff(in_).item()
 
         iterable = zip(rand_eff_inputs, self._randeffs)
         log_like = [np.c_[d(in_)] for in_, d in iterable]

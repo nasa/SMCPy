@@ -43,12 +43,12 @@ def test_multisource_normal_fixed_std(args_0, args_1):
 
     segment_array = np.array(args_0)
     std_array = np.array(args_1)
-    exp_term = sum([np.product(std_array ** 2) / (std_array[i] ** 2)
+    exp_term = sum([np.prod(std_array ** 2) / (std_array[i] ** 2)
                     * segment_array[i] for i in range(len(std_array))])
     expected_log_like = np.ones(inputs.shape[0])
     expected_log_like *= (np.log(2 * np.pi) * -(len(data) / 2) + \
                          np.sum(np.log(std_array) * -segment_array)) + \
-                         -1 / (2 * np.product(std_array ** 2)) * exp_term
+                         -1 / (2 * np.prod(std_array ** 2)) * exp_term
 
     msn = MultiSourceNormal(model, data, args)
     log_like = msn(inputs)

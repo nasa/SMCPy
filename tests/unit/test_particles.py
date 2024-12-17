@@ -99,7 +99,7 @@ def test_compute_mean(params, weights):
 
     particles = Particles(params, log_likes, np.log(weights))
 
-    assert particles.compute_mean() == expected_means
+    assert particles.compute_mean() == pytest.approx(expected_means)
 
 
 @pytest.mark.parametrize('params, weights, expected_var',

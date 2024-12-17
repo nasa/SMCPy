@@ -224,7 +224,7 @@ def test_constrained_uniform_prior_rvs_max_tries(mocker):
     mocker.patch('smcpy.priors.np.random.default_rng', return_value=rng_mock)
 
     bounds = np.array([[2, 2], [3, 3]])
-    constraint_func = lambda x: np.product(x, axis=1) < 1
+    constraint_func = lambda x: np.prod(x, axis=1) < 1
     p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func,
                            max_rvs_tries=10)
 
