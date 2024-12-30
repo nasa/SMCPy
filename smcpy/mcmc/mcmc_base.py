@@ -9,7 +9,7 @@ from ..utils.mpi_utils import rank_zero_output_only
 
 class MCMCBase(ABC):
     def __init__(self, model, data, priors, log_like_args, log_like_func):
-        '''
+        """
         :param model: maps inputs to outputs
         :type model: callable
         :param data: data corresponding to model outputs
@@ -23,12 +23,23 @@ class MCMCBase(ABC):
         :param log_like_func: log likelihood function that takes inputs, model,
             data, and hyperparameters and returns log likelihoods
         :type log_like_func: callable
-        '''
+        """
         self._eval_model = model
         self._data = data
         self._priors = priors
-        self._log_like_func = log_like_func(self.evaluate_model, data,
-                                            log_like_args)
+        self._log_like_func = log_like_func(self.evaluate_model, data, log_like_args)
+        self._rng = np.random.default_rng()
+
+    @property
+    def rng(self):
+        return self._rng
+
+    @rng.setter
+    def rng(self, rng):
+        if isinstance(rng, np.random._generator.Generator):
+            self._rng = rng
+        else:
+            raise TypeError("Random number generator must be a numpy generator.")
 
     def smc_metropolis(self, inputs, num_samples, cov):
         num_particles = inputs.shape[0]
@@ -36,8 +47,9 @@ class MCMCBase(ABC):
 
         for i in range(num_samples):
 
-            inputs, log_like, log_priors, rejected = \
-                self._perform_mcmc_step(inputs, cov, log_like, log_priors)
+            inputs, log_like, log_priors, rejected = self._perform_mcmc_step(
+                inputs, cov, log_like, log_priors
+            )
 
             num_accepted = num_particles - np.sum(rejected)
 
@@ -48,14 +60,16 @@ class MCMCBase(ABC):
 
         return inputs, log_like
 
-    def metropolis(self,
-                   inputs,
-                   num_samples,
-                   cov,
-                   adapt_interval=None,
-                   adapt_delay=0,
-                   progress_bar=False,
-                   **kwargs):
+    def metropolis(
+        self,
+        inputs,
+        num_samples,
+        cov,
+        adapt_interval=None,
+        adapt_delay=0,
+        progress_bar=False,
+        **kwargs,
+    ):
 
         chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
         chain[:, :, 0] = inputs
@@ -64,19 +78,19 @@ class MCMCBase(ABC):
 
         for i in tqdm(range(1, num_samples + 1), disable=not progress_bar):
 
-            inputs, log_like, log_priors, rejected = \
-                self._perform_mcmc_step(inputs, cov, log_like, log_priors)
+            inputs, log_like, log_priors, rejected = self._perform_mcmc_step(
+                inputs, cov, log_like, log_priors
+            )
             chain[:, :, i] = inputs
 
-            cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval,
-                                          adapt_delay)
+            cov = self.adapt_proposal_cov(cov, chain, i, adapt_interval, adapt_delay)
         return chain
 
     @abstractmethod
     def evaluate_model(self, inputs):
-        '''
+        """
         Calls self._model with "inputs" and returns corresponding outputs.
-        '''
+        """
 
     @rank_zero_output_only
     def sample_from_priors(self, num_samples):
@@ -94,7 +108,7 @@ class MCMCBase(ABC):
         prior_probs = np.empty((inputs.shape[0], len(self._priors)))
         in_start_idx = 0
         for i, p in enumerate(self._priors):
-            in_ = inputs[:, in_start_idx:in_start_idx + prior_dims[i]]
+            in_ = inputs[:, in_start_idx : in_start_idx + prior_dims[i]]
             prior_probs[:, i] = p.pdf(in_).squeeze()
             in_start_idx += prior_dims[i]
 
@@ -104,7 +118,7 @@ class MCMCBase(ABC):
         return log_priors
 
     def _get_prior_dims(self):
-        return [p.dim if hasattr(p, 'dim') else 1 for p in self._priors]
+        return [p.dim if hasattr(p, "dim") else 1 for p in self._priors]
 
     def evaluate_log_likelihood(self, inputs):
         log_like = self._log_like_func(inputs)
@@ -121,14 +135,21 @@ class MCMCBase(ABC):
         delta = np.matmul(chol, z.T).T
         return inputs + delta
 
-    def acceptance_ratio(self, new_inputs, old_inputs, new_log_like,
-                         old_log_like, new_log_priors, old_log_priors):
-        old_log_post = self.evaluate_log_posterior(old_inputs,
-                                                   old_log_like,
-                                                   old_log_priors)
-        new_log_post = self.evaluate_log_posterior(new_inputs,
-                                                   new_log_like,
-                                                   new_log_priors)
+    def acceptance_ratio(
+        self,
+        new_inputs,
+        old_inputs,
+        new_log_like,
+        old_log_like,
+        new_log_priors,
+        old_log_priors,
+    ):
+        old_log_post = self.evaluate_log_posterior(
+            old_inputs, old_log_like, old_log_priors
+        )
+        new_log_post = self.evaluate_log_posterior(
+            new_inputs, new_log_like, new_log_priors
+        )
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
     @staticmethod
@@ -143,8 +164,7 @@ class MCMCBase(ABC):
             start = self._get_window_start(idx, adapt_delay, adapt_interval)
             end = idx + 1
             n_param = chain.shape[1]
-            flat_chain = [chain[:, i, start:end].flatten() \
-                          for i in range(n_param)]
+            flat_chain = [chain[:, i, start:end].flatten() for i in range(n_param)]
             return np.cov(flat_chain)
         return cov
 
@@ -157,12 +177,11 @@ class MCMCBase(ABC):
     def _perform_mcmc_step(self, inputs, cov, log_like, log_priors):
         new_inputs = self.proposal(inputs, cov)
         new_log_priors = self.evaluate_log_priors(new_inputs)
-        new_log_like = self._eval_log_like_if_prior_nonzero(
-            new_log_priors, new_inputs)
+        new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors, new_inputs)
 
-        accpt_ratio = self.acceptance_ratio(new_inputs, inputs,
-                                            new_log_like, log_like,
-                                            new_log_priors, log_priors)
+        accpt_ratio = self.acceptance_ratio(
+            new_inputs, inputs, new_log_like, log_like, new_log_priors, log_priors
+        )
 
         rejected = self.get_rejections(accpt_ratio)
 
@@ -188,15 +207,15 @@ class MCMCBase(ABC):
 
     def _check_log_priors_for_zero_probability(self, log_priors):
         if any(~self._row_has_nonzero_prior_probability(log_priors)):
-            raise ValueError('Initial inputs are out of bounds; '
-                             f'prior log prob = {log_priors}')
+            raise ValueError(
+                "Initial inputs are out of bounds; " f"prior log prob = {log_priors}"
+            )
 
     def _eval_log_like_if_prior_nonzero(self, log_priors, inputs):
         pos_rows = self._row_has_nonzero_prior_probability(log_priors)
         log_likes = np.zeros((log_priors.shape[0], 1))
         if inputs[pos_rows].size != 0:
-            log_likes[pos_rows] = self.evaluate_log_likelihood(
-                inputs[pos_rows])
+            log_likes[pos_rows] = self.evaluate_log_likelihood(inputs[pos_rows])
         return log_likes
 
     @staticmethod
@@ -205,19 +224,20 @@ class MCMCBase(ABC):
 
     @staticmethod
     def _ensure_psd_cov_and_do_chol_decomp(cov):
-        '''
+        """
         Higham NJ. Computing a nearest symmetric positive semidefinite matrix.
         Linear Algebra and its Applications. 1988 May;103(C):103-118.
 
         Code implementation: https://stackoverflow.com/a/63131250/4733085
-        '''
+        """
         try:
             return np.linalg.cholesky(cov)
         except:
             warnings.warn(
-                'Covariance matrix is not positive semi-definite; '
-                'forcing negative eigenvalues to zero and rebuilding '
-                'covariance matrix.')
+                "Covariance matrix is not positive semi-definite; "
+                "forcing negative eigenvalues to zero and rebuilding "
+                "covariance matrix."
+            )
             eigval, eigvec = np.linalg.eigh(cov)
             eigval[eigval < 0] = 0
             cov = (eigvec @ np.diag(eigval)) @ eigvec.T
