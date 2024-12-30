@@ -15,7 +15,9 @@ class MCMCBase(ABC):
         :param data: data corresponding to model outputs
         :type data: 1D array
         :param priors: random variable objects with a pdf and rvs method (e.g.
-            scipy stats random variable objects)
+            scipy stats random variable objects); note that the rvs method will
+            also receive a numpy random number generator as an argument, which
+            must be accounted for with custom prior objects
         :type priors: list of objects
         :param log_like_args: any fixed parameters that define the likelihood
             function (e.g., standard deviation for a Gaussian likelihood).
@@ -96,7 +98,7 @@ class MCMCBase(ABC):
     def sample_from_priors(self, num_samples):
         samples = []
         for i, p in enumerate(self._priors):
-            samples.append(p.rvs(num_samples).T)
+            samples.append(p.rvs(num_samples, random_state=self.rng).T)
         return np.vstack(samples).T
 
     def evaluate_log_priors(self, inputs):
@@ -131,7 +133,7 @@ class MCMCBase(ABC):
     @rank_zero_output_only
     def proposal(self, inputs, cov):
         chol = self._ensure_psd_cov_and_do_chol_decomp(cov)
-        z = np.random.normal(0, 1, inputs.shape)
+        z = self.rng.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
         return inputs + delta
 
@@ -152,10 +154,9 @@ class MCMCBase(ABC):
         )
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
-    @staticmethod
     @rank_zero_output_only
-    def get_rejections(acceptance_ratios):
-        u = np.random.uniform(0, 1, acceptance_ratios.shape)
+    def get_rejections(self, acceptance_ratios):
+        u = self.rng.uniform(0, 1, acceptance_ratios.shape)
         return acceptance_ratios < u
 
     def adapt_proposal_cov(self, cov, chain, idx, adapt_interval, adapt_delay):

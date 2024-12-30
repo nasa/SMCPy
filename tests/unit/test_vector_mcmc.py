@@ -26,12 +26,16 @@ def data():
 def priors(mocker):
     priors = [mocker.Mock() for _ in range(3)]
     for i, p in enumerate(priors):
-        p.rvs = lambda x, i=i: np.array([1 + i] * x)
+        p.rvs = mocker.Mock(
+            side_effect=lambda x, random_state, i=i: np.array([1 + i] * x)
+        )
         p.pdf = lambda x, i=i: x + i
         delattr(p, "dim")
 
     multivar_prior = mocker.Mock()
-    multivar_prior.rvs = lambda x: np.tile([4, 5, 6], (x, 1))
+    multivar_prior.rvs = mocker.Mock(
+        side_effect=lambda x, random_state: np.tile([4, 5, 6], (x, 1))
+    )
     multivar_prior.pdf = lambda x: np.sum(x - 0.5, axis=1)
     multivar_prior.dim = 3
     priors.append(multivar_prior)
@@ -49,6 +53,8 @@ def test_vectorized_prior_sampling(vector_mcmc, num_samples):
     prior_samples = vector_mcmc.sample_from_priors(num_samples=num_samples)
     expected_samples = np.tile([1, 2, 3, 4, 5, 6], (num_samples, 1))
     np.testing.assert_array_equal(prior_samples, expected_samples)
+    for p in vector_mcmc._priors:
+        p.rvs.assert_called_once_with(num_samples, random_state=vector_mcmc.rng)
 
 
 @pytest.mark.parametrize(
@@ -94,9 +100,12 @@ def test_vectorized_default_likelihood(vector_mcmc, inputs, std_dev):
     "inputs", (np.array([[0, 1, 0.5]]), np.array([[0, 1, 0.5]] * 4))
 )
 def test_vectorized_proposal(vector_mcmc, inputs, mocker):
+    rng = mocker.Mock(np.random.default_rng(), autospec=True)
+    norm_mock = mocker.patch.object(rng, "normal", return_value=np.array([1]))
     chol_mock = mocker.patch("numpy.linalg.cholesky", return_value=2)
-    norm_mock = mocker.patch("numpy.random.normal", return_value=np.array([1]))
     matmul_mock = mocker.patch("numpy.matmul", return_value=np.ones(inputs.shape).T)
+
+    vector_mcmc.rng = rng
 
     n_param = inputs.shape[1]
     cov = np.eye(n_param)
@@ -158,9 +167,9 @@ def test_vectorized_accept_ratio(vector_mcmc, new_inputs, old_inputs, mocker):
 def test_vectorized_get_rejections(vector_mcmc, mocker):
     acceptance_ratios = np.c_[[0.25, 1.2, 0.25, 0.75]]
     uniform_samples = np.full((4, 1), 0.5)
-    uniform_mock = mocker.patch(
-        "smcpy.mcmc.vector_mcmc.np.random.uniform", return_value=uniform_samples
-    )
+    rng = mocker.Mock(np.random.default_rng(), autospec=True)
+    uniform_mock = mocker.patch.object(rng, "uniform", return_value=uniform_samples)
+    vector_mcmc.rng = rng
     expected = np.c_[[True, False, True, False]]
 
     rejected = vector_mcmc.get_rejections(acceptance_ratios)
