@@ -44,6 +44,20 @@ def test_sample_from_prior(vector_mcmc, mocker):
     np.testing.assert_array_equal(samples["b"], mocked_sample[:, 1])
 
 
+def test_sample_from_proposal(vector_mcmc, mocker):
+    mocked_sample = np.array([[1, 2], [3, 4], [5, 6]])
+    vmcmc = VectorMCMCKernel(vector_mcmc, param_order=["a", "b"])
+    mocked_proposal = mocker.Mock()
+    rvs = mocker.patch.object(mocked_proposal, "rvs", return_value=mocked_sample)
+    vmcmc.path._proposal = mocked_proposal
+
+    samples = vmcmc.sample_from_proposal(num_samples=3)
+
+    np.testing.assert_array_equal(samples["a"], mocked_sample[:, 0])
+    np.testing.assert_array_equal(samples["b"], mocked_sample[:, 1])
+    rvs.assert_called_once_with(3, random_state=vmcmc.rng)
+
+
 @pytest.mark.parametrize(
     "param_dict, expected",
     (

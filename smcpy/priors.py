@@ -4,11 +4,11 @@ from scipy.stats import invwishart
 
 
 class ImproperUniform:
-    '''
+    """
     Improper uniform prior distribution over the provided bounds. Sampling from
     this distribution is not possible and thus a proposal distribution should be
     used (see smcpy.proposals).
-    '''
+    """
 
     def __init__(self, lower_bound=None, upper_bound=None):
         self._lower = lower_bound
@@ -21,28 +21,27 @@ class ImproperUniform:
             self._upper = np.inf
 
     def pdf(self, x):
-        '''
+        """
         :param x: input array
         :type x: 1D or 2D array; if 2D, must squeeze to 1D
-        '''
+        """
         array_x = np.array(x).squeeze()
 
         if array_x.ndim > 1:
-            raise ValueError('Input array must be 1D or must squeeze to 1D')
+            raise ValueError("Input array must be 1D or must squeeze to 1D")
 
         prior_pdf = np.zeros(array_x.size)
         in_bounds = (array_x >= self._lower) & (array_x <= self._upper)
         return np.add(prior_pdf, 1, out=prior_pdf, where=in_bounds)
 
 
-
 class InvWishart:
 
     def __init__(self, dof, scale):
-        '''
+        """
         :param scale: scale matrix
         :param dof: degrees of freedom (if == scale.shape[0], noninformative)
-        '''
+        """
         self._cov_dim = scale.shape[0]
         self._dim = int(self._cov_dim * (self._cov_dim + 1) / 2)
         self._invwishart = invwishart(dof, scale)
@@ -51,22 +50,22 @@ class InvWishart:
     def dim(self):
         return self._dim
 
-    def rvs(self, num_samples):
-        '''
+    def rvs(self, num_samples, random_state=None):
+        """
         :param num_samples: number of samples to return
         :type num_samples: int
-        '''
-        cov = self._invwishart.rvs(num_samples)
+        """
+        cov = self._invwishart.rvs(num_samples, random_state=random_state)
         if num_samples == 1:
             cov = np.expand_dims(cov, 0)
         idx1, idx2 = np.triu_indices(self._cov_dim)
         return cov[:, idx1, idx2]
 
     def pdf(self, x):
-        '''
+        """
         :param x: input array
         :type x: 2D array (# samples, # unique covariances)
-        '''
+        """
         covs = self._assemble_covs(x)
         try:
             return self._invwishart.pdf(covs).reshape(-1, 1)
@@ -74,10 +73,10 @@ class InvWishart:
             return np.zeros((x.shape[0], 1))
 
     def logpdf(self, x):
-        '''
+        """
         :param x: input array
         :type x: 2D array (# samples, # unique covariances)
-        '''
+        """
         covs = self._assemble_covs(x)
         try:
             return self._invwishart.logpdf(covs).reshape(-1, 1)
@@ -91,12 +90,14 @@ class InvWishart:
         covs += np.transpose(np.triu(covs, 1), axes=(0, 2, 1))
         return np.transpose(covs, axes=(1, 2, 0))
 
+
 class ImproperCov:
-    '''
+    """
     Improper uniform prior distribution over all positive definite covariance
     matrices. Sampling from this distribution is not possible and thus a
     proposal distribution should be used (see smcpy.proposals).
-    '''
+    """
+
     def __init__(self, num_cov_cols):
         self._ncols = num_cov_cols
         self._dim = int(num_cov_cols * (num_cov_cols + 1) / 2)
@@ -128,17 +129,18 @@ class ImproperCov:
 
     def _check_samples_shape(self, cov):
         if len(cov.shape) != 2 or cov.shape[1] != self._dim:
-            raise ValueError('Covariance must be 3D array w/ index 0 '
-                             'representing the sample index and indices 1 and '
-                             '2 representing the 2D covariance indices (which '
-                             'should also be equal size)')
+            raise ValueError(
+                "Covariance must be 3D array w/ index 0 "
+                "representing the sample index and indices 1 and "
+                "2 representing the 2D covariance indices (which "
+                "should also be equal size)"
+            )
 
 
 class ConstrainedUniform:
 
-    def __init__(self, constraint_function, dim=None, bounds=None, seed=None,
-                 max_rvs_tries=1000):
-        '''
+    def __init__(self, constraint_function, dim=None, bounds=None, max_rvs_tries=1000):
+        """
         :param constraint_function: a function that takes in an array of
             parameters with shape = (num_samples, num_params) and returns
             a boolean array-like with length num_samples. Prior probability will
@@ -156,20 +158,16 @@ class ConstrainedUniform:
             Parameter vectors falling outside of the bounds will result in a
             prior probability of 0.0 and 1.0 otherwise.
         :type bounds: 2D array
-        :param seed: [optional] random seed passed to the random number
-            generator when generating samples from the prior
-        :type seed: int
         :param max_rvs_tries: [optional; default=1000] number of tries to
             generate random samples that satisfy the provided constraint.
             Samples are generated uniformly within bounds and then pruned via
             rejection if violating the constraint; this process is repeated
             until the requested number of samples satisfying the constraint
             have been generated.
-        '''
+        """
         self._constraint_function = constraint_function
         self._bounds = bounds
         self._dim = dim
-        self._seed = seed
         self._max_rvs_tries = max_rvs_tries
 
         self._verify_inputs()
@@ -181,13 +179,16 @@ class ConstrainedUniform:
             constr *= bnd
         return constr
 
-    def rvs(self, num_samples):
+    def rvs(self, num_samples, random_state=None):
+        self._raise_error_if_rng_is_not_numpy_generator(random_state)
         if self._bounds_are_finite():
-            return self._get_constrained_samples(num_samples)
-        raise NotImplementedError('rvs cannot be used without finite bounds.')
+            return self._get_constrained_samples(
+                num_samples,
+                rng=(np.random.default_rng() if random_state is None else random_state),
+            )
+        raise NotImplementedError("rvs cannot be used without finite bounds.")
 
-    def _get_constrained_samples(self, num_samples):
-        rng = np.random.default_rng(seed=self._seed)
+    def _get_constrained_samples(self, num_samples, rng):
         samples = []
         tries = 0
 
@@ -201,8 +202,9 @@ class ConstrainedUniform:
         return np.array(samples)[:num_samples]
 
     def _are_within_bounds(self, samples):
-        in_bounds = (self._bounds[0] <= samples).all(axis=1) * \
-                    (self._bounds[1] >= samples).all(axis=1)
+        in_bounds = (self._bounds[0] <= samples).all(axis=1) * (
+            self._bounds[1] >= samples
+        ).all(axis=1)
         return in_bounds.astype(int).reshape(-1, 1)
 
     def _bounds_are_finite(self):
@@ -213,9 +215,9 @@ class ConstrainedUniform:
     @staticmethod
     def _raise_error_if_less_than_requested(samples, num_samples):
         if len(samples) < num_samples:
-            raise ValueError('Max rvs tries exceeded; '
-                             f'{len(samples)}/{num_samples} generated')
-
+            raise ValueError(
+                "Max rvs tries exceeded; " f"{len(samples)}/{num_samples} generated"
+            )
 
     def _verify_inputs(self):
         if self._dim is None and self._bounds is None:
@@ -226,3 +228,9 @@ class ConstrainedUniform:
         if self._dim:
             return self._dim
         return self._bounds.shape[1]
+
+    @staticmethod
+    def _raise_error_if_rng_is_not_numpy_generator(rng):
+        if rng is not None and not isinstance(rng, np.random._generator.Generator):
+            raise TypeError("Random number generator must be a numpy generator.")
+        return None

@@ -23,7 +23,7 @@ class VectorMCMCKernel(MCMCKernel):
         return self._conv_param_array_to_dict(param_array)
 
     def sample_from_proposal(self, num_samples):
-        param_array = self.path.proposal.rvs(num_samples)
+        param_array = self.path.proposal.rvs(num_samples, random_state=self.rng)
         return self._conv_param_array_to_dict(param_array)
 
     def get_log_likelihoods(self, param_dict):

@@ -1,4 +1,4 @@
-'''
+"""
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration. No copyright is claimed in
@@ -28,7 +28,7 @@ UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
 ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
-'''
+"""
 
 import numpy as np
 
@@ -36,16 +36,17 @@ from .particles import Particles
 
 
 class Updater:
-    '''
+    """
     Updates particle weights (and resamples if necessary) based on delta phi
     and particle state.
-    '''
+    """
+
     def __init__(self, ess_threshold, mcmc_kernel):
-        '''
+        """
         :param ess_threshold: threshold on effective sample size (ess); if
             ess < ess_threshold, resampling with replacement is conducted.
         :type ess_threshold: float
-        '''
+        """
         self.ess_threshold = ess_threshold
         self._ess = np.nan
         self._resampled = False
@@ -58,8 +59,8 @@ class Updater:
 
     @ess_threshold.setter
     def ess_threshold(self, ess_threshold):
-        if ess_threshold < 0. or ess_threshold > 1.:
-            raise ValueError('ESS threshold must be between 0 and 1.')
+        if ess_threshold < 0.0 or ess_threshold > 1.0:
+            raise ValueError("ESS threshold must be between 0 and 1.")
         self._ess_threshold = ess_threshold
 
     @property
@@ -72,8 +73,9 @@ class Updater:
 
     def update(self, particles):
         new_log_weights = self._compute_new_weights(particles)
-        new_particles = Particles(particles.param_dict, particles.log_likes,
-                                  new_log_weights)
+        new_particles = Particles(
+            particles.param_dict, particles.log_likes, new_log_weights
+        )
 
         new_particles = self.resample_if_needed(new_particles)
         return new_particles
@@ -100,14 +102,13 @@ class Updater:
             kernel.get_log_priors(particles.param_dict),
         )
 
-        un_log_weights = particles.log_weights + \
-                         kernel.path.inc_log_weights(*args)  
+        un_log_weights = particles.log_weights + kernel.path.inc_log_weights(*args)
 
         self._unnorm_log_weights.append(un_log_weights)
         return un_log_weights
 
     def _resample(self, particles):
-        u = np.random.uniform(0, 1, particles.num_particles)
+        u = self._mcmc_kernel.rng.uniform(0, 1, particles.num_particles)
         resample_indices = np.digitize(u, np.cumsum(particles.weights))
 
         new_params = particles.params[resample_indices]
@@ -115,7 +116,7 @@ class Updater:
 
         new_log_likes = particles.log_likes[resample_indices]
 
-        uniform_weights = [1/particles.num_particles] * particles.num_particles
+        uniform_weights = [1 / particles.num_particles] * particles.num_particles
         new_weights = np.log(uniform_weights)
 
         return Particles(param_dict, new_log_likes, new_weights)
