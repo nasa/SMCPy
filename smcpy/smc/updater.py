@@ -41,7 +41,7 @@ class Updater:
     and particle state.
     """
 
-    def __init__(self, ess_threshold, mcmc_kernel):
+    def __init__(self, ess_threshold, mcmc_kernel, resample_strategy='standard'):
         """
         :param ess_threshold: threshold on effective sample size (ess); if
             ess < ess_threshold, resampling with replacement is conducted.
@@ -52,6 +52,7 @@ class Updater:
         self._resampled = False
         self._unnorm_log_weights = []
         self._mcmc_kernel = mcmc_kernel
+        self.resample_rng = resample_strategy.lower()
 
     @property
     def ess_threshold(self):
@@ -70,6 +71,20 @@ class Updater:
     @property
     def resampled(self):
         return self._resampled
+
+    @property
+    def resample_rng(self):
+        return self._resample_rng
+
+    @resample_rng.setter
+    def resample_rng(self, resample_strategy):
+        if resample_strategy == 'standard':
+            self._resample_rng =  lambda N: self._mcmc_kernel.rng.uniform(0, 1, N)
+        elif resample_strategy == 'stratified':
+            self._resample_rng = lambda N: 1 / N * (np.arange(N) + self._mcmc_kernel.rng.uniform(0, 1, N))
+        else:
+            raise ValueError(f'Invalid resampling strategy {resample_strategy}')
+
 
     def update(self, particles):
         new_log_weights = self._compute_new_weights(particles)
@@ -108,9 +123,7 @@ class Updater:
         return un_log_weights
 
     def _resample(self, particles):
-        u = self._mcmc_kernel.rng.uniform(0, 1, particles.num_particles)
-        resample_indices = np.digitize(u, np.cumsum(particles.weights))
-
+        resample_indices = self._generate_resample_indices(particles)
         new_params = particles.params[resample_indices]
         param_dict = dict(zip(particles.param_names, new_params.T))
 
@@ -120,3 +133,8 @@ class Updater:
         new_weights = np.log(uniform_weights)
 
         return Particles(param_dict, new_log_likes, new_weights)
+
+    def _generate_resample_indices(self, particles):
+        u = self._resample_rng(particles.num_particles)
+        return np.digitize(u, np.cumsum(particles.weights))
+

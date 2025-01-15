@@ -208,7 +208,7 @@ def test_update_w_zero_in_numer_and_denom(mocked_particles, mocker):
         (np.array([0.3, 0.7, 0.3]), [1, 2, 1]),
     ),
 )
-def test_update_with_resample(
+def test_update_with_standard_resample(
     mocked_particles, random_samples, resample_indices, mocker
 ):
     mocker.patch("smcpy.smc.updater.Particles", new=MockedParticles)
@@ -241,3 +241,60 @@ def test_update_with_resample(
     )
 
     assert new_particles._total_unlw == 99
+
+
+def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_particles):
+    mocked_kernel = mocker.Mock()
+    mocked_kernel.rng = np.random.default_rng()
+    n_particles = mocked_particles.num_particles
+    mocked_particles.weights = np.array([[1/n_particles]] * n_particles)
+    updater = Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=mocked_kernel,
+        resample_strategy='stratified'
+    )
+
+    new_particles = updater.resample_if_needed(mocked_particles)
+    assert updater._resampled == True
+    np.testing.assert_array_equal(mocked_particles.params, new_particles.params)
+
+
+@pytest.mark.parametrize(
+        'uniform_sample, expected',
+        (([0.3, 0.5, 0.5], [1, 2]), ([0.4, 0.5, 0.5], (1, 3)))
+    )
+def test_resample_using_stratified_sampling_nonuniform_weights(
+        mocker, mocked_particles, uniform_sample, expected):
+    mocked_rng = mocker.Mock(np.random.default_rng(), autospec=True)
+    mocked_rng.uniform.return_value = uniform_sample
+    mocked_kernel = mocker.Mock()
+    mocked_kernel.rng = mocked_rng
+
+    expected_params = np.array([ expected, [1, 3], [2, 4] ])
+
+    updater = Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=mocked_kernel,
+        resample_strategy='stratified'
+    )
+
+    new_particles = updater.resample_if_needed(mocked_particles)
+    assert updater._resampled == True
+    np.testing.assert_array_equal(expected_params, new_particles.params)
+
+
+def test_resample_raises_with_invalid_strategy(mocker, mocked_particles):
+    with pytest.raises(ValueError):
+        Updater(
+            ess_threshold=1.0,
+            mcmc_kernel=mocker.Mock(),
+            resample_strategy='bad-strat'
+        )
+
+
+def test_resample_strategy_case_insensitive(mocker):
+    Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=mocker.Mock(),
+        resample_strategy='StAnDaRd'
+    )

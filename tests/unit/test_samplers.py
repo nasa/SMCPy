@@ -78,7 +78,7 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel,
                                 ess_threshold,
                                 progress_bar=prog_bar)
 
-    upd.assert_called_once_with(ess_threshold, mcmc_kernel)
+    upd.assert_called_once_with(ess_threshold, mcmc_kernel, resample_strategy='standard')
     mut.assert_called_once_with(smc._mcmc_kernel)
 
     np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[1:])
@@ -249,7 +249,7 @@ def test_adaptive_phi_sample(mocker, mcmc_kernel, required_phi, exp_index,
                           num_mcmc_samples=5,
                           target_ess=1,)
 
-    update_mock.assert_called_once_with(ess_threshold=1, mcmc_kernel=mcmc_kernel)
+    update_mock.assert_called_once_with(ess_threshold=1, mcmc_kernel=mcmc_kernel, resample_strategy='standard')
     np.testing.assert_array_equal(smc._phi_sequence, [0, 0.5, 0.6, 1.0])
     np.testing.assert_array_equal(smc.req_phi_index, exp_index)
     assert len(result_mock.save_step.call_args_list) == 4
@@ -319,3 +319,19 @@ def test_optimize_step_does_not_alter_req_phi_list(mocker, mcmc_kernel):
     
     assert smc._mcmc_kernel.path.required_phi_list == [0.2]
     assert phi == 0.5
+
+
+@pytest.mark.parametrize('sampler, kwargs', (
+    (AdaptiveSampler, {}),
+    (FixedSampler, {'phi_sequence': [0, 0.5, 1], 'ess_threshold': 0.8})
+))
+def test_sampling_strategy_passed_through(sampler, mcmc_kernel, kwargs):
+    smc = sampler(mcmc_kernel)
+    with pytest.raises(ValueError):
+        # TODO this is a little hacky, just checking bad strategy raises error
+        smc.sample(
+            num_particles=1,
+            num_mcmc_samples=1,
+            resample_strategy='bad-strat',
+            **kwargs
+        )
