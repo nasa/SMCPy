@@ -328,7 +328,7 @@ def test_optimize_step_does_not_alter_req_phi_list(mocker, mcmc_kernel):
 def test_sampling_strategy_passed_through(sampler, mcmc_kernel, kwargs):
     smc = sampler(mcmc_kernel)
     with pytest.raises(ValueError):
-        # TODO this is a little hacky, just checking bad strategy raises error
+        # TODO this is hacky, just checking bad strategy raises error
         smc.sample(
             num_particles=1,
             num_mcmc_samples=1,
