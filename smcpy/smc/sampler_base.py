@@ -1,4 +1,4 @@
-'''
+"""
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration. No copyright is claimed in
@@ -28,7 +28,7 @@ UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
 ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
-'''
+"""
 
 import numpy as np
 
@@ -42,7 +42,6 @@ from ..utils.context_manager import ContextManager
 
 
 class SamplerBase:
-
     def __init__(self, mcmc_kernel):
         self._mcmc_kernel = mcmc_kernel
         self._initializer = Initializer(self._mcmc_kernel)
@@ -73,10 +72,10 @@ class SamplerBase:
 
     @abstractmethod
     def sample(self):
-        '''
+        """
         Performs SMC sampling. Returns step list and estimates of marginal
         log likelihood at each step.
-        '''
+        """
         raise NotImplementedError
 
     def _initialize(self, num_particles):

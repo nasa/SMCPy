@@ -6,8 +6,8 @@ from smcpy.smc.mutator import Mutator
 from smcpy.smc.particles import Particles
 from smcpy.paths import GeometricPath
 
-class DummyParticles:
 
+class DummyParticles:
     def __init__(self, params, log_likes, log_weights):
         self.params = params
         self.log_likes = log_likes
@@ -37,10 +37,9 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     mocked_particles.log_likes = 2
     mocked_particles.log_weights = 3
     mocked_particles.total_unnorm_log_weight = 99
-    mocker.patch.object(mocked_particles, 'compute_covariance',
-                        return_value=cov)
+    mocker.patch.object(mocked_particles, "compute_covariance", return_value=cov)
 
-    mocker.patch('smcpy.smc.mutator.Particles', new=DummyParticles)
+    mocker.patch("smcpy.smc.mutator.Particles", new=DummyParticles)
 
     stub_mcmc_kernel.mutate_particles.return_value = [10, 20]
     stub_mcmc_kernel.path = GeometricPath()
@@ -52,27 +51,23 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     assert mutated_particles.log_likes == 20
     assert mutated_particles.log_weights == 3
     assert mutated_particles._total_unlw == 99
-    assert mutated_particles.attrs['phi'] == 1
+    assert mutated_particles.attrs["phi"] == 1
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
-            mocked_particles.param_dict, num_samples, cov)
+        mocked_particles.param_dict, num_samples, cov
+    )
 
 
 def test_hidden_turn_off_cov_calculation(mocker, mutator, stub_mcmc_kernel):
-  
     mocked_particles = mocker.Mock(Particles, autospec=True)
     mocked_particles.param_dict = {}
-    mocker.patch.object(mocked_particles, 'compute_covariance')
+    mocker.patch.object(mocked_particles, "compute_covariance")
 
     stub_mcmc_kernel.path = mocker.Mock()
 
-    mocker.patch.object(
-        mutator.mcmc_kernel,
-        'mutate_particles',
-        return_value=[1, 1]
-    )
+    mocker.patch.object(mutator.mcmc_kernel, "mutate_particles", return_value=[1, 1])
 
-    mocker.patch('smcpy.smc.mutator.Particles', new=DummyParticles)
+    mocker.patch("smcpy.smc.mutator.Particles", new=DummyParticles)
 
     mutator._compute_cov = False
     mutator.mutate(mocked_particles, 1)

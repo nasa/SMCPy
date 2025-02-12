@@ -5,10 +5,8 @@ from ..log_likelihoods import Normal
 
 
 class VectorMCMC(MCMCBase):
-    
-    def __init__(self, model, data, priors, log_like_args=None,
-                 log_like_func=Normal):
-        '''
+    def __init__(self, model, data, priors, log_like_args=None, log_like_func=Normal):
+        """
         :param model: maps inputs to outputs
         :type model: callable
         :param data: data corresponding to model outputs
@@ -22,7 +20,7 @@ class VectorMCMC(MCMCBase):
         :param log_like_func: log likelihood function that takes inputs, model,
             data, and hyperparameters and returns log likelihoods
         :type log_like_func: callable
-        '''
+        """
         super().__init__(model, data, priors, log_like_args, log_like_func)
 
     def evaluate_model(self, inputs):

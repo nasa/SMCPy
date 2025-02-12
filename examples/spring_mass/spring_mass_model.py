@@ -1,15 +1,15 @@
 import numpy as np
 from scipy.integrate import odeint
 
-#------------------------------------------------------
+# ------------------------------------------------------
 # Helper function to use scipy integrator in model class
 
 
 def mass_spring(state, t, K, g):
-    '''
+    """
     Return velocity/acceleration given velocity/position and values for
     stiffness and mass
-    '''
+    """
 
     # unpack the state vector
     x = state[0]
@@ -22,15 +22,15 @@ def mass_spring(state, t, K, g):
     return [xd, xdd]
 
 
-#------------------------------------------------------
+# ------------------------------------------------------
 
-class SpringMassModel():
-    '''
+
+class SpringMassModel:
+    """
     Defines Spring Mass model with 2 free params (spring stiffness, k & mass, m)
-    '''
+    """
 
     def __init__(self, state0=None, time_grid=None):
-
         if state0 is None:
             state0 = [0.0, 0.0]
         if time_grid is None:
@@ -40,10 +40,10 @@ class SpringMassModel():
         self._t = time_grid
 
     def evaluate(self, params):
-        '''
+        """
         Simulate spring mass system for given spring constant. Returns state
         (position, velocity) at all points in time grid
-        '''
+        """
         results = []
         for p in params:
             K = p[0]

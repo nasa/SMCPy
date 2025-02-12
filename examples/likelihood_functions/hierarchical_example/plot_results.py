@@ -13,6 +13,7 @@ from generate_data import gen_data_from_mvn, plot_noisy_data, X
 N_SAMPLES = 5000
 PLOT_DIR = Path(__file__).parent
 
+
 def get_mean_and_cov(params):
     mvn = MVNHierarchModel(params)
     means = mvn._inputs
@@ -21,42 +22,38 @@ def get_mean_and_cov(params):
 
 
 def get_smc_predictive_samples(step):
-    rng = np.random.default_rng()#seed=34)
+    rng = np.random.default_rng()  # seed=34)
     means, covs = get_mean_and_cov(step.params)
     samples = np.zeros((means.shape))
     for i, (m, c) in enumerate(zip(means, covs)):
         samples[i, :] = rng.multivariate_normal(m, c)
-    df = pd.DataFrame(data=samples, columns=['a', 'b'])
-    df['src'] = 'SMC'
+    df = pd.DataFrame(data=samples, columns=["a", "b"])
+    df["src"] = "SMC"
     return df
 
 
 def get_ground_truth_samples(nsamples):
     rng = np.random.default_rng(seed=34)
-    ground_truth_samples = rng.multivariate_normal(
-        TRUE_PARAMS[0],
-        TRUE_COV,
-        nsamples
-    )
-    df = pd.DataFrame(data=ground_truth_samples, columns=['a', 'b'])
-    df['src'] = 'Ground Truth'
+    ground_truth_samples = rng.multivariate_normal(TRUE_PARAMS[0], TRUE_COV, nsamples)
+    df = pd.DataFrame(data=ground_truth_samples, columns=["a", "b"])
+    df["src"] = "Ground Truth"
     return df
 
 
 def plot_hyperparms(results):
     df = pd.DataFrame(results[-1].param_dict)
-    sns.pairplot(df, diag_kind='kde')
-    plt.savefig(PLOT_DIR / 'hyperparam_pairplot.png')
- 
+    sns.pairplot(df, diag_kind="kde")
+    plt.savefig(PLOT_DIR / "hyperparam_pairplot.png")
+
 
 def plot_predictive(results):
     _, r_effs = gen_data_from_mvn(plot=False)
     df = get_smc_predictive_samples(results[-1])
     gt_df = get_ground_truth_samples(nsamples=df.shape[0])
-    sns.pairplot(data=pd.concat((df, gt_df)), kind='kde', hue='src')
+    sns.pairplot(data=pd.concat((df, gt_df)), kind="kde", hue="src")
     ax = plt.gcf().axes[2]
-    ax.plot(r_effs[:, 0], r_effs[:, 1], 'k+')
-    plt.savefig(PLOT_DIR / 'predictive_pairplot.png')
+    ax.plot(r_effs[:, 0], r_effs[:, 1], "k+")
+    plt.savefig(PLOT_DIR / "predictive_pairplot.png")
 
 
 def plot_95pct_pred_interval(results):
@@ -67,7 +64,7 @@ def plot_95pct_pred_interval(results):
     interp = interp1d(np.linspace(0, 1, out.shape[0]), out, axis=0)
     intervals = interp([0.025, 0.5, 0.975])
     plt.fill_between(X, intervals[0], intervals[2], zorder=10, alpha=0.7)
-    plt.savefig(PLOT_DIR / 'pred_interval.png')
+    plt.savefig(PLOT_DIR / "pred_interval.png")
 
 
 def plot_hyperparam_animation(results):
@@ -104,13 +101,13 @@ def plot_hyperparam_animation(results):
             _ = [xlims.append(x.get_xlim()) for x in g.axes.flatten()]
             _ = [ylims.append(x.get_ylim()) for x in g.axes.flatten()]
 
-    ani = animation.FuncAnimation(g.fig, animate, frames=np.arange(num_steps),
-                                  repeat=False, interval=100)
-    ani.save(PLOT_DIR / 'hyperparam_pairplot.gif', writer='pillow')
+    ani = animation.FuncAnimation(
+        g.fig, animate, frames=np.arange(num_steps), repeat=False, interval=100
+    )
+    ani.save(PLOT_DIR / "hyperparam_pairplot.gif", writer="pillow")
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     results = HDF5Storage(HDF5_FILE)
 
     plot_hyperparms(results)

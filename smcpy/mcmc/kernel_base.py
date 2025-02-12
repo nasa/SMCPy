@@ -8,7 +8,6 @@ ABC = abc.ABCMeta("ABC", (object,), {"__slots__": ()})
 
 
 class MCMCKernel(ABC):
-
     def __init__(self, mcmc_object, param_order, path, rng=None):
         self._mcmc = mcmc_object
         self._param_order = param_order

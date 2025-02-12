@@ -36,7 +36,6 @@ def plot_noisy_data(x, y_true, noisy_data):
 
 
 if __name__ == "__main__":
-
     rng = np.random.default_rng(200)
 
     std_dev = 2

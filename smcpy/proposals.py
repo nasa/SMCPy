@@ -2,7 +2,6 @@ import numpy as np
 
 
 class MultivarIndependent:
-
     def __init__(self, *args):
         """
         Helper class to combine arbitrary number of independent proposal

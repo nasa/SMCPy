@@ -28,15 +28,14 @@ def generate_data(eval_model, plot=True):
 
 def plot_noisy_data(x, y_true, noisy_data):
     fig, ax = plt.subplots(1)
-    ax.plot(x.flatten(), y_true.flatten(), '-k')
-    ax.plot(x.flatten(), noisy_data.flatten(), 'o')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
+    ax.plot(x.flatten(), y_true.flatten(), "-k")
+    ax.plot(x.flatten(), noisy_data.flatten(), "o")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
     plt.show()
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     np.random.seed(200)
 
     noisy_data = generate_data(eval_model, plot=False)
@@ -46,12 +45,16 @@ if __name__ == '__main__':
     init_inputs = np.array([[2, 2], [3.5, 3.5]])
     cov = np.eye(2)
 
-    priors = [uniform(0., 6.), uniform(0., 6.)]
+    priors = [uniform(0.0, 6.0), uniform(0.0, 6.0)]
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
 
-    chain = vector_mcmc.metropolis(init_inputs, num_samples, cov,
-                                   adapt_interval=200, adapt_delay=100,
-                                   progress_bar=True)
+    chain = vector_mcmc.metropolis(
+        init_inputs,
+        num_samples,
+        cov,
+        adapt_interval=200,
+        adapt_delay=100,
+        progress_bar=True,
+    )
 
-    plot_mcmc_chain(chain, param_labels=['a', 'b'], burnin=burnin,
-                    include_kde=True)
+    plot_mcmc_chain(chain, param_labels=["a", "b"], burnin=burnin, include_kde=True)

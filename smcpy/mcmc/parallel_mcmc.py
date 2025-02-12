@@ -5,7 +5,7 @@ from ..log_likelihoods import Normal
 
 
 class ParallelMCMC(VectorMCMC):
-    '''
+    """
     Enables use of MPI to split model evaluations over a distributed memory
     system.
 
@@ -15,10 +15,11 @@ class ParallelMCMC(VectorMCMC):
     normally and propagate objects of the right shape and type. At the end of
     an analysis that uses the ParallelMCMC class, outputs on positive ranks
     should be discarded and ONLY the output from rank 0 should be used.
-    '''
+    """
 
-    def __init__(self, model, data, priors, mpi_comm, log_like_args=None,
-                 log_like_func=Normal):
+    def __init__(
+        self, model, data, priors, mpi_comm, log_like_args=None, log_like_func=Normal
+    ):
         self._comm = mpi_comm
         self._size = mpi_comm.Get_size()
         self._rank = mpi_comm.Get_rank()
