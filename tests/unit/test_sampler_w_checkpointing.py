@@ -4,7 +4,7 @@ import pytest
 from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.mcmc.kernel_base import MCMCKernel
 
-SAMPLER_BASE = "smcpy.smc.sampler_base"
+SAMPLER_BASE = "smcpy.smc.samplers"
 
 
 class DummyResult:

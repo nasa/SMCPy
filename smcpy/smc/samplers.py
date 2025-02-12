@@ -32,13 +32,77 @@ AGREEMENT.
 
 import numpy as np
 
+from abc import ABC, abstractmethod
 from scipy.optimize import bisect
 from tqdm import tqdm
 
-from .sampler_base import SamplerBase
+from .initializer import Initializer
+from .mutator import Mutator
 from .updater import Updater
+from ..utils.context_manager import ContextManager
+from ..utils.mpi_utils import rank_zero_output_only, rank_zero_run_only
 from ..utils.progress_bar import set_bar
-from ..utils.mpi_utils import rank_zero_output_only
+from ..utils.storage import InMemoryStorage
+
+
+class SamplerBase:
+    def __init__(self, mcmc_kernel):
+        self._mcmc_kernel = mcmc_kernel
+        self._initializer = Initializer(self._mcmc_kernel)
+        self._mutator = Mutator(self._mcmc_kernel)
+        self._updater = None
+        self._mutation_ratio = 1
+        self._step_list = []
+        self._phi_sequence = []
+
+        try:
+            self._result = ContextManager.get_context()
+        except:
+            self._result = InMemoryStorage()
+
+    @property
+    def phi_sequence(self):
+        return np.array(self._phi_sequence)
+
+    @property
+    def step(self):
+        return self._step
+
+    @step.setter
+    def step(self, step):
+        if step is not None:
+            self._save_step(step)
+            self._step = step
+
+    @abstractmethod
+    def sample(self):
+        """
+        Performs SMC sampling. Returns step list and estimates of marginal
+        log likelihood at each step.
+        """
+        raise NotImplementedError
+
+    def _initialize(self, num_particles):
+        if self._result and self._result.is_restart:
+            self._step = self._result[-1]
+            self._phi_sequence = self._result.phi_sequence
+            return None
+        return self._initializer.initialize_particles(num_particles)
+
+    def _do_smc_step(self, phi, num_mcmc_samples):
+        self._mcmc_kernel.path.phi = phi
+        particles = self._updater.update(self.step)
+        mut_particles = self._mutator.mutate(particles, num_mcmc_samples)
+        self._compute_mutation_ratio(particles, mut_particles)
+        self.step = mut_particles
+
+    def _compute_mutation_ratio(self, old_particles, new_particles):
+        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
+        self._mutation_ratio = sum(mutated) / new_particles.params.shape[0]
+
+    @rank_zero_run_only
+    def _save_step(self, step):
+        self._result.save_step(step)
 
 
 class FixedSampler(SamplerBase):

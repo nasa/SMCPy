@@ -2,7 +2,7 @@ import pytest
 
 from smcpy import VectorMCMCKernel
 from smcpy.mcmc.vector_mcmc import *
-from smcpy.smc.sampler_base import SamplerBase
+from smcpy.smc.samplers import SamplerBase
 from smcpy.paths import GeometricPath
 
 

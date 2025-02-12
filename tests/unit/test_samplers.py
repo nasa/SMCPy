@@ -7,7 +7,7 @@ from smcpy.mcmc.kernel_base import MCMCKernel
 from smcpy.paths import GeometricPath
 
 SAMPLERS = "smcpy.smc.samplers"
-SAMPLER_BASE = "smcpy.smc.sampler_base"
+SAMPLER_BASE = "smcpy.smc.samplers"
 
 
 @pytest.fixture
