@@ -123,7 +123,7 @@ class ImproperCov:
         try:
             np.linalg.cholesky(x)
             return 1
-        except np.linalg.linalg.LinAlgError:
+        except np.linalg.LinAlgError:
             return 0
 
     def _check_samples_shape(self, cov):

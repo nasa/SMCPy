@@ -51,7 +51,7 @@ class Checks(object):
         try:
             np.linalg.cholesky(input_)
             return True
-        except np.linalg.linalg.LinAlgError:
+        except np.linalg.LinAlgError:
             return False
 
     @staticmethod

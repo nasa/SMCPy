@@ -128,7 +128,7 @@ def test_vectorized_proposal_non_psd_cov(vector_mcmc, mocker):
     expected_cov = np.array([[2.025, 0.9], [0.9, 0.4]]) + 1e-14 * np.eye(2)
 
     chol_mock = mocker.patch(
-        "numpy.linalg.cholesky", side_effect=(np.linalg.linalg.LinAlgError, np.eye(2))
+        "numpy.linalg.cholesky", side_effect=(np.linalg.LinAlgError, np.eye(2))
     )
     mocker.patch("numpy.linalg.eigh", return_value=(eigval, eigvec))
 
