@@ -95,7 +95,7 @@ class HDF5Storage(BaseStorage):
         step_grp.create_dataset("log_likes", data=step.log_likes)
         step_grp.create_dataset("log_weights", data=step.log_weights)
 
-        param_grp = step_grp.create_group("params")
+        param_grp = step_grp.create_group("params", track_order=True)
         for key, array in step.param_dict.items():
             param_grp.create_dataset(key, data=array)
 

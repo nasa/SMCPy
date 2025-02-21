@@ -17,8 +17,12 @@ class DummyParticles:
 def mock_particles(mocker):
     mocker.patch("smcpy.utils.storage.Particles", new=DummyParticles)
     mock_particles = mocker.Mock()
-    mock_particles.params = np.ones((10, 3))
-    mock_particles.param_dict = {"0": np.ones(10), "1": np.ones(10), "2": np.ones(10)}
+    mock_particles.params = np.array([[2] * 10, [0] * 10, [1] * 10]).T
+    mock_particles.param_dict = {
+        "1": np.ones(10) * 2,
+        "0": np.zeros(10),
+        "2": np.ones(10),
+    }
     mock_particles.log_likes = np.ones((10, 1))
     mock_particles.log_weights = np.ones((10, 1))
     mock_particles.total_unnorm_log_weight = 99
