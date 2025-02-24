@@ -10,7 +10,6 @@ from smcpy.paths import GeometricPath
 
 
 class StubParticles:
-
     def __init__(self, params, log_likes, log_weights):
         self.params = params
         self.log_likes = log_likes

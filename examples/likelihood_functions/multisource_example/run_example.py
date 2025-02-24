@@ -10,6 +10,7 @@ NUM_DATA_PTS = 20
 TRUE_PARAMS = np.array([[2, 3.5]])
 X = np.arange(NUM_DATA_PTS)
 
+
 def eval_model(theta):
     a = theta[:, 0, None]
     b = theta[:, 1, None]
@@ -19,8 +20,10 @@ def eval_model(theta):
 
 def gen_data_from_multi_src(eval_model, std_devs, plot=True):
     y_true = np.array_split(eval_model(TRUE_PARAMS), 3, axis=1)
-    noisy_data = [y_true[i] + np.random.normal(0, std, y_true[i].shape)
-                  for i, std in enumerate(std_devs)]
+    noisy_data = [
+        y_true[i] + np.random.normal(0, std, y_true[i].shape)
+        for i, std in enumerate(std_devs)
+    ]
     if plot:
         plot_noisy_data(X, y_true, noisy_data)
     return np.array(noisy_data).flatten()
@@ -29,16 +32,15 @@ def gen_data_from_multi_src(eval_model, std_devs, plot=True):
 def plot_noisy_data(x, y_true, noisy_data):
     fig, ax = plt.subplots(1)
     for i, nd in enumerate(noisy_data):
-        ax.plot(x.flatten(), y_true[i].flatten(), '-k')
-        ax.plot(x.flatten(), nd.flatten(), 'o', label=f'std{i}')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
+        ax.plot(x.flatten(), y_true[i].flatten(), "-k")
+        ax.plot(x.flatten(), nd.flatten(), "o", label=f"std{i}")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
     plt.legend()
     plt.show()
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     np.random.seed(200)
 
     true_std_devs = (20, 5, 0.25)
@@ -50,18 +52,29 @@ if __name__ == '__main__':
     cov = np.eye(num_params)
 
     src_num_pts = (NUM_DATA_PTS, NUM_DATA_PTS, NUM_DATA_PTS)
-    src_std_devs = (None, None, None) # estimate all 3 source std devs
+    src_std_devs = (None, None, None)  # estimate all 3 source std devs
     log_like_args = [src_num_pts, src_std_devs]
     log_like_func = MultiSourceNormal
 
-    priors = [ImproperUniform(0., 6.), ImproperUniform(0., 6.)] + \
-             [ImproperUniform(0, None)] * 3 # priors for all 3 source std devs
-    vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, log_like_args,
-                             log_like_func)
+    priors = [ImproperUniform(0.0, 6.0), ImproperUniform(0.0, 6.0)] + [
+        ImproperUniform(0, None)
+    ] * 3  # priors for all 3 source std devs
+    vector_mcmc = VectorMCMC(
+        eval_model, noisy_data, priors, log_like_args, log_like_func
+    )
 
-    chain = vector_mcmc.metropolis(init_inputs, num_samples, cov,
-                                   adapt_interval=200, adapt_delay=200,
-                                   progress_bar=True)
+    chain = vector_mcmc.metropolis(
+        init_inputs,
+        num_samples,
+        cov,
+        adapt_interval=200,
+        adapt_delay=200,
+        progress_bar=True,
+    )
 
-    plot_mcmc_chain(chain, param_labels=['a', 'b', 'std1', 'std2', 'std3'],
-                    burnin=burnin, include_kde=True)
+    plot_mcmc_chain(
+        chain,
+        param_labels=["a", "b", "std1", "std2", "std3"],
+        burnin=burnin,
+        include_kde=True,
+    )

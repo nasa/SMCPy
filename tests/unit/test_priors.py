@@ -188,7 +188,6 @@ def test_impropcov_probability_nd(posdefindex):
     ],
 )
 def test_constrainted_uniform_prior(bounds, dim, expected_pdf):
-
     constraint_func = lambda x: x[:, 0] ** 2 + x[:, 1] ** 2 <= 1
 
     x = np.array(
@@ -227,7 +226,6 @@ def test_constrained_uniform_prior_rvs():
 
 
 def test_constrained_uniform_prior_rvs_seed(mocker):
-
     rng = mocker.Mock(np.random.default_rng(seed=1), autospec=True)
     rng.uniform.return_value = np.ones((1, 1))
     bounds = np.array([[-2], [2]])
@@ -238,7 +236,6 @@ def test_constrained_uniform_prior_rvs_seed(mocker):
 
 
 def test_constrained_uniform_prior_rvs_max_tries(mocker):
-
     rng_mock = mocker.Mock(np.random.default_rng(), autospec=True)
     rng_mock.uniform.return_value = np.array([[2.5, 2.5]])
 

@@ -1,4 +1,4 @@
-'''
+"""
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration. No copyright is claimed in
@@ -28,7 +28,7 @@ UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
 ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
-'''
+"""
 
 import numpy as np
 
@@ -40,16 +40,17 @@ from ..utils.single_rank_comm import SingleRankComm
 
 
 class Initializer:
-    '''
+    """
     Generates SMCStep objects based on either samples from a prior distribution
     or a proposal distribution, depending on how the target path is defined in
     the MCMC kernel (i.e., if a proposal is available, it will be used).
-    '''
+    """
+
     def __init__(self, mcmc_kernel):
-        '''
+        """
         :param mcmc_kernel: a kernel object for conducting particle mutation
         :type mcmc_kernel: MCMCKernel object
-        '''
+        """
         self.mcmc_kernel = mcmc_kernel
 
     @property
@@ -70,8 +71,8 @@ class Initializer:
             params = kernel.sample_from_prior(num_particles)
 
         log_likes = kernel.get_log_likelihoods(params)
-        log_weights = np.array([np.log(1/num_particles)] * num_particles)
+        log_weights = np.array([np.log(1 / num_particles)] * num_particles)
 
         particles = Particles(params, log_likes, log_weights)
-        particles.attrs.update({'phi': 0})
+        particles.attrs.update({"phi": 0})
         return particles

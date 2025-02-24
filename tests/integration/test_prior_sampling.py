@@ -7,7 +7,7 @@ from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.priors import ImproperUniform, InvWishart
 
 
-@pytest.mark.parametrize('insert_index', [0, 1, 2])
+@pytest.mark.parametrize("insert_index", [0, 1, 2])
 def test_prior_sampling(mocker, insert_index):
     n_samples = 10
     dim = 3
@@ -35,7 +35,7 @@ def test_prior_sampling(mocker, insert_index):
     priors.insert(insert_index, smcpy_prior)
 
     expect_sample = np.ones((n_samples, 2 + n_cov_terms))
-    expect_sample[:, insert_index:insert_index + n_cov_terms] = cov_sample
+    expect_sample[:, insert_index : insert_index + n_cov_terms] = cov_sample
 
     vmcmc = VectorMCMC(model, data, priors)
 

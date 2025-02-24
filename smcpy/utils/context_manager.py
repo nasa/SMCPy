@@ -1,5 +1,6 @@
 import threading
 
+
 class ContextManager:
     _contexts = threading.local()
 
@@ -13,7 +14,7 @@ class ContextManager:
     @classmethod
     def get_contexts(cls):
         """Returns context stack"""
-        if not hasattr(cls._contexts, 'stack'):
+        if not hasattr(cls._contexts, "stack"):
             cls._contexts.stack = []
         return cls._contexts.stack
 

@@ -48,7 +48,6 @@ class MCMCBase(ABC):
         log_priors, log_like = self._initialize_probabilities(inputs)
 
         for i in range(num_samples):
-
             inputs, log_like, log_priors, rejected = self._perform_mcmc_step(
                 inputs, cov, log_like, log_priors
             )
@@ -72,14 +71,12 @@ class MCMCBase(ABC):
         progress_bar=False,
         **kwargs,
     ):
-
         chain = np.zeros([inputs.shape[0], inputs.shape[1], num_samples + 1])
         chain[:, :, 0] = inputs
 
         log_priors, log_like = self._initialize_probabilities(inputs)
 
         for i in tqdm(range(1, num_samples + 1), disable=not progress_bar):
-
             inputs, log_like, log_priors, rejected = self._perform_mcmc_step(
                 inputs, cov, log_like, log_priors
             )
@@ -160,7 +157,6 @@ class MCMCBase(ABC):
         return acceptance_ratios < u
 
     def adapt_proposal_cov(self, cov, chain, idx, adapt_interval, adapt_delay):
-
         if self._is_adapt_iteration(adapt_interval, idx, adapt_delay):
             start = self._get_window_start(idx, adapt_delay, adapt_interval)
             end = idx + 1
