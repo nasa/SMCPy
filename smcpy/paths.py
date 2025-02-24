@@ -3,10 +3,10 @@ import numpy as np
 import warnings
 
 # compatible with Python 2 *and* 3:
-ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
+ABC = abc.ABCMeta("ABC", (object,), {"__slots__": ()})
+
 
 class PathBase:
-
     def __init__(self, proposal):
         self._phi_list = [0]
         self._proposal = proposal
@@ -17,9 +17,10 @@ class PathBase:
 
     @phi.setter
     def phi(self, phi):
-        if phi <= self._phi_list[-1]: 
-            raise ValueError('phi updates must be monotonic; '
-                             f'tried {self.phi} -> {phi}')
+        if phi <= self._phi_list[-1]:
+            raise ValueError(
+                "phi updates must be monotonic; " f"tried {self.phi} -> {phi}"
+            )
         self._phi_list.append(phi)
 
     @property
@@ -54,14 +55,13 @@ class PathBase:
     @staticmethod
     def _log_prob_sum(x):
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+            warnings.simplefilter("ignore")
             y = x.sum(axis=1, keepdims=True)
-            y[np.isnan(y)] = -np.inf # probability 0/0 => 0
+            y[np.isnan(y)] = -np.inf  # probability 0/0 => 0
         return y
 
 
 class GeometricPath(PathBase):
-
     def __init__(self, proposal=None, required_phi=1):
         super().__init__(proposal)
         self._lambda = None
@@ -91,17 +91,22 @@ class GeometricPath(PathBase):
         return self._log_prob_sum(np.hstack((numer, -denom)))
 
     def _eval_target(self, log_like, log_prior, log_p, phi):
-        prior_exp = min(1., phi / self._lambda)
-        prop_exp = max(0., (self._lambda - phi) / self._lambda)
+        prior_exp = min(1.0, phi / self._lambda)
+        prop_exp = max(0.0, (self._lambda - phi) / self._lambda)
 
-        target =  np.hstack((
-            log_like * phi,
-            log_prior * prior_exp if prior_exp > 0 else np.zeros_like(log_p),
-            log_p * prop_exp if prop_exp > 0 else np.zeros_like(log_p)
-        ))
+        target = np.hstack(
+            (
+                log_like * phi,
+                log_prior * prior_exp if prior_exp > 0 else np.zeros_like(log_p),
+                log_p * prop_exp if prop_exp > 0 else np.zeros_like(log_p),
+            )
+        )
 
         return target
 
     def _get_proposal_logpdf(self, inputs, log_prior):
-        return self._proposal.logpdf(inputs).reshape(-1, 1) \
-               if self._proposal else log_prior
+        return (
+            self._proposal.logpdf(inputs).reshape(-1, 1)
+            if self._proposal
+            else log_prior
+        )

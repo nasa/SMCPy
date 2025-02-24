@@ -13,9 +13,8 @@ NUM_SNAPSHOTS = 50
 NUM_FEATURES = 3
 TRUE_PARAMS = np.array([[2, 3.5]])
 X = np.arange(NUM_FEATURES)
-TRUE_COV = np.array([[0.5, 0.25, 0.005],
-                     [0.25, 0.25, 0.04],
-                     [0.005, 0.04, 1]])
+TRUE_COV = np.array([[0.5, 0.25, 0.005], [0.25, 0.25, 0.04], [0.005, 0.04, 1]])
+
 
 def eval_model(theta):
     a = theta[:, 0, None]
@@ -36,16 +35,15 @@ def gen_data_from_mvn(eval_model, plot=True):
 def plot_noisy_data(x, y_true, noisy_data):
     fig, ax = plt.subplots(1)
     for i, nd in enumerate(noisy_data):
-        ax.plot(x, nd, '-o', label=f'Noisy Snapshot {i}')
-    ax.plot(x, y_true[0], 'k-', linewidth=2, label='True')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
+        ax.plot(x, nd, "-o", label=f"Noisy Snapshot {i}")
+    ax.plot(x, y_true[0], "k-", linewidth=2, label="True")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
     plt.legend(bbox_to_anchor=(1.1, 1.0))
     plt.show()
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     np.random.seed(200)
 
     num_particles = 1000
@@ -53,27 +51,26 @@ if __name__ == '__main__':
     noisy_data = gen_data_from_mvn(eval_model, plot=True)
     idx1, idx2 = np.triu_indices(noisy_data.shape[1])
     param_order = ["a", "b"] + [f"cov{i}" for i in range(len(idx1))]
-    log_like_args = [None] * len(idx1) # estimate all variances/covariances
+    log_like_args = [None] * len(idx1)  # estimate all variances/covariances
 
-    priors = [uniform(0., 6.), uniform(0., 6.), 
-              ImproperCov(3, dof=5, S=np.eye(3))]
+    priors = [uniform(0.0, 6.0), uniform(0.0, 6.0), ImproperCov(3, dof=5, S=np.eye(3))]
 
     mcmc = VectorMCMC(eval_model, noisy_data, priors, log_like_args, MVNormal)
     kernel = VectorMCMCKernel(mcmc, param_order)
     smc = AdaptiveSampler(kernel)
     steps, mll = smc.sample(num_particles, 20, progress_bar=True)
 
-    #plotting
+    # plotting
     ground_truth = np.concatenate((TRUE_PARAMS.flatten(), TRUE_COV[idx1, idx2]))
     ground_truth = pd.DataFrame(ground_truth.reshape(1, -1), columns=param_order)
-    ground_truth['type'] = 'True'
+    ground_truth["type"] = "True"
     samples = pd.DataFrame(steps[-1].param_dict)
-    samples['type'] = 'SMC'
+    samples["type"] = "SMC"
     data = pd.concat([samples, ground_truth], ignore_index=True)
-    
-    g = sns.pairplot(data[param_order[:2] + ['type']], hue='type', corner=True)
-    g.map_lower(sns.kdeplot, levels=4, palette=['.2', '.2'], warn_singular=0)
+
+    g = sns.pairplot(data[param_order[:2] + ["type"]], hue="type", corner=True)
+    g.map_lower(sns.kdeplot, levels=4, palette=[".2", ".2"], warn_singular=0)
     sns.mpl.pyplot.show()
-    g = sns.pairplot(data[param_order[2:] + ['type']], hue='type', corner=True)
-    g.map_lower(sns.kdeplot, levels=4, palette=['.2', '.2'], warn_singular=0)
+    g = sns.pairplot(data[param_order[2:] + ["type"]], hue="type", corner=True)
+    g.map_lower(sns.kdeplot, levels=4, palette=[".2", ".2"], warn_singular=0)
     sns.mpl.pyplot.show()

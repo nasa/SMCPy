@@ -41,7 +41,7 @@ class Updater:
     and particle state.
     """
 
-    def __init__(self, ess_threshold, mcmc_kernel, resample_strategy='standard'):
+    def __init__(self, ess_threshold, mcmc_kernel, resample_strategy="standard"):
         """
         :param ess_threshold: threshold on effective sample size (ess); if
             ess < ess_threshold, resampling with replacement is conducted.
@@ -78,13 +78,16 @@ class Updater:
 
     @resample_rng.setter
     def resample_rng(self, resample_strategy):
-        if resample_strategy == 'standard':
-            self._resample_rng =  lambda N: self._mcmc_kernel.rng.uniform(0, 1, N)
-        elif resample_strategy == 'stratified':
-            self._resample_rng = lambda N: 1 / N * (np.arange(N) + self._mcmc_kernel.rng.uniform(0, 1, N))
+        if resample_strategy == "standard":
+            self._resample_rng = lambda N: self._mcmc_kernel.rng.uniform(0, 1, N)
+        elif resample_strategy == "stratified":
+            self._resample_rng = (
+                lambda N: 1
+                / N
+                * (np.arange(N) + self._mcmc_kernel.rng.uniform(0, 1, N))
+            )
         else:
-            raise ValueError(f'Invalid resampling strategy {resample_strategy}')
-
+            raise ValueError(f"Invalid resampling strategy {resample_strategy}")
 
     def update(self, particles):
         new_log_weights = self._compute_new_weights(particles)
@@ -137,4 +140,3 @@ class Updater:
     def _generate_resample_indices(self, particles):
         u = self._resample_rng(particles.num_particles)
         return np.digitize(u, np.cumsum(particles.weights))
-

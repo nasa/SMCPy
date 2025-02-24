@@ -7,7 +7,6 @@ from smcpy.paths import GeometricPath
 
 
 class MockedParticles:
-
     def __init__(self, params, log_likes, log_weights):
         self.param_names = tuple(params.keys())
         self.param_dict = params
@@ -247,11 +246,9 @@ def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_parti
     mocked_kernel = mocker.Mock()
     mocked_kernel.rng = np.random.default_rng()
     n_particles = mocked_particles.num_particles
-    mocked_particles.weights = np.array([[1/n_particles]] * n_particles)
+    mocked_particles.weights = np.array([[1 / n_particles]] * n_particles)
     updater = Updater(
-        ess_threshold=1.0,
-        mcmc_kernel=mocked_kernel,
-        resample_strategy='stratified'
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -260,22 +257,20 @@ def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_parti
 
 
 @pytest.mark.parametrize(
-        'uniform_sample, expected',
-        (([0.3, 0.5, 0.5], [1, 2]), ([0.4, 0.5, 0.5], (1, 3)))
-    )
+    "uniform_sample, expected", (([0.3, 0.5, 0.5], [1, 2]), ([0.4, 0.5, 0.5], (1, 3)))
+)
 def test_resample_using_stratified_sampling_nonuniform_weights(
-        mocker, mocked_particles, uniform_sample, expected):
+    mocker, mocked_particles, uniform_sample, expected
+):
     mocked_rng = mocker.Mock(np.random.default_rng(), autospec=True)
     mocked_rng.uniform.return_value = uniform_sample
     mocked_kernel = mocker.Mock()
     mocked_kernel.rng = mocked_rng
 
-    expected_params = np.array([ expected, [1, 3], [2, 4] ])
+    expected_params = np.array([expected, [1, 3], [2, 4]])
 
     updater = Updater(
-        ess_threshold=1.0,
-        mcmc_kernel=mocked_kernel,
-        resample_strategy='stratified'
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -286,15 +281,9 @@ def test_resample_using_stratified_sampling_nonuniform_weights(
 def test_resample_raises_with_invalid_strategy(mocker, mocked_particles):
     with pytest.raises(ValueError):
         Updater(
-            ess_threshold=1.0,
-            mcmc_kernel=mocker.Mock(),
-            resample_strategy='bad-strat'
+            ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="bad-strat"
         )
 
 
 def test_resample_strategy_case_insensitive(mocker):
-    Updater(
-        ess_threshold=1.0,
-        mcmc_kernel=mocker.Mock(),
-        resample_strategy='StAnDaRd'
-    )
+    Updater(ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="StAnDaRd")
