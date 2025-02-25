@@ -198,6 +198,8 @@ class AdaptiveSampler(SamplerBase):
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         """
+        if target_ess <= 0 or target_ess >= 1:
+            raise (ValueError)
         self._updater = Updater(
             ess_threshold=1,  # ensures always resampling
             mcmc_kernel=self._mcmc_kernel,
@@ -242,7 +244,7 @@ class AdaptiveSampler(SamplerBase):
         proposed_phi_list.append(phi)
         return self._select_phi(proposed_phi_list, phi_old)
 
-    def predict_ess_margin(self, phi_new, phi_old, particles, target_ess=1):
+    def predict_ess_margin(self, phi_new, phi_old, particles, target_ess):
         delta_phi = phi_new - phi_old
         log_beta = (
             self._get_inc_weights(particles, phi_new)

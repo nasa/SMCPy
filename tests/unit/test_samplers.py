@@ -247,7 +247,7 @@ def test_adaptive_phi_sample(
     steps, _ = smc.sample(
         num_particles=num_particles,
         num_mcmc_samples=5,
-        target_ess=1,
+        target_ess=0.8,
     )
 
     update_mock.assert_called_once_with(
@@ -336,4 +336,32 @@ def test_sampling_strategy_passed_through(sampler, mcmc_kernel, kwargs):
         # TODO this is hacky, just checking bad strategy raises error
         smc.sample(
             num_particles=1, num_mcmc_samples=1, resample_strategy="bad-strat", **kwargs
+        )
+
+
+@pytest.mark.parametrize("target_ess", [-100, -3.0, 0, 1, 10.0, 1000])
+def test_valid_target_ess(mocker, target_ess, mcmc_kernel, result_mock):
+    required_phi = 0.3
+    proposal = False
+    num_particles = 5
+    update_mock = mocker.patch(SAMPLERS + ".Updater")
+
+    mcmc_kernel.path = GeometricPath(required_phi=required_phi)
+    mcmc_kernel.has_proposal.return_value = False
+    mcmc_kernel.has_proposal.return_value = proposal
+    mcmc_kernel.get_log_likelihoods.return_value = np.ones((num_particles, 1))
+    mcmc_kernel.sample_from_prior.return_value = {"a": np.ones(num_particles)}
+    mcmc_kernel.sample_from_proposal.return_value = {"a": np.ones(num_particles)}
+
+    mocker.patch(SAMPLER_BASE + ".InMemoryStorage", return_value=result_mock)
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    mocker.patch.object(smc, "optimize_step", side_effect=[0.5, 0.6, 1.0])
+    mocker.patch.object(smc, "_mutator")
+    mocker.patch.object(smc._mutator, "mutate", return_value=0.4)
+    mocker.patch.object(smc, "_compute_mutation_ratio")
+
+    with pytest.raises(ValueError):
+        smc.sample(
+            num_particles=num_particles, num_mcmc_samples=2, target_ess=target_ess
         )
