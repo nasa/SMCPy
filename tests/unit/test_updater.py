@@ -75,7 +75,7 @@ def test_update_particles_warning(mocked_particles_resample, mocker):
     kernel.path.phi = kernel.path.phi + delta_phi
 
     particles_warn_threshold = 1.0
-    with pytest.warns(UserWarning, match="Resampling with less than 100.0% particles;"):
+    with pytest.warns(UserWarning, match="Resampled to less than 100.0% of particles;"):
         updater.update(mocked_particles_resample)
 
 

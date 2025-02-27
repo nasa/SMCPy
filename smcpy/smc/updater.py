@@ -152,7 +152,7 @@ class Updater:
 
         if num_unique_particles <= num_warn_particles:
             warnings.warn(
-                f"Resampling with less than {self.particles_warn_threshold * 100}% particles; ",
+                f"Resampled to less than {self.particles_warn_threshold * 100}% of particles; ",
                 UserWarning,
             )
 
