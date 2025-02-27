@@ -125,6 +125,7 @@ class FixedSampler(SamplerBase):
         ess_threshold,
         progress_bar=True,
         resample_strategy="standard",
+        particles_warn_threshold=0.01,
     ):
         """
         :param num_particles: number of particles
@@ -143,7 +144,10 @@ class FixedSampler(SamplerBase):
         :type progress_bar: bool
         """
         self._updater = Updater(
-            ess_threshold, self._mcmc_kernel, resample_strategy=resample_strategy
+            ess_threshold,
+            self._mcmc_kernel,
+            resample_strategy=resample_strategy,
+            particles_warn_threshold=particles_warn_threshold,
         )
         self._phi_sequence = phi_sequence
 
@@ -182,6 +186,7 @@ class AdaptiveSampler(SamplerBase):
         min_dphi=None,
         progress_bar=True,
         resample_strategy="standard",
+        particles_warn_threshold=0.01,
     ):
         """
         :param num_particles: number of particles
@@ -198,12 +203,14 @@ class AdaptiveSampler(SamplerBase):
         :param progress_bar: display progress bar during sampling
         :type progress_bar: bool
         """
-        if target_ess <= 0 or target_ess >= 1:
-            raise (ValueError)
+        if target_ess <= 0.0 or target_ess >= 1.0:
+            raise ValueError
+
         self._updater = Updater(
             ess_threshold=1,  # ensures always resampling
             mcmc_kernel=self._mcmc_kernel,
             resample_strategy=resample_strategy,
+            particles_warn_threshold=particles_warn_threshold,
         )
         self._phi_sequence = [0]
 

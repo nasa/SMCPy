@@ -75,7 +75,10 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
     )
 
     upd.assert_called_once_with(
-        ess_threshold, mcmc_kernel, resample_strategy="standard"
+        ess_threshold,
+        mcmc_kernel,
+        resample_strategy="standard",
+        particles_warn_threshold=0.01,
     )
     mut.assert_called_once_with(smc._mcmc_kernel)
 
@@ -251,7 +254,10 @@ def test_adaptive_phi_sample(
     )
 
     update_mock.assert_called_once_with(
-        ess_threshold=1, mcmc_kernel=mcmc_kernel, resample_strategy="standard"
+        ess_threshold=1,
+        mcmc_kernel=mcmc_kernel,
+        resample_strategy="standard",
+        particles_warn_threshold=0.01,
     )
     np.testing.assert_array_equal(smc._phi_sequence, [0, 0.5, 0.6, 1.0])
     np.testing.assert_array_equal(smc.req_phi_index, exp_index)

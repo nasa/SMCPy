@@ -30,10 +30,53 @@ def mocked_particles(mocker):
     return particles
 
 
+@pytest.fixture
+def mocked_particles_resample(mocker):
+    params = {"a": np.array([1, 1, 2]), "b": np.array([2, 3, 4])}
+    log_likes = np.array([-1, -2, -3]).reshape(-1, 1)
+    log_weights = np.array([0, 0, 1]).reshape(-1, 1)
+    particles = MockedParticles(params, log_likes, log_weights)
+    return particles
+
+
 @pytest.mark.parametrize("ess_threshold", [-0.1, 1.1])
 def test_ess_threshold_valid(ess_threshold):
     with pytest.raises(ValueError):
         Updater(ess_threshold, mcmc_kernel=None)
+
+
+@pytest.mark.parametrize("particles_warn_threshold", [-99, -1.9, 1.1, 3, 10000])
+def test_particles_warn_threshold_valid(particles_warn_threshold):
+    ess_threshold = 0.8
+    with pytest.raises(ValueError):
+        Updater(
+            ess_threshold=ess_threshold,
+            mcmc_kernel=None,
+            particles_warn_threshold=particles_warn_threshold,
+        )
+
+
+def test_update_particles_warning(mocked_particles_resample, mocker):
+    mocker.patch("smcpy.smc.updater.Particles", new=MockedParticles)
+
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ["a", "b"])
+    particles_warn_threshold = 1.0
+    mocker.patch.object(kernel, "get_log_priors", return_value=np.ones((3, 1)))
+
+    updater = Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=kernel,
+        particles_warn_threshold=particles_warn_threshold,
+    )
+
+    delta_phi = 0.1
+    kernel.path.phi = 0.1
+    kernel.path.phi = kernel.path.phi + delta_phi
+
+    particles_warn_threshold = 1.0
+    with pytest.warns(UserWarning, match="Resampling with less than 100.0% particles;"):
+        updater.update(mocked_particles_resample)
 
 
 def test_update_no_proposal(mocked_particles, mocker):

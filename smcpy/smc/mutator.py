@@ -30,7 +30,6 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 """
 
-
 from .particles import Particles
 from ..mcmc.kernel_base import MCMCKernel
 from copy import copy
