@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from smcpy.mcmc.parallel_mcmc import ParallelMCMC
+from smcpy.mcmc.parallel_vector_mcmc import ParallelVectorMCMC
 from smcpy.utils.single_rank_comm import SingleRankComm
 
 
@@ -11,10 +11,10 @@ def test_parallel_likelihood(mocker):
 
     mocked_model_eval = mocker.Mock(return_value=np.array([[1]]))
     mocker.patch(
-        "smcpy.mcmc.parallel_mcmc.ParallelMCMC.evaluate_model", new=mocked_model_eval
+        "smcpy.mcmc.parallel_vector_mcmc.ParallelVectorMCMC.evaluate_model", new=mocked_model_eval
     )
 
-    mcmc = ParallelMCMC(
+    mcmc = ParallelVectorMCMC(
         model=None,
         data=np.array([1]),
         priors=None,

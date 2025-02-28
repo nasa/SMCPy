@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
-from smcpy.mcmc.parallel_mcmc import ParallelMCMC
+from smcpy.mcmc.parallel_vector_mcmc import ParallelVectorMCMC
 
 
 @pytest.fixture(params=[(1, 0), (2, 1), (3, 1), (4, 3)])
@@ -19,7 +19,7 @@ def mock_comm(mocker, request):
 
 
 def test_comm_set(mock_comm):
-    pmcmc = ParallelMCMC(
+    pmcmc = ParallelVectorMCMC(
         model=None, data=np.ones(4), priors=None, mpi_comm=mock_comm, log_like_args=None
     )
     assert pmcmc._size == mock_comm.size
@@ -27,7 +27,7 @@ def test_comm_set(mock_comm):
 
 
 def test_inherit(mock_comm):
-    pmcmc = ParallelMCMC(
+    pmcmc = ParallelVectorMCMC(
         model=None, data=np.ones(4), priors=None, mpi_comm=mock_comm, log_like_args=None
     )
     assert isinstance(pmcmc, VectorMCMC)
@@ -49,7 +49,7 @@ def test_mpi_eval_model(mocker, mock_comm):
 
     mock_model = lambda x: x[:, :2]
 
-    pmcmc = ParallelMCMC(
+    pmcmc = ParallelVectorMCMC(
         mock_model,
         data=inputs[0, :2].flatten(),
         priors=None,
@@ -82,7 +82,7 @@ def test_mpi_eval_with_zero_scat_input(mocker, mock_comm, data_shape):
 
     expected_scattered_output_shape = (0, 10)
 
-    pmcmc = ParallelMCMC(
+    pmcmc = ParallelVectorMCMC(
         mocker.Mock(), data=data, priors=None, mpi_comm=mock_comm, log_like_args=None
     )
     output = pmcmc.model_wrapper(mocker.Mock(), inputs)

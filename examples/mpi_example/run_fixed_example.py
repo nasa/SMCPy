@@ -5,7 +5,7 @@ import time
 from mpi4py import MPI
 from scipy.stats import uniform
 
-from smcpy import FixedSampler, VectorMCMCKernel, ParallelMCMC
+from smcpy import FixedSampler, VectorMCMCKernel, ParallelVectorMCMC
 
 
 def gen_noisy_data(eval_model, std_dev, plot=True):
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     priors = [uniform(0.0, 6.0), uniform(0.0, 6.0)]
 
     comm = MPI.COMM_WORLD.Clone()
-    parallel_mcmc = ParallelMCMC(eval_model, noisy_data, priors, comm, std_dev)
+    parallel_mcmc = ParallelVectorMCMC(eval_model, noisy_data, priors, comm, std_dev)
 
     phi_sequence = np.linspace(0, 1, num_smc_steps)
 
