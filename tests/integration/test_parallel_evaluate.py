@@ -11,7 +11,8 @@ def test_parallel_likelihood(mocker):
 
     mocked_model_eval = mocker.Mock(return_value=np.array([[1]]))
     mocker.patch(
-        "smcpy.mcmc.parallel_vector_mcmc.ParallelVectorMCMC.evaluate_model", new=mocked_model_eval
+        "smcpy.mcmc.parallel_vector_mcmc.ParallelVectorMCMC.evaluate_model",
+        new=mocked_model_eval,
     )
 
     mcmc = ParallelVectorMCMC(
