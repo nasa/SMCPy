@@ -56,13 +56,10 @@ def test_particles_warn_threshold_valid(particles_warn_threshold):
         )
 
 
-def test_update_particles_warning(mocked_particles_resample, mocker):
-    mocker.patch("smcpy.smc.updater.Particles", new=MockedParticles)
-
+def test_max_particles_warn_threshold(mocked_particles_resample):
     vmcmc = VectorMCMC(None, None, None)
     kernel = VectorMCMCKernel(vmcmc, ["a", "b"])
-    particles_warn_threshold = 1.0
-    mocker.patch.object(kernel, "get_log_priors", return_value=np.ones((3, 1)))
+    particles_warn_threshold = 0.0
 
     updater = Updater(
         ess_threshold=1.0,
@@ -70,13 +67,24 @@ def test_update_particles_warning(mocked_particles_resample, mocker):
         particles_warn_threshold=particles_warn_threshold,
     )
 
-    delta_phi = 0.1
-    kernel.path.phi = 0.1
-    kernel.path.phi = kernel.path.phi + delta_phi
+    with pytest.warns(UserWarning, match="Resampled to less than 0.0% of particles;"):
+        updater.resample_if_needed(mocked_particles_resample)
 
+
+def test_generate_particles_warning(mocked_particles_resample):
+
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ["a", "b"])
     particles_warn_threshold = 1.0
+
+    updater = Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=kernel,
+        particles_warn_threshold=particles_warn_threshold,
+    )
+
     with pytest.warns(UserWarning, match="Resampled to less than 100.0% of particles;"):
-        updater.update(mocked_particles_resample)
+        updater.resample_if_needed(mocked_particles_resample)
 
 
 def test_update_no_proposal(mocked_particles, mocker):

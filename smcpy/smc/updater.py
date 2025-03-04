@@ -145,16 +145,8 @@ class Updater:
 
     def _resample(self, particles):
         resample_indices = self._generate_resample_indices(particles)
-        num_unique_particles = len(set(resample_indices))
-        num_warn_particles = max(
-            1, self.particles_warn_threshold * particles.num_particles
-        )
 
-        if num_unique_particles <= num_warn_particles:
-            warnings.warn(
-                f"Resampled to less than {self.particles_warn_threshold * 100}% of particles; ",
-                UserWarning,
-            )
+        self._check_if_generate_particles_warning(particles)
 
         new_params = particles.params[resample_indices]
         param_dict = dict(zip(particles.param_names, new_params.T))
@@ -169,3 +161,16 @@ class Updater:
     def _generate_resample_indices(self, particles):
         u = self._resample_rng(particles.num_particles)
         return np.digitize(u, np.cumsum(particles.weights))
+
+    def _check_if_generate_particles_warning(self, particles):
+        resample_indices = self._generate_resample_indices(particles)
+        num_unique_particles = len(set(resample_indices))
+        num_warn_particles = max(
+            1, self.particles_warn_threshold * particles.num_particles
+        )
+
+        if num_unique_particles <= num_warn_particles:
+            warnings.warn(
+                f"Resampled to less than {self.particles_warn_threshold * 100}% of particles; ",
+                UserWarning,
+            )
