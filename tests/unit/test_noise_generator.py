@@ -6,8 +6,8 @@ from smcpy.utils.noise_generator import generate_noisy_data
 
 def test_nothing_to_generate():
     std = 1
-    output = np.array([[]])
-    noisy_data = generate_noisy_data(std, output)
+    model_output = np.array([[]])
+    noisy_data = generate_noisy_data(model_output, std)
 
     np.testing.assert_array_equal(noisy_data, np.array([[]]))
 
@@ -24,24 +24,23 @@ def test_nothing_to_generate():
 )
 def test_noise_amount_generated(model_output, expected_size):
     std = 1
-    noisy_data = generate_noisy_data(std=std, output=model_output)
+    noisy_data = generate_noisy_data(model_output, std=std)
 
     assert noisy_data.size == expected_size
 
 
 @pytest.mark.parametrize("std", [-1, -1000, -33])
 def test_valid_std(std):
-    model_output = np.array(
-        [[3, 3, 3, 3, 3], [4, 4, 4, 4, 4], [8, 8, 8, 8, 8], [11, 12, 13, 15, 18]]
-    )
+    model_output = np.array([[]])
+
     with pytest.raises(ValueError):
-        generate_noisy_data(std, model_output)
+        generate_noisy_data(model_output, std)
 
 
-def test_provided_std_val():
+def test_scalar_std_val():
     std = 0
     model_output = np.array([[1, 2, 3], [1, 2, 3]])
-    noisy_data = generate_noisy_data(std, model_output)
+    noisy_data = generate_noisy_data(model_output, std)
     np.testing.assert_array_equal(noisy_data, model_output)
 
 
@@ -53,14 +52,13 @@ def test_noise_array(mocker):
         "smcpy.utils.noise_generator.np.random.normal",
         return_value=np.array([[1, 2]] * 3),
     )
-    noisy_data = generate_noisy_data(std_array, model_output)
+    noisy_data = generate_noisy_data(model_output, std_array)
     expected_output = np.array([[2, 3, 4], [4, 6, 8]])
 
     np.testing.assert_array_equal(noisy_data, expected_output)
 
-    first_call = mockednp.call_args_list[0]
-    call_args = first_call[0]
-    assert call_args == (0, std_array, (3, 2))
+    np_normal_call_args = mockednp.call_args_list[0][0]
+    assert np_normal_call_args == (0, std_array, (3, 2))
 
 
 @pytest.mark.parametrize(
@@ -69,11 +67,4 @@ def test_noise_array(mocker):
 def test_model_output_valid_2d(model_output):
     std = 1
     with pytest.raises(ValueError):
-        generate_noisy_data(std, model_output)
-
-
-@pytest.mark.parametrize("std", [[1, 2, 3], [5, 5, 5, 5]])
-def test_valid_number_std_array(std):
-    model_output = np.array([[1, 2, 3], [2, 4, 6]])
-    with pytest.raises(ValueError):
-        generate_noisy_data(std, model_output)
+        generate_noisy_data(model_output, std)
