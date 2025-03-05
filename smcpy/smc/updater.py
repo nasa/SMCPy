@@ -34,6 +34,7 @@ import numpy as np
 import warnings
 
 from .particles import Particles
+from ..resample_strategies import ResampleStrategy
 
 
 class Updater:
@@ -96,14 +97,8 @@ class Updater:
 
     @resample_rng.setter
     def resample_rng(self, resample_strategy):
-        if resample_strategy == "standard":
-            self._resample_rng = lambda N: self._mcmc_kernel.rng.uniform(0, 1, N)
-        elif resample_strategy == "stratified":
-            self._resample_rng = (
-                lambda N: 1
-                / N
-                * (np.arange(N) + self._mcmc_kernel.rng.uniform(0, 1, N))
-            )
+        if hasattr(ResampleStrategy, resample_strategy):
+            self._resample_rng = getattr(ResampleStrategy, resample_strategy)
         else:
             raise ValueError(f"Invalid resampling strategy {resample_strategy}")
 
@@ -159,7 +154,7 @@ class Updater:
         return Particles(param_dict, new_log_likes, new_weights)
 
     def _generate_resample_indices(self, particles):
-        u = self._resample_rng(particles.num_particles)
+        u = self._resample_rng(self._mcmc_kernel, particles.num_particles)
         return np.digitize(u, np.cumsum(particles.weights))
 
     def _check_if_generate_particles_warning(self, particles):
