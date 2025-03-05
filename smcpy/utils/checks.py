@@ -2,7 +2,6 @@ import numpy as np
 
 
 class Checks(object):
-
     @classmethod
     def _is_dict(class_, input_):
         return isinstance(input_, dict)
@@ -52,21 +51,21 @@ class Checks(object):
         try:
             np.linalg.cholesky(input_)
             return True
-        except np.linalg.linalg.LinAlgError:
+        except np.linalg.LinAlgError:
             return False
 
     @staticmethod
     def _raise_type_error(input_, type_):
-        raise TypeError('%s must be %s.' % (input_, type_))
+        raise TypeError("%s must be %s." % (input_, type_))
 
     @staticmethod
     def _raise_negative_error(input_):
-        raise ValueError('%s must be > 0.' % input_)
+        raise ValueError("%s must be > 0." % input_)
 
     @staticmethod
     def _raise_zero_error(input_):
-        raise ValueError('%s cannot be zero.' % input_)
+        raise ValueError("%s cannot be zero." % input_)
 
     @staticmethod
     def _raise_out_of_bounds_error(input_):
-        raise ValueError('%s cannot be greater than num_time_steps.' % input)
+        raise ValueError("%s cannot be greater than num_time_steps." % input)

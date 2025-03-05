@@ -36,7 +36,6 @@ class ImproperUniform:
 
 
 class InvWishart:
-
     def __init__(self, dof, scale):
         """
         :param scale: scale matrix
@@ -124,7 +123,7 @@ class ImproperCov:
         try:
             np.linalg.cholesky(x)
             return 1
-        except np.linalg.linalg.LinAlgError:
+        except np.linalg.LinAlgError:
             return 0
 
     def _check_samples_shape(self, cov):
@@ -138,7 +137,6 @@ class ImproperCov:
 
 
 class ConstrainedUniform:
-
     def __init__(self, constraint_function, dim=None, bounds=None, max_rvs_tries=1000):
         """
         :param constraint_function: a function that takes in an array of

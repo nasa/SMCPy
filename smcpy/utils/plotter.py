@@ -1,4 +1,4 @@
-'''
+"""
 Notices:
 Copyright 2018 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration. No copyright is claimed in
@@ -28,7 +28,7 @@ UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
 ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
-'''
+"""
 
 import imp
 import matplotlib.pyplot as plt
@@ -49,9 +49,10 @@ def _mpi_decorator(func):
         function using rank 0.
         """
         try:
-            imp.find_module('mpi4py')
+            imp.find_module("mpi4py")
 
             from mpi4py import MPI
+
             comm = MPI.COMM_WORLD.Clone()
 
             size = comm.size
@@ -59,7 +60,6 @@ def _mpi_decorator(func):
             comm = comm
 
         except ImportError:
-
             size = 1
             rank = 0
             comm = SingleRankComm()
@@ -70,42 +70,48 @@ def _mpi_decorator(func):
     return wrapper
 
 
-def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
-                    include_kde=False, filename='chain.png',
-                    report_style=False):
-
+def plot_mcmc_chain(
+    chain,
+    param_labels,
+    burnin=0,
+    save=False,
+    show=True,
+    include_kde=False,
+    filename="chain.png",
+    report_style=False,
+):
     n_columns = 2
-    gridspec = {'width_ratios': [1., 0.], 'wspace': 0.0}
+    gridspec = {"width_ratios": [1.0, 0.0], "wspace": 0.0}
     if include_kde:
-        gridspec = {'width_ratios': [0.85, 0.15], 'wspace': 0.0}
+        gridspec = {"width_ratios": [0.85, 0.15], "wspace": 0.0}
 
-    fig, ax = plt.subplots(len(param_labels), n_columns, sharey='row',
-                           gridspec_kw=gridspec)
+    fig, ax = plt.subplots(
+        len(param_labels), n_columns, sharey="row", gridspec_kw=gridspec
+    )
 
     chain = chain[:, :, burnin:]
     for i, name in enumerate(param_labels):
         for parallel_chain in chain:
-            ax[i, 0].plot(parallel_chain[i], '-', linewidth=0.5)
+            ax[i, 0].plot(parallel_chain[i], "-", linewidth=0.5)
 
             if include_kde:
                 ylims = ax[i, 0].get_ylim()
                 x = np.linspace(ylims[0], ylims[1], 1000)
                 kde = gaussian_kde(parallel_chain[i])
-                ax[i, 1].plot(kde.pdf(x), x, '-')
-                ax[i, 1].fill_betweenx(x, kde.pdf(x), np.zeros(x.shape),
-                                      alpha=0.3)
+                ax[i, 1].plot(kde.pdf(x), x, "-")
+                ax[i, 1].fill_betweenx(x, kde.pdf(x), np.zeros(x.shape), alpha=0.3)
 
-        ax[i, 1].axis('off')
+        ax[i, 1].axis("off")
         if include_kde:
             ax[i, 1].set_xlim(0, None)
 
         ax[i, 0].set_ylabel(name)
-        ax[i, 0].set_xlim(0, chain.shape[2]) 
+        ax[i, 0].set_xlim(0, chain.shape[2])
         ax[i, 0].get_xaxis().set_visible(False)
 
     ax[len(param_labels) - 1, 0].get_xaxis().set_visible(True)
-    ax[len(param_labels) - 1, 0].set_xlabel('sample #')
-    ax[len(param_labels) - 1, 1].set_xlabel('probability density')
+    ax[len(param_labels) - 1, 0].set_xlabel("sample #")
+    ax[len(param_labels) - 1, 1].set_xlabel("probability density")
 
     if save:
         plt.tight_layout()
@@ -115,7 +121,7 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
 
     if report_style:
         fig.set_figheight(fig.get_figheight() * ax.shape[0])
-        rprt_filename = os.path.splitext(filename)[0] + '_report.pdf'
+        rprt_filename = os.path.splitext(filename)[0] + "_report.pdf"
         with PdfPages(rprt_filename) as pdf:
             scale = fig.dpi_scale_trans.inverted()
             extent1 = ax[0, 0].get_window_extent().transformed(scale)
@@ -124,8 +130,8 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
 
             for i in range(ax.shape[0]):
                 ax[i, 0].get_xaxis().set_visible(True)
-                ax[i, 0].set_xlabel('sample #')
-                ax[i, 1].set_xlabel('probability density')
+                ax[i, 0].set_xlabel("sample #")
+                ax[i, 1].set_xlabel("probability density")
                 extent = ax[i, 0].get_window_extent().transformed(scale)
                 extent.x0 = 0
                 extent.x1 = fig.get_figwidth()
@@ -134,37 +140,50 @@ def plot_mcmc_chain(chain, param_labels, burnin=0, save=False, show=True,
 
     return fig
 
-def plot_pairwise(samples, weights=None, param_names=None,
-                  save=False, show=True, xlim=None, ylim=None,
-                  filename='pairwise.png'):  # pragma no cover
-    #TODO true params on plot #true_params=None,
-    '''
+
+def plot_pairwise(
+    samples,
+    weights=None,
+    param_names=None,
+    save=False,
+    show=True,
+    xlim=None,
+    ylim=None,
+    filename="pairwise.png",
+):  # pragma no cover
+    # TODO true params on plot #true_params=None,
+    """
     Plots pairwise distributions of all parameter combos. Color codes each
     by weight if provided.
-    '''
+    """
     if param_names is None:
-        param_names = [f'p{i}' for i in range(samples.shape[1])]
+        param_names = [f"p{i}" for i in range(samples.shape[1])]
 
     if weights is None:
         weights = np.ones((samples.shape[0], 1))
 
-    columns = param_names + ['weights_']
+    columns = param_names + ["weights_"]
     samples = np.hstack((samples, weights))
 
-    sm = plt.cm.ScalarMappable(cmap='viridis')
+    sm = plt.cm.ScalarMappable(cmap="viridis")
     sm.set_array([])
 
     df = pd.DataFrame(samples, columns=columns)
 
-    ax = sns.pairplot(df, diag_kind='kde', corner=True,
-                      hue='weights_', palette='viridis',
-                      diag_kws={'weights': weights.flatten(), 'hue': None})
+    ax = sns.pairplot(
+        df,
+        diag_kind="kde",
+        corner=True,
+        hue="weights_",
+        palette="viridis",
+        diag_kws={"weights": weights.flatten(), "hue": None},
+    )
     ax.set(xlim=xlim)
     ax.set(ylim=ylim)
 
     ax.legend.remove()
     cbar = plt.gcf().colorbar(sm)
-    cbar.ax.set_ylabel('Particle Weight')
+    cbar.ax.set_ylabel("Particle Weight")
 
     # compute means TODO plot means
     if weights is None:
@@ -181,7 +200,6 @@ def plot_pairwise(samples, weights=None, param_names=None,
 
 
 def plot_geweke(burnin, z, param_labels=None):
-
     n_params = z[0].shape[0]
     if param_labels is None:
         param_labels = [f"Param{i}" for i in range(n_params)]
@@ -191,8 +209,8 @@ def plot_geweke(burnin, z, param_labels=None):
 
     fig, ax = plt.subplots(n_params)
     for i in range(n_params):
-        ax[i].fill_between([0, xlim[1]], y*2, y*-2, alpha=0.5, color="0.4")
-        ax[i].fill_between([0, xlim[1]], y*1, y*-1, alpha=0.5, color="0.4")
+        ax[i].fill_between([0, xlim[1]], y * 2, y * -2, alpha=0.5, color="0.4")
+        ax[i].fill_between([0, xlim[1]], y * 1, y * -1, alpha=0.5, color="0.4")
         ax[i].axhline(2, linestyle="--", color="k")
         ax[i].axhline(-2, linestyle="--", color="k")
         ax[i].plot(burnin, z[:, i], "o")

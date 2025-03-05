@@ -10,7 +10,6 @@ from smcpy import AdaptiveSampler, VectorMCMC, VectorMCMCKernel
 from run_example_adaptive import generate_data, eval_model
 
 if __name__ == "__main__":
-
     rng = np.random.default_rng(seed=200)
 
     noisy_data = generate_data(eval_model, std_dev=2, plot=False, rng=rng)

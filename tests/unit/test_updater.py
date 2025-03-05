@@ -7,7 +7,6 @@ from smcpy.paths import GeometricPath
 
 
 class MockedParticles:
-
     def __init__(self, params, log_likes, log_weights):
         self.param_names = tuple(params.keys())
         self.param_dict = params
@@ -31,10 +30,61 @@ def mocked_particles(mocker):
     return particles
 
 
+@pytest.fixture
+def mocked_particles_resample(mocker):
+    params = {"a": np.array([1, 1, 2]), "b": np.array([2, 3, 4])}
+    log_likes = np.array([-1, -2, -3]).reshape(-1, 1)
+    log_weights = np.array([0, 0, 1]).reshape(-1, 1)
+    particles = MockedParticles(params, log_likes, log_weights)
+    return particles
+
+
 @pytest.mark.parametrize("ess_threshold", [-0.1, 1.1])
 def test_ess_threshold_valid(ess_threshold):
     with pytest.raises(ValueError):
         Updater(ess_threshold, mcmc_kernel=None)
+
+
+@pytest.mark.parametrize("particles_warn_threshold", [-99, -1.9, 1.1, 3, 10000])
+def test_particles_warn_threshold_valid(particles_warn_threshold):
+    ess_threshold = 0.8
+    with pytest.raises(ValueError):
+        Updater(
+            ess_threshold=ess_threshold,
+            mcmc_kernel=None,
+            particles_warn_threshold=particles_warn_threshold,
+        )
+
+
+def test_max_particles_warn_threshold(mocked_particles_resample):
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ["a", "b"])
+    particles_warn_threshold = 0.0
+
+    updater = Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=kernel,
+        particles_warn_threshold=particles_warn_threshold,
+    )
+
+    with pytest.warns(UserWarning, match="Resampled to less than 0.0% of particles;"):
+        updater.resample_if_needed(mocked_particles_resample)
+
+
+def test_generate_particles_warning(mocked_particles_resample):
+
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ["a", "b"])
+    particles_warn_threshold = 1.0
+
+    updater = Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=kernel,
+        particles_warn_threshold=particles_warn_threshold,
+    )
+
+    with pytest.warns(UserWarning, match="Resampled to less than 100.0% of particles;"):
+        updater.resample_if_needed(mocked_particles_resample)
 
 
 def test_update_no_proposal(mocked_particles, mocker):
@@ -247,11 +297,9 @@ def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_parti
     mocked_kernel = mocker.Mock()
     mocked_kernel.rng = np.random.default_rng()
     n_particles = mocked_particles.num_particles
-    mocked_particles.weights = np.array([[1/n_particles]] * n_particles)
+    mocked_particles.weights = np.array([[1 / n_particles]] * n_particles)
     updater = Updater(
-        ess_threshold=1.0,
-        mcmc_kernel=mocked_kernel,
-        resample_strategy='stratified'
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -260,22 +308,20 @@ def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_parti
 
 
 @pytest.mark.parametrize(
-        'uniform_sample, expected',
-        (([0.3, 0.5, 0.5], [1, 2]), ([0.4, 0.5, 0.5], (1, 3)))
-    )
+    "uniform_sample, expected", (([0.3, 0.5, 0.5], [1, 2]), ([0.4, 0.5, 0.5], (1, 3)))
+)
 def test_resample_using_stratified_sampling_nonuniform_weights(
-        mocker, mocked_particles, uniform_sample, expected):
+    mocker, mocked_particles, uniform_sample, expected
+):
     mocked_rng = mocker.Mock(np.random.default_rng(), autospec=True)
     mocked_rng.uniform.return_value = uniform_sample
     mocked_kernel = mocker.Mock()
     mocked_kernel.rng = mocked_rng
 
-    expected_params = np.array([ expected, [1, 3], [2, 4] ])
+    expected_params = np.array([expected, [1, 3], [2, 4]])
 
     updater = Updater(
-        ess_threshold=1.0,
-        mcmc_kernel=mocked_kernel,
-        resample_strategy='stratified'
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -286,15 +332,9 @@ def test_resample_using_stratified_sampling_nonuniform_weights(
 def test_resample_raises_with_invalid_strategy(mocker, mocked_particles):
     with pytest.raises(ValueError):
         Updater(
-            ess_threshold=1.0,
-            mcmc_kernel=mocker.Mock(),
-            resample_strategy='bad-strat'
+            ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="bad-strat"
         )
 
 
 def test_resample_strategy_case_insensitive(mocker):
-    Updater(
-        ess_threshold=1.0,
-        mcmc_kernel=mocker.Mock(),
-        resample_strategy='StAnDaRd'
-    )
+    Updater(ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="StAnDaRd")

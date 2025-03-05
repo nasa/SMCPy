@@ -5,7 +5,6 @@ from .kernel_base import MCMCKernel
 
 
 class VectorMCMCKernel(MCMCKernel):
-
     def __init__(self, vector_mcmc_object, param_order, path=None, rng=None):
         super().__init__(vector_mcmc_object, param_order, path, rng)
         self._mcmc.evaluate_log_posterior = self.path.logpdf
