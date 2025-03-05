@@ -101,16 +101,13 @@ class VectorMCMC:
         if inputs.shape[1] != sum(prior_dims):
             raise ValueError("Num prior distributions != num input params")
 
-        prior_probs = np.empty((inputs.shape[0], len(self._priors)))
+        log_priors = np.empty((inputs.shape[0], len(self._priors)))
         in_start_idx = 0
         for i, p in enumerate(self._priors):
             in_ = inputs[:, in_start_idx : in_start_idx + prior_dims[i]]
-            prior_probs[:, i] = p.pdf(in_).squeeze()
+            log_priors[:, i] = p.logpdf(in_).squeeze()
             in_start_idx += prior_dims[i]
 
-        nonzero_priors = prior_probs != 0
-        log_priors = np.full(prior_probs.shape, -np.inf)
-        log_priors = np.log(prior_probs, where=nonzero_priors, out=log_priors)
         return log_priors
 
     def _get_prior_dims(self):

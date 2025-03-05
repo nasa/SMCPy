@@ -29,14 +29,14 @@ def priors(mocker):
         p.rvs = mocker.Mock(
             side_effect=lambda x, random_state, i=i: np.array([1 + i] * x)
         )
-        p.pdf = lambda x, i=i: x + i
+        p.logpdf = lambda x, i=i: np.log(x + i)
         delattr(p, "dim")
 
     multivar_prior = mocker.Mock()
     multivar_prior.rvs = mocker.Mock(
         side_effect=lambda x, random_state: np.tile([4, 5, 6], (x, 1))
     )
-    multivar_prior.pdf = lambda x: np.sum(x - 0.5, axis=1)
+    multivar_prior.logpdf = lambda x: np.log(np.sum(x - 0.5, axis=1))
     multivar_prior.dim = 3
     priors.append(multivar_prior)
 
@@ -313,7 +313,7 @@ def test_multi_dim_priors(mocker):
     ]
 
     for p in priors:
-        p.pdf.return_value = np.array([[1] * inputs.shape[0]])
+        p.logpdf.return_value = np.array([[0] * inputs.shape[0]])
         p.dim = 1
     priors[3].dim = 3
 
@@ -322,7 +322,7 @@ def test_multi_dim_priors(mocker):
     np.testing.assert_array_equal(mcmc.evaluate_log_priors(inputs), expected_priors)
     for i, exp_call in enumerate(expected_prior_calls):
         np.testing.assert_array_equal(
-            priors[i].pdf.call_args[0][0], exp_call.reshape(n_inputs, -1)
+            priors[i].logpdf.call_args[0][0], exp_call.reshape(n_inputs, -1)
         )
 
 
