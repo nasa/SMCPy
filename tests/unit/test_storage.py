@@ -2,6 +2,8 @@ import copy
 import numpy as np
 import pytest
 
+from pathlib import Path
+
 from smcpy.utils.storage import *
 
 
@@ -79,12 +81,17 @@ def test_hdf5storage_no_restart_file_not_exist(tmpdir):
     assert not storage.is_restart
 
 
+def test_hdf5storage_file_not_exist_write(tmpdir):
+    f = tmpdir / "test.txt"
+    storage = HDF5Storage(str(f), mode="w")
+    assert not storage.is_restart
+
+
 def test_hdf5storage_no_restart_write_mode(tmpdir):
     f = tmpdir / "test.txt"
     f.write_text("test", encoding="ascii")
     storage = HDF5Storage(str(f), mode="w")
     assert not storage.is_restart
-    assert not f.isfile()
 
 
 def test_hdf5storage_restart(tmpdir, mocker):
@@ -159,3 +166,50 @@ def test_overwrite_mode(mocker, tmpdir):
     storage._open_h5("w")
 
     h5_mock.assert_called_once_with(filename, "w")
+
+
+def test_os_scandir_params(mocker, tmpdir):
+    filename = tmpdir / "test.h5"
+
+    mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
+    storage = HDF5Storage(filename=filename)
+    storage._open_h5("a")
+
+    mock_scandir.assert_called_once_with(tmpdir)
+
+
+@pytest.mark.parametrize("mode", [1, 1000, "b", "abc", "A", "W"])
+def test_invalid_input_mode(tmpdir, mode):
+    filename = tmpdir / "test.h5"
+
+    with pytest.raises(ValueError):
+        HDF5Storage(filename=filename, mode=mode)
+
+
+def test_mode_default(tmpdir):
+    filename = tmpdir / "test.h5"
+    storage = HDF5Storage(filename=filename)
+
+    assert storage._mode == "a"
+
+
+def test_mode_write(tmpdir):
+    filename = tmpdir / "test.h5"
+    storage = HDF5Storage(filename=filename, mode="w")
+
+    assert storage._mode == "w"
+
+
+def test_mode_append(tmpdir):
+    filename = tmpdir / "test.h5"
+    storage = HDF5Storage(filename=filename, mode="a")
+
+    assert storage._mode == "a"
+
+
+def test_mode_save_step(tmpdir, mock_particles):
+    filename = tmpdir / "test.h5"
+    storage = HDF5Storage(filename=filename, mode="w")
+
+    storage.save_step(mock_particles)
+    assert storage._mode == "a"

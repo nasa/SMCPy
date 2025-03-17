@@ -3,13 +3,13 @@ import numpy as np
 import os
 
 from abc import abstractmethod
+from pathlib import Path
 
 from ..smc.particles import Particles
 from .context_manager import ContextManager
 
 
 class BaseStorage(ContextManager):
-
     def __init__(self):
         self.is_restart = False
 
@@ -40,7 +40,6 @@ class BaseStorage(ContextManager):
 
 
 class InMemoryStorage(BaseStorage):
-
     def __init__(self):
         super().__init__()
         self._step_list = []
@@ -70,17 +69,17 @@ class InMemoryStorage(BaseStorage):
 
 
 class HDF5Storage(BaseStorage):
-
     def __init__(self, filename, mode="a"):
+        if mode != "a" and mode != "w":
+            raise ValueError
+
         super().__init__()
-        self._filename = filename
+        self._filename = Path(filename)
         self._len = 0
-        if os.path.exists(filename):
-            if mode != "w":
-                self._init_length_on_restart()
-                self.is_restart = True
-            else:
-                os.remove(filename)
+        self._mode = mode
+        if os.path.exists(filename) and mode == "a":
+            self._init_length_on_restart()
+            self.is_restart = True
 
     @property
     def phi_sequence(self):
@@ -90,8 +89,8 @@ class HDF5Storage(BaseStorage):
         return phi_sequence
 
     def save_step(self, step):
-        h5 = self._open_h5("a")
-
+        h5 = self._open_h5(self._mode)
+        self._mode = "a"
         step_grp = h5.create_group(str(len(self)))
         step_grp.attrs["phi"] = step.attrs["phi"]
         step_grp.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
@@ -105,6 +104,8 @@ class HDF5Storage(BaseStorage):
         self._close(h5)
 
     def _open_h5(self, mode):
+        os.scandir(self._filename.parent)
+
         h5 = h5py.File(self._filename, mode)
         self._len = len(h5.keys())
         return h5
