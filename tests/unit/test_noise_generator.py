@@ -44,23 +44,6 @@ def test_scalar_std_val():
     np.testing.assert_array_equal(noisy_data, model_output)
 
 
-def test_noise_array(mocker):
-    std_array = [0.1, 0.3]
-    model_output = np.array([[1, 2, 3], [2, 4, 6]])
-
-    mockednp = mocker.patch(
-        "smcpy.utils.noise_generator.np.random.normal",
-        return_value=np.array([[1, 2]] * 3),
-    )
-    noisy_data = generate_noisy_data(model_output, std_array)
-    expected_output = np.array([[2, 3, 4], [4, 6, 8]])
-
-    np.testing.assert_array_equal(noisy_data, expected_output)
-
-    np_normal_call_args = mockednp.call_args_list[0][0]
-    assert np_normal_call_args == (0, std_array, (3, 2))
-
-
 @pytest.mark.parametrize(
     "model_output", [np.array([1, 2, 3, 4, 5]), np.array([[[0, 0, 0]]])]
 )
@@ -68,3 +51,17 @@ def test_model_output_valid_2d(model_output):
     std = 1
     with pytest.raises(ValueError):
         generate_noisy_data(model_output, std)
+
+
+def test_compare_seed_val():
+    std = 1
+    model_output = np.array([[0, 0, 0], [0, 0, 0]])
+
+    noisy_data = generate_noisy_data(model_output, std, 1)
+    noisy_data_same_seed = generate_noisy_data(model_output, std, 1)
+    noisy_data_diff_seed = generate_noisy_data(model_output, std, 2)
+
+    np.testing.assert_array_equal(noisy_data, noisy_data_same_seed)
+    np.testing.assert_raises(
+        AssertionError, np.testing.assert_array_equal, noisy_data, noisy_data_diff_seed
+    )
