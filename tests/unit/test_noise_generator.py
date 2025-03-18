@@ -44,6 +44,24 @@ def test_scalar_std_val():
     np.testing.assert_array_equal(noisy_data, model_output)
 
 
+def test_noise_array(mocker):
+    std_array = [0.1, 0.3]
+    model_output = np.array([[1, 2, 3], [2, 4, 6]])
+
+    mock_rng = mocker.Mock()
+    mock_rng.normal.return_value = np.array([[1, 2]] * 3)
+    mocker.patch(
+        "smcpy.utils.noise_generator.np.random.default_rng", return_value=mock_rng
+    )
+
+    noisy_data = generate_noisy_data(model_output, std_array)
+    expected_output = np.array([[2, 3, 4], [4, 6, 8]])
+
+    np.testing.assert_array_equal(noisy_data, expected_output)
+    np_normal_call_args = mock_rng.normal.call_args_list[0][0]
+    assert np_normal_call_args == (0, std_array, (3, 2))
+
+
 @pytest.mark.parametrize(
     "model_output", [np.array([1, 2, 3, 4, 5]), np.array([[[0, 0, 0]]])]
 )
