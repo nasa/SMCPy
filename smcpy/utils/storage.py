@@ -104,7 +104,7 @@ class HDF5Storage(BaseStorage):
         self._close(h5)
 
     def _open_h5(self, mode):
-        os.scandir(self._filename.parent)
+        self._refresh_filesystem_metadata()
 
         h5 = h5py.File(self._filename, mode)
         self._len = len(h5.keys())
@@ -148,3 +148,6 @@ class HDF5Storage(BaseStorage):
     def _init_length_on_restart(self):
         h5 = self._open_h5("r")
         self._close(h5)
+
+    def _refresh_filesystem_metadata(self):
+        os.scandir(self._filename.parent)

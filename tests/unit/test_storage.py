@@ -193,21 +193,15 @@ def test_mode_default(tmpdir):
     assert storage._mode == "a"
 
 
-def test_mode_write(tmpdir):
+@pytest.mark.parametrize("mode", ["w", "a"])
+def test_mode_write(tmpdir, mode):
     filename = tmpdir / "test.h5"
-    storage = HDF5Storage(filename=filename, mode="w")
+    storage = HDF5Storage(filename=filename, mode=mode)
 
-    assert storage._mode == "w"
-
-
-def test_mode_append(tmpdir):
-    filename = tmpdir / "test.h5"
-    storage = HDF5Storage(filename=filename, mode="a")
-
-    assert storage._mode == "a"
+    assert storage._mode == mode
 
 
-def test_mode_save_step(tmpdir, mock_particles):
+def test_first_save_step_changes_mode(tmpdir, mock_particles):
     filename = tmpdir / "test.h5"
     storage = HDF5Storage(filename=filename, mode="w")
 

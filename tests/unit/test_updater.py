@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from smcpy.resampler_rngs import *
 from smcpy.smc.updater import Updater
 from smcpy import VectorMCMC, VectorMCMCKernel
 from smcpy.paths import GeometricPath
@@ -299,7 +300,7 @@ def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_parti
     n_particles = mocked_particles.num_particles
     mocked_particles.weights = np.array([[1 / n_particles]] * n_particles)
     updater = Updater(
-        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_rng=stratified
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -321,7 +322,7 @@ def test_resample_using_stratified_sampling_nonuniform_weights(
     expected_params = np.array([expected, [1, 3], [2, 4]])
 
     updater = Updater(
-        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_rng=stratified
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -329,12 +330,6 @@ def test_resample_using_stratified_sampling_nonuniform_weights(
     np.testing.assert_array_equal(expected_params, new_particles.params)
 
 
-def test_resample_raises_with_invalid_strategy(mocker, mocked_particles):
-    with pytest.raises(ValueError):
-        Updater(
-            ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="bad-strat"
-        )
-
-
-def test_resample_strategy_case_insensitive(mocker):
-    Updater(ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="StAnDaRd")
+def test_resample_raises_with_invalid_rng(mocker, mocked_particles):
+    with pytest.raises(TypeError):
+        Updater(ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_rng="bad-strat")

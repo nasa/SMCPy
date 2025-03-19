@@ -39,6 +39,7 @@ from tqdm import tqdm
 from .initializer import Initializer
 from .mutator import Mutator
 from .updater import Updater
+from ..resampler_rngs import *
 from ..utils.context_manager import ContextManager
 from ..utils.mpi_utils import rank_zero_output_only, rank_zero_run_only
 from ..utils.progress_bar import set_bar
@@ -124,7 +125,7 @@ class FixedSampler(SamplerBase):
         phi_sequence,
         ess_threshold,
         progress_bar=True,
-        resample_strategy="standard",
+        resample_rng=standard,
         particles_warn_threshold=0.01,
     ):
         """
@@ -146,7 +147,7 @@ class FixedSampler(SamplerBase):
         self._updater = Updater(
             ess_threshold,
             self._mcmc_kernel,
-            resample_strategy=resample_strategy,
+            resample_rng=resample_rng,
             particles_warn_threshold=particles_warn_threshold,
         )
         self._phi_sequence = phi_sequence
@@ -185,7 +186,7 @@ class AdaptiveSampler(SamplerBase):
         target_ess=0.8,
         min_dphi=None,
         progress_bar=True,
-        resample_strategy="standard",
+        resample_rng=standard,
         particles_warn_threshold=0.01,
     ):
         """
@@ -209,7 +210,7 @@ class AdaptiveSampler(SamplerBase):
         self._updater = Updater(
             ess_threshold=1,  # ensures always resampling
             mcmc_kernel=self._mcmc_kernel,
-            resample_strategy=resample_strategy,
+            resample_rng=resample_rng,
             particles_warn_threshold=particles_warn_threshold,
         )
         self._phi_sequence = [0]
