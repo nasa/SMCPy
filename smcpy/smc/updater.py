@@ -47,7 +47,7 @@ class Updater:
         self,
         ess_threshold,
         mcmc_kernel,
-        resample_rng=standard,
+        resample_rng,
         particles_warn_threshold=0.01,
     ):
         """
