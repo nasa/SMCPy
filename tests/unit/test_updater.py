@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from smcpy.resampler_rngs import *
 from smcpy.smc.updater import Updater
 from smcpy import VectorMCMC, VectorMCMCKernel
 from smcpy.paths import GeometricPath
@@ -42,7 +43,7 @@ def mocked_particles_resample(mocker):
 @pytest.mark.parametrize("ess_threshold", [-0.1, 1.1])
 def test_ess_threshold_valid(ess_threshold):
     with pytest.raises(ValueError):
-        Updater(ess_threshold, mcmc_kernel=None)
+        Updater(ess_threshold, mcmc_kernel=None, resample_rng=standard)
 
 
 @pytest.mark.parametrize("particles_warn_threshold", [-99, -1.9, 1.1, 3, 10000])
@@ -53,6 +54,7 @@ def test_particles_warn_threshold_valid(particles_warn_threshold):
             ess_threshold=ess_threshold,
             mcmc_kernel=None,
             particles_warn_threshold=particles_warn_threshold,
+            resample_rng=standard,
         )
 
 
@@ -65,6 +67,7 @@ def test_max_particles_warn_threshold(mocked_particles_resample):
         ess_threshold=1.0,
         mcmc_kernel=kernel,
         particles_warn_threshold=particles_warn_threshold,
+        resample_rng=standard,
     )
 
     with pytest.warns(UserWarning, match="Resampled to less than 0.0% of particles;"):
@@ -81,6 +84,7 @@ def test_generate_particles_warning(mocked_particles_resample):
         ess_threshold=1.0,
         mcmc_kernel=kernel,
         particles_warn_threshold=particles_warn_threshold,
+        resample_rng=standard,
     )
 
     with pytest.warns(UserWarning, match="Resampled to less than 100.0% of particles;"):
@@ -94,7 +98,11 @@ def test_update_no_proposal(mocked_particles, mocker):
     kernel = VectorMCMCKernel(vmcmc, ["a", "b"])
     mocker.patch.object(kernel, "get_log_priors", return_value=np.ones((3, 2)))
 
-    updater = Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    updater = Updater(
+        ess_threshold=0.0,
+        mcmc_kernel=kernel,
+        resample_rng=standard,
+    )
     delta_phi = 0.1
     kernel.path.phi = 0.1
     kernel.path.phi = kernel.path.phi + delta_phi
@@ -125,7 +133,11 @@ def test_update_w_proposal(mocked_particles, mocker):
     kernel = VectorMCMCKernel(vmcmc, ["a", "b"], path)
     mocker.patch.object(kernel, "get_log_priors", return_value=np.ones((3, 2)))
 
-    updater = Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    updater = Updater(
+        ess_threshold=0.0,
+        mcmc_kernel=kernel,
+        resample_rng=standard,
+    )
     delta_phi = 0.1
     kernel.path.phi = 0.1
     kernel.path.phi = kernel.path.phi + delta_phi
@@ -158,7 +170,11 @@ def test_update_w_proposal_and_req_phi(mocked_particles, mocker):
     kernel = VectorMCMCKernel(vmcmc, ["a", "b"], path)
     mocker.patch.object(kernel, "get_log_priors", return_value=np.ones((3, 2)))
 
-    updater = Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    updater = Updater(
+        ess_threshold=0.0,
+        mcmc_kernel=kernel,
+        resample_rng=standard,
+    )
     delta_phi = 0.1
     kernel.path.phi = 0.1
     kernel.path.phi = kernel.path.phi + delta_phi
@@ -193,7 +209,11 @@ def test_update_w_zero_prob_prior(mocked_particles, mocker):
         kernel, "get_log_priors", return_value=np.array([[1, 1], [1, 1], [1, -np.inf]])
     )
 
-    updater = Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    updater = Updater(
+        ess_threshold=0.0,
+        mcmc_kernel=kernel,
+        resample_rng=standard,
+    )
     delta_phi = 0.1
     kernel.path.phi = delta_phi
 
@@ -226,7 +246,11 @@ def test_update_w_zero_in_numer_and_denom(mocked_particles, mocker):
     kernel = VectorMCMCKernel(vmcmc, ["a", "b"], path)
     mocker.patch.object(kernel, "get_log_priors", return_value=np.ones((3, 2)))
 
-    updater = Updater(ess_threshold=0.0, mcmc_kernel=kernel)
+    updater = Updater(
+        ess_threshold=0.0,
+        mcmc_kernel=kernel,
+        resample_rng=standard,
+    )
     delta_phi = 0.1
     kernel.path.phi = 0.1
     kernel.path.phi = kernel.path.phi + delta_phi
@@ -267,7 +291,11 @@ def test_update_with_standard_resample(
     vmcmc = VectorMCMC(None, None, None)
     kernel = VectorMCMCKernel(vmcmc, ["a", "b"], rng=rng)
 
-    updater = Updater(ess_threshold=1.0, mcmc_kernel=kernel)
+    updater = Updater(
+        ess_threshold=1.0,
+        mcmc_kernel=kernel,
+        resample_rng=standard,
+    )
     delta_phi = 0.1
     kernel.path.phi = 0.1
     kernel.path.phi = kernel.path.phi + delta_phi
@@ -299,7 +327,7 @@ def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_parti
     n_particles = mocked_particles.num_particles
     mocked_particles.weights = np.array([[1 / n_particles]] * n_particles)
     updater = Updater(
-        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_rng=stratified
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -321,7 +349,7 @@ def test_resample_using_stratified_sampling_nonuniform_weights(
     expected_params = np.array([expected, [1, 3], [2, 4]])
 
     updater = Updater(
-        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_strategy="stratified"
+        ess_threshold=1.0, mcmc_kernel=mocked_kernel, resample_rng=stratified
     )
 
     new_particles = updater.resample_if_needed(mocked_particles)
@@ -329,12 +357,6 @@ def test_resample_using_stratified_sampling_nonuniform_weights(
     np.testing.assert_array_equal(expected_params, new_particles.params)
 
 
-def test_resample_raises_with_invalid_strategy(mocker, mocked_particles):
-    with pytest.raises(ValueError):
-        Updater(
-            ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="bad-strat"
-        )
-
-
-def test_resample_strategy_case_insensitive(mocker):
-    Updater(ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_strategy="StAnDaRd")
+def test_raises_with_invalid_rng(mocker, mocked_particles):
+    with pytest.raises(TypeError):
+        Updater(ess_threshold=1.0, mcmc_kernel=mocker.Mock(), resample_rng="bad-strat")

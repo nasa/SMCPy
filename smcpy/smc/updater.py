@@ -34,6 +34,7 @@ import numpy as np
 import warnings
 
 from .particles import Particles
+from ..resampler_rngs import *
 
 
 class Updater:
@@ -46,7 +47,7 @@ class Updater:
         self,
         ess_threshold,
         mcmc_kernel,
-        resample_strategy="standard",
+        resample_rng,
         particles_warn_threshold=0.01,
     ):
         """
@@ -54,12 +55,15 @@ class Updater:
             ess < ess_threshold, resampling with replacement is conducted.
         :type ess_threshold: float
         """
+        if not callable(resample_rng):
+            raise TypeError
+
         self.ess_threshold = ess_threshold
         self._ess = np.nan
         self._resampled = False
         self._unnorm_log_weights = []
         self._mcmc_kernel = mcmc_kernel
-        self.resample_rng = resample_strategy.lower()
+        self.resample_rng = resample_rng
         self.particles_warn_threshold = particles_warn_threshold
 
     @property
@@ -89,23 +93,6 @@ class Updater:
     @property
     def resampled(self):
         return self._resampled
-
-    @property
-    def resample_rng(self):
-        return self._resample_rng
-
-    @resample_rng.setter
-    def resample_rng(self, resample_strategy):
-        if resample_strategy == "standard":
-            self._resample_rng = lambda N: self._mcmc_kernel.rng.uniform(0, 1, N)
-        elif resample_strategy == "stratified":
-            self._resample_rng = (
-                lambda N: 1
-                / N
-                * (np.arange(N) + self._mcmc_kernel.rng.uniform(0, 1, N))
-            )
-        else:
-            raise ValueError(f"Invalid resampling strategy {resample_strategy}")
 
     def update(self, particles):
         new_log_weights = self._compute_new_weights(particles)
@@ -159,7 +146,7 @@ class Updater:
         return Particles(param_dict, new_log_likes, new_weights)
 
     def _generate_resample_indices(self, particles):
-        u = self._resample_rng(particles.num_particles)
+        u = self.resample_rng(self._mcmc_kernel, particles.num_particles)
         return np.digitize(u, np.cumsum(particles.weights))
 
     def _check_if_generate_particles_warning(self, particles):
