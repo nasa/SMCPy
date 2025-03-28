@@ -30,7 +30,7 @@ def test_kernel_instance(vector_mcmc, stub_model, data, priors):
     assert vmcmc._mcmc._eval_model == stub_model
     assert vmcmc._mcmc._data == data
     assert vmcmc._mcmc._priors == priors
-    assert vmcmc._param_order == tuple("a")
+    assert vmcmc.param_order == tuple("a")
 
 
 def test_sample_from_prior(vector_mcmc, mocker):
@@ -158,3 +158,13 @@ def test_kernel_overwrites_with_default(vector_mcmc):
     kernel = VectorMCMCKernel(vector_mcmc, param_order=[], rng=None)
     assert kernel._mcmc.rng != orig_rng
     assert kernel.rng == kernel._mcmc.rng
+
+def test_convert_params_ele_to_string(vector_mcmc):
+    param_order = (0.0, 1, 1j, [], (), range(0,9))
+    kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
+    assert kernel.param_order == ("0.0", "1", "1j", "[]", "()", "range(0, 9)")
+
+@pytest.mark.parametrize("iterable", [[], (), {}, set(), ""])
+def test_convert_params_itr_to_tuple(vector_mcmc, iterable):
+    kernel = VectorMCMCKernel(vector_mcmc, iterable)
+    assert isinstance(kernel.param_order, tuple)

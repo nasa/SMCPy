@@ -8,6 +8,7 @@ class VectorMCMCKernel(MCMCKernel):
     def __init__(self, vector_mcmc_object, param_order, path=None, rng=None):
         super().__init__(vector_mcmc_object, param_order, path, rng)
         self._mcmc.evaluate_log_posterior = self.path.logpdf
+        self.param_order = tuple(str(param) for param in param_order)
 
     def mutate_particles(self, param_dict, num_samples, cov):
         param_array = self._conv_param_dict_to_array(param_dict)
@@ -38,15 +39,15 @@ class VectorMCMCKernel(MCMCKernel):
         self._mcmc.rng = rng
 
     def _conv_param_array_to_dict(self, param_array):
-        return dict(zip(self._param_order, param_array.T))
+        return dict(zip(self.param_order, param_array.T))
 
     def _conv_param_dict_to_array(self, param_dict):
         dim0 = 1
-        if not isinstance(param_dict[self._param_order[0]], (int, float)):
-            dim0 = len(param_dict[self._param_order[0]])
-        param_array = np.zeros((dim0, len(self._param_order)))
+        if not isinstance(param_dict[self.param_order[0]], (int, float)):
+            dim0 = len(param_dict[self.param_order[0]])
+        param_array = np.zeros((dim0, len(self.param_order)))
 
-        for i, k in enumerate(self._param_order):
+        for i, k in enumerate(self.param_order):
             if param_dict[k].dtype == "object":
                 param_array = param_array.astype("object")
             param_array[:, i] = param_dict[k]
