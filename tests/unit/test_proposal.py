@@ -29,8 +29,8 @@ def test_multivarindp_proposal_logpdf(dist1, dist2):
     cp = MultivarIndependent(dist1, dist2)
     logpdf = cp.logpdf(inputs)
 
-    dist1.logpdf.called_once_with(np.full((3, 1), 5))
-    dist2.logpdf.called_once_with(np.full((3, 2), 6))
+    np.testing.assert_array_equal(dist1.logpdf.call_args[0][0], np.full((3, 1), 5))
+    np.testing.assert_array_equal(dist2.logpdf.call_args[0][0], np.full((3, 2), 6))
 
     np.testing.assert_array_equal(logpdf, np.full((3, 1), 3))
 
@@ -41,7 +41,7 @@ def test_multivarindp_proposal_rvs(dist1, dist2):
     rng = np.random.default_rng()
     samples = cp.rvs(3, random_state=rng)
 
-    dist1.rvs.called_once_with(3, random_state=rng)
-    dist2.rvs.called_once_with(3, random_state=rng)
+    dist1.rvs.assert_called_with(3, random_state=rng)
+    dist2.rvs.assert_called_with(3, random_state=rng)
 
     np.testing.assert_array_equal(samples, np.ones((3, 3)))

@@ -251,7 +251,8 @@ def test_random_effects_dummy_model(mocker):
 
 
 def test_random_effects_multi_model(mocker):
-    norm_mock = mocker.patch("smcpy.log_likelihoods.Normal")
+    norm_mock_instance = mocker.Mock()
+    norm_mock = mocker.patch("smcpy.log_likelihoods.Normal", return_value=norm_mock_instance)
     model = [0, 1, 2]
     args = ([1], [0, 1, 2])
     data = [0, 1, 2]
@@ -261,7 +262,7 @@ def test_random_effects_multi_model(mocker):
 
     for i in model:
         assert norm_mock.call_args_list[i][0] == (i, i, i)
-    assert norm_mock._model_wrapper.called_with(4)
+    assert norm_mock_instance.set_model_wrapper.call_args_list[-1][0][0] == 4
 
 
 def test_random_effects_multi_model_not_match_num_rand_eff():

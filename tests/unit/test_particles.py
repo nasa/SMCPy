@@ -150,7 +150,11 @@ def test_compute_covariance(mocker):
 
     cov = particles.compute_covariance()
 
-    expected_call = mocker.call(param_array, ddof=0, aweights=weights)
+    expected_call = [param_array, 0, weights]
     assert cov == np.array([[1]])
     assert cov.shape == (1, 1)
-    assert cov_mock.called_once_with(expected_call)
+
+    mock_args = cov_mock.call_args
+    np.testing.assert_array_equal(mock_args[0][0], expected_call[0])
+    assert mock_args[1]["ddof"] == expected_call[1]
+    np.testing.assert_array_almost_equal(mock_args[1]["aweights"], expected_call[2])
