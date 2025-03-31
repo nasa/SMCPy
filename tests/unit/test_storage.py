@@ -9,6 +9,7 @@ from smcpy.utils.storage import *
 
 class DummyParticles:
     def __init__(self, params, log_likes, log_weights):
+        self.attrs = dict()
         self.log_likes = log_likes
         self.log_weights = log_weights
         self.param_dict = params
@@ -114,6 +115,7 @@ def test_hdf5storage_save(tmpdir, mock_particles):
         for key, val in mock_particles.param_dict.items():
             np.testing.assert_array_equal(p.param_dict[key], val)
         assert p._total_unlw == 99
+        assert p.attrs == {"phi": 2}
 
     assert isinstance(storage[0], DummyParticles)
     [test_particles(p) for p in storage]

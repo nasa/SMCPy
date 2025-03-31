@@ -159,10 +159,12 @@ def test_kernel_overwrites_with_default(vector_mcmc):
     assert kernel._mcmc.rng != orig_rng
     assert kernel.rng == kernel._mcmc.rng
 
+
 def test_convert_params_ele_to_string(vector_mcmc):
-    param_order = (0.0, 1, 1j, [], (), range(0,9))
+    param_order = (0.0, 1, 1j, [], (), range(0, 9))
     kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
     assert kernel.param_order == ("0.0", "1", "1j", "[]", "()", "range(0, 9)")
+
 
 @pytest.mark.parametrize("iterable", [[], (), {}, set(), ""])
 def test_convert_params_itr_to_tuple(vector_mcmc, iterable):
