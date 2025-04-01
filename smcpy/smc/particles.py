@@ -74,7 +74,7 @@ class Particles(Checks):
         self._param_names = None
         self._num_particles = None
 
-        self.attrs = dict()
+        self.attrs = {"mutation_ratio": 1}
 
         self._set_params(params)
         self._set_log_likes(log_likes)

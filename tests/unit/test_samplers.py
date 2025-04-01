@@ -52,7 +52,9 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
     upd = mocker.patch(SAMPLERS + ".Updater", return_value=upd_mock)
 
     mocked_mutator = mocker.Mock()
-    mocked_mutator.mutate.return_value = 3
+    mocked_mut_particles = mocker.Mock()
+    mocked_mut_particles.attrs = {"mutation_ratio": 0.3}
+    mocked_mutator.mutate.return_value = mocked_mut_particles
     mut = mocker.patch(SAMPLER_BASE + ".Mutator", return_value=mocked_mutator)
 
     mocker.patch(SAMPLER_BASE + ".InMemoryStorage", return_value=result_mock)
@@ -66,7 +68,6 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
     ess_threshold = 0.2
 
     smc = FixedSampler(mcmc_kernel)
-    mut_ratio = mocker.patch.object(smc, "_compute_mutation_ratio")
     step_list, mll = smc.sample(
         num_particles,
         num_mcmc_samples,
@@ -90,7 +91,7 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
         num_saves = len(result_mock.save_step.call_args_list)
         assert num_saves == len(phi_sequence) - 1
     assert mll == 34
-    assert smc.step == 3
+    assert smc.step == mocked_mut_particles
 
     if proposal:
         mcmc_kernel.sample_from_proposal.assert_called_once()
@@ -98,27 +99,6 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
     else:
         mcmc_kernel.sample_from_proposal.assert_not_called()
         mcmc_kernel.sample_from_prior.assert_called_once()
-
-
-@pytest.mark.parametrize(
-    "new_param, expected_ratio",
-    (
-        (np.array([[1, 2], [0, 0], [0, 0], [0, 0]]), 0.25),
-        (np.array([[0, 0], [0, 0], [0, 0], [0, 0]]), 0.00),
-        (np.array([[0, 1], [1, 1], [2, 0], [1, 1]]), 1.00),
-        (np.array([[2, 0], [2, 0], [0, 1], [0, 0]]), 0.75),
-    ),
-)
-def test_calc_mutation_ratio(mocker, new_param, expected_ratio, mcmc_kernel):
-    old = mocker.Mock()
-    old.params = np.zeros((4, 2))
-    new = mocker.Mock()
-    new.params = new_param
-
-    smc = FixedSampler(mcmc_kernel)
-    smc._compute_mutation_ratio(old, new)
-
-    assert smc._mutation_ratio == expected_ratio
 
 
 @pytest.mark.parametrize("proposal", [True, False])
@@ -245,8 +225,10 @@ def test_adaptive_phi_sample(
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, "optimize_step", side_effect=[0.5, 0.6, 1.0])
     mocker.patch.object(smc, "_mutator")
-    mocker.patch.object(smc._mutator, "mutate", return_value=0.4)
-    mocker.patch.object(smc, "_compute_mutation_ratio")
+
+    mocked_mut_particles = mocker.Mock()
+    mocked_mut_particles.attrs = {"mutation_ratio": 0.3}
+    mocker.patch.object(smc._mutator, "mutate", return_value=mocked_mut_particles)
 
     steps, _ = smc.sample(
         num_particles=num_particles,
@@ -264,7 +246,8 @@ def test_adaptive_phi_sample(
     np.testing.assert_array_equal(smc.req_phi_index, exp_index)
     assert len(result_mock.save_step.call_args_list) == 4
     result_mock.estimate_marginal_log_likelihoods.assert_called_once()
-    assert smc.step == 0.4
+    assert smc.step == mocked_mut_particles
+    assert smc.step.attrs == {"mutation_ratio": 0.3}
 
     smc = AdaptiveSampler(mcmc_kernel)
     assert smc._phi_sequence == []
@@ -310,8 +293,10 @@ def test_minimum_delta_phi(mocker, mcmc_kernel, result_mock, min_dphi, is_floore
     smc = AdaptiveSampler(mcmc_kernel)
     mocker.patch.object(smc, "optimize_step", side_effect=np.linspace(0.1, 1, 10))
     mocker.patch.object(smc, "_mutator")
-    mocker.patch.object(smc._mutator, "mutate", return_value=0.4)
-    mocker.patch.object(smc, "_compute_mutation_ratio")
+
+    mocked_mut_particles = mocker.Mock()
+    mocked_mut_particles.attrs = {"mutation_ratio": 0.3}
+    mocker.patch.object(smc._mutator, "mutate", return_value=mocked_mut_particles)
 
     _, _ = smc.sample(num_particles=5, num_mcmc_samples=5, min_dphi=min_dphi)
 

@@ -57,7 +57,14 @@ class Mutator:
         new_particles = Particles(mutated[0], mutated[1], particles.log_weights)
         new_particles._total_unlw = particles.total_unnorm_log_weight
         new_particles.attrs.update({"phi": self._mcmc_kernel.path.phi})
+        new_particles.attrs.update(
+            {"mutation_ratio": self._compute_mutation_ratio(particles, new_particles)}
+        )
         return new_particles
+
+    def _compute_mutation_ratio(self, old_particles, new_particles):
+        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
+        return sum(mutated) / new_particles.params.shape[0]
 
     @property
     def mcmc_kernel(self):

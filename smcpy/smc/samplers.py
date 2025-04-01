@@ -52,7 +52,6 @@ class SamplerBase:
         self._initializer = Initializer(self._mcmc_kernel)
         self._mutator = Mutator(self._mcmc_kernel)
         self._updater = None
-        self._mutation_ratio = 1
         self._step_list = []
         self._phi_sequence = []
 
@@ -94,12 +93,7 @@ class SamplerBase:
         self._mcmc_kernel.path.phi = phi
         particles = self._updater.update(self.step)
         mut_particles = self._mutator.mutate(particles, num_mcmc_samples)
-        self._compute_mutation_ratio(particles, mut_particles)
         self.step = mut_particles
-
-    def _compute_mutation_ratio(self, old_particles, new_particles):
-        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
-        self._mutation_ratio = sum(mutated) / new_particles.params.shape[0]
 
     @rank_zero_run_only
     def _save_step(self, step):
@@ -157,11 +151,13 @@ class FixedSampler(SamplerBase):
         phi_iterator = self._phi_sequence[1:]
         if progress_bar:
             phi_iterator = tqdm(phi_iterator)
-        set_bar(phi_iterator, 1, self._mutation_ratio, self._updater)
+        set_bar(phi_iterator, 1, self.step.attrs["mutation_ratio"], self._updater)
 
         for i, phi in enumerate(phi_iterator):
             self._do_smc_step(phi, num_mcmc_samples)
-            set_bar(phi_iterator, i + 2, self._mutation_ratio, self._updater)
+            set_bar(
+                phi_iterator, i + 2, self.step.attrs["mutation_ratio"], self._updater
+            )
 
         return self._result, self._result.estimate_marginal_log_likelihoods()
 
@@ -305,7 +301,9 @@ class AdaptiveSampler(SamplerBase):
 
     def _update_progress_bar(self, pbar, dphi):
         if pbar:
-            pbar.set_description(f"[ mutation ratio: {self._mutation_ratio}")
+            pbar.set_description(
+                f"[ mutation ratio: {self.step.attrs['mutation_ratio']}"
+            )
             pbar.update(dphi)
 
     @staticmethod
