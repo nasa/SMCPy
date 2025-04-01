@@ -44,10 +44,15 @@ class InMemoryStorage(BaseStorage):
         super().__init__()
         self._step_list = []
         self._phi_sequence = []
+        self._mut_ratio_sequence = []
 
     @property
     def phi_sequence(self):
         return self._phi_sequence
+
+    @property
+    def mut_ratio_sequence(self):
+        return self._mut_ratio_sequence
 
     def __getitem__(self, idx):
         return self._step_list[idx]
@@ -66,6 +71,7 @@ class InMemoryStorage(BaseStorage):
     def save_step(self, step):
         self._step_list.append(step)
         self._phi_sequence.append(step.attrs["phi"])
+        self._mut_ratio_sequence.append(step.attrs["mutation_ratio"])
 
 
 class HDF5Storage(BaseStorage):
@@ -88,12 +94,22 @@ class HDF5Storage(BaseStorage):
         self._close(h5)
         return phi_sequence
 
+    @property
+    def mut_ratio_sequence(self):
+        h5 = self._open_h5("r")
+        mut_ratio_sequence = [
+            h5[i].attrs["mutation_ratio"] for i in sorted(h5.keys(), key=int)
+        ]
+        self._close(h5)
+        return mut_ratio_sequence
+
     def save_step(self, step):
         h5 = self._open_h5(self._mode)
         self._mode = "a"
         step_grp = h5.create_group(str(len(self)))
         step_grp.attrs["phi"] = step.attrs["phi"]
         step_grp.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
+        step_grp.attrs["mutation_ratio"] = step.attrs["mutation_ratio"]
         step_grp.create_dataset("log_likes", data=step.log_likes)
         step_grp.create_dataset("log_weights", data=step.log_weights)
 
@@ -120,11 +136,13 @@ class HDF5Storage(BaseStorage):
 
         phi = step_grp.attrs["phi"]
         total_unlw = step_grp.attrs["total_unnorm_log_weight"]
+        mutation_ratio = step_grp.attrs["mutation_ratio"]
         kwargs = {k: v[:] for k, v in step_grp.items() if k != "params"}
         kwargs["params"] = {k: v[:] for k, v in step_grp["params"].items()}
         particles = Particles(**kwargs)
         particles.attrs["phi"] = phi
         particles._total_unlw = total_unlw
+        particles.attrs["mutation_ratio"] = mutation_ratio
 
         self._close(h5)
         return particles

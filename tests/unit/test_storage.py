@@ -29,14 +29,14 @@ def mock_particles(mocker):
     mock_particles.log_likes = np.ones((10, 1))
     mock_particles.log_weights = np.ones((10, 1))
     mock_particles.total_unnorm_log_weight = 99
-    mock_particles.attrs = {"phi": 2}
+    mock_particles.attrs = {"phi": 2, "mutation_ratio": 1}
     return mock_particles
 
 
 def test_inmemorystorage_save(mocker):
     mocks = [mocker.Mock() for _ in range(3)]
     for i, mock in enumerate(mocks):
-        mock.attrs = {"phi": i / 10}
+        mock.attrs = {"phi": i / 10, "mutation_ratio": i / len(mocks)}
 
     storage = InMemoryStorage()
     storage.save_step(mocks[0])
@@ -49,6 +49,7 @@ def test_inmemorystorage_save(mocker):
     assert storage[-1] == mocks[2]
     assert len(storage) == 3
     assert storage.phi_sequence == [0, 0.1, 0.2]
+    assert storage.mut_ratio_sequence == [0, 1 / 3, 2 / 3]
 
     with pytest.raises(IndexError):
         storage[3]
@@ -115,17 +116,19 @@ def test_hdf5storage_save(tmpdir, mock_particles):
         for key, val in mock_particles.param_dict.items():
             np.testing.assert_array_equal(p.param_dict[key], val)
         assert p._total_unlw == 99
-        assert p.attrs == {"phi": 2}
+        assert p.attrs == {"phi": 2, "mutation_ratio": 1}
 
     assert isinstance(storage[0], DummyParticles)
     [test_particles(p) for p in storage]
     assert storage.phi_sequence == [2, 2]
+    assert storage.mut_ratio_sequence == [1, 1]
 
 
 def test_hdf5storage_load_existing(tmpdir, mock_particles):
     storage = HDF5Storage(filename=tmpdir / "test.h5")
     mp2 = copy.deepcopy(mock_particles)
     mp2.attrs["phi"] = 1
+    mp2.attrs["mutation_ratio"] = 0
     [storage.save_step(mock_particles) for _ in range(12)]  # 2 digits tests sort
     storage.save_step(mp2)
 
@@ -133,6 +136,7 @@ def test_hdf5storage_load_existing(tmpdir, mock_particles):
     storage.save_step(mock_particles)
 
     assert storage.phi_sequence == [2] * 12 + [1, 2]
+    assert storage.mut_ratio_sequence == [1] * 12 + [0, 1]
 
 
 def test_hdf5storage_length(tmpdir, mock_particles):
