@@ -6,7 +6,7 @@ from scipy.stats import uniform
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy.samplers import FixedSampler, AdaptiveSampler
+from smcpy import FixedSampler, AdaptiveSampler
 from smcpy.utils.plotter import *
 from smcpy.utils.storage import HDF5Storage
 

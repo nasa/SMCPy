@@ -296,7 +296,7 @@ class AdaptiveSampler(SamplerBase):
             )
             pbar = tqdm(total=1.0, bar_format=bar_format)
             pbar.set_description("[ mutation ratio: n/a")
-            pbar.update(0)
+            pbar.update(self.phi_sequence[-1])
         return pbar
 
     def _update_progress_bar(self, pbar, dphi):
