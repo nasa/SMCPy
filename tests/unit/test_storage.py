@@ -115,8 +115,7 @@ def test_hdf5storage_save(tmpdir, mock_particles):
         np.testing.assert_array_equal(p.log_weights, mock_particles.log_weights)
         for key, val in mock_particles.param_dict.items():
             np.testing.assert_array_equal(p.param_dict[key], val)
-        assert p._total_unlw == 99
-        assert p.attrs == {"phi": 2, "mutation_ratio": 1}
+        assert p.attrs == {"phi": 2, "mutation_ratio": 1, "total_unnorm_log_weight": 99}
 
     assert isinstance(storage[0], DummyParticles)
     [test_particles(p) for p in storage]

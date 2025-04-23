@@ -51,7 +51,9 @@ def test_set_particles(
 
     assert isinstance(particles.total_unnorm_log_weight, float)
     assert particles.total_unnorm_log_weight == pytest.approx(2.50258509)
-    assert particles.attrs == {"mutation_ratio": 1}
+    assert particles.attrs == dict(
+        {"total_unnorm_log_weight": pytest.approx(2.50258509)}
+    )
 
 
 def test_params_value_error():

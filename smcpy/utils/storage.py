@@ -134,15 +134,10 @@ class HDF5Storage(BaseStorage):
         h5 = self._open_h5("r")
         step_grp = h5[self._format_index(idx)]
 
-        phi = step_grp.attrs["phi"]
-        total_unlw = step_grp.attrs["total_unnorm_log_weight"]
-        mutation_ratio = step_grp.attrs["mutation_ratio"]
         kwargs = {k: v[:] for k, v in step_grp.items() if k != "params"}
         kwargs["params"] = {k: v[:] for k, v in step_grp["params"].items()}
         particles = Particles(**kwargs)
-        particles.attrs["phi"] = phi
-        particles._total_unlw = total_unlw
-        particles.attrs["mutation_ratio"] = mutation_ratio
+        particles.attrs = {k: v for k, v in step_grp.attrs.items()}
 
         self._close(h5)
         return particles
