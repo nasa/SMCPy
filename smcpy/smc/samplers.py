@@ -295,7 +295,9 @@ class AdaptiveSampler(SamplerBase):
                 + "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
             )
             pbar = tqdm(total=1.0, bar_format=bar_format)
-            pbar.set_description("[ mutation ratio: n/a")
+            pbar.set_description(
+                f"[ mutation ratio: {self.step.attrs['mutation_ratio']}"
+            )
             pbar.update(self.phi_sequence[-1])
         return pbar
 

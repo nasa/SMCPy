@@ -42,10 +42,9 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
 
     mocker.patch("smcpy.smc.mutator.Particles", new=DummyParticles)
 
-    mut_dummy_particles = stub_mcmc_kernel.mutate_particles.return_value = (
-        np.array([[333, 333]]),
-        [[33]],
-    )
+    params = np.array([[333, 333]])
+    log_likes = [[33]]
+    stub_mcmc_kernel.mutate_particles.return_value = (params, log_likes)
     stub_mcmc_kernel.path = GeometricPath()
     stub_mcmc_kernel.path.phi = 1
 
@@ -54,7 +53,7 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     np.testing.assert_array_equal(mutated_particles.params, np.array([[333, 333]]))
     assert mutated_particles.log_likes == [[33]]
     assert mutated_particles.log_weights == 3
-    assert mutated_particles._total_unlw == 99
+    assert mutated_particles.attrs["total_unnorm_log_weight"] == 99
     assert mutated_particles.attrs["phi"] == 1
     assert mutated_particles.attrs["mutation_ratio"] == 0
 
@@ -70,8 +69,10 @@ def test_hidden_turn_off_cov_calculation(mocker, mutator, stub_mcmc_kernel):
 
     stub_mcmc_kernel.path = mocker.Mock()
 
+    params = np.array([[1]])
+    log_likes = [[1]]
     mocker.patch.object(
-        mutator.mcmc_kernel, "mutate_particles", return_value=(np.array([[1]]), [[1]])
+        mutator.mcmc_kernel, "mutate_particles", return_value=(params, log_likes)
     )
 
     mocker.patch("smcpy.smc.mutator.Particles", new=DummyParticles)

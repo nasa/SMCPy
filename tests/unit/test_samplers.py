@@ -283,6 +283,10 @@ def test_minimum_delta_phi(mocker, mcmc_kernel, result_mock, min_dphi, is_floore
 
     init_mock = mocker.Mock()
     init_mock.init_particles_from_prior.return_value = 1
+
+    init_particles = mocker.Mock()
+    init_mock.initialize_particles.return_value = init_particles
+    init_particles.attrs = {"mutation_ratio": 0.3}
     mocker.patch(SAMPLER_BASE + ".Initializer", return_value=init_mock)
     update_mock = mocker.patch(SAMPLERS + ".Updater")
 

@@ -75,4 +75,5 @@ class Initializer:
 
         particles = Particles(params, log_likes, log_weights)
         particles.attrs.update({"phi": 0})
+        particles.attrs.update({"mutation_ratio": 0})
         return particles
