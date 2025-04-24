@@ -55,7 +55,9 @@ class Mutator:
             particles.param_dict, num_samples, cov
         )
         new_particles = Particles(mutated[0], mutated[1], particles.log_weights)
-        new_particles._total_unlw = particles.total_unnorm_log_weight
+        new_particles.attrs["total_unnorm_log_weight"] = (
+            particles.total_unnorm_log_weight
+        )
         new_particles.attrs.update({"phi": self._mcmc_kernel.path.phi})
         new_particles.attrs.update(
             {"mutation_ratio": self._compute_mutation_ratio(particles, new_particles)}

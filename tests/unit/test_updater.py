@@ -16,7 +16,11 @@ class MockedParticles:
         self.log_weights = log_weights
         self.weights = np.exp(log_weights)
         self.num_particles = len(log_weights)
-        self.total_unnorm_log_weight = 99
+        self.attrs = dict(total_unnorm_log_weight=99)
+
+    @property
+    def total_unnorm_log_weight(self):
+        return self.attrs["total_unnorm_log_weight"]
 
     def compute_ess(self):
         return 0.5 * self.params.shape[0]
@@ -318,7 +322,7 @@ def test_update_with_standard_resample(
         new_particles.params, mocked_particles.params[resample_indices]
     )
 
-    assert new_particles._total_unlw == 99
+    assert new_particles.attrs["total_unnorm_log_weight"] == 99
 
 
 def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_particles):

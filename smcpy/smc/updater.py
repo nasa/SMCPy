@@ -111,7 +111,9 @@ class Updater:
         if eff_sample_size < self.ess_threshold * particles.num_particles:
             self._resampled = True
             resampled_particles = self._resample(particles)
-            resampled_particles._total_unlw = particles.total_unnorm_log_weight
+            resampled_particles.attrs["total_unnorm_log_weight"] = (
+                particles.total_unnorm_log_weight
+            )
 
             return resampled_particles
 
