@@ -322,7 +322,7 @@ def test_update_with_standard_resample(
         new_particles.params, mocked_particles.params[resample_indices]
     )
 
-    assert new_particles.attrs["total_unnorm_log_weight"] == 99
+    assert new_particles.total_unnorm_log_weight == 99
 
 
 def test_resample_using_stratified_sampling_uniform_weights(mocker, mocked_particles):

@@ -12,7 +12,11 @@ class DummyParticles:
         self.params = params
         self.log_likes = log_likes
         self.log_weights = log_weights
-        self.attrs = {}
+        self.attrs = dict()
+
+    @property
+    def total_unnorm_log_weight(self):
+        return self.attrs["total_unnorm_log_weight"]
 
     def compute_covariance(self):
         return 4
@@ -53,7 +57,7 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     np.testing.assert_array_equal(mutated_particles.params, np.array([[333, 333]]))
     assert mutated_particles.log_likes == [[33]]
     assert mutated_particles.log_weights == 3
-    assert mutated_particles.attrs["total_unnorm_log_weight"] == 99
+    assert mutated_particles.total_unnorm_log_weight == 99
     assert mutated_particles.attrs["phi"] == 1
     assert mutated_particles.attrs["mutation_ratio"] == 0
 
