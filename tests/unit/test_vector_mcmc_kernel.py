@@ -137,6 +137,24 @@ def test_convert_dict_to_array_when_objects(vector_mcmc):
     np.testing.assert_array_equal(array, np.array([[np.array, np.array]] * 3))
 
 
+@pytest.mark.parametrize(
+    "param_array, expected_dict",
+    (
+        [
+            np.array([[1, 2], [3, 4], [5, 6]]),
+            {"a": np.array([1, 3, 5]), "b": np.array([2, 4, 6])},
+        ],
+        [np.arange(2), {"a": np.array([0, 1])}],
+    ),
+)
+def test_convert_array_to_dict(vector_mcmc, param_array, expected_dict):
+    param_order = expected_dict.keys()
+    kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
+    out_dict = kernel._conv_param_array_to_dict(param_array=param_array)
+    for param in param_order:
+        np.testing.assert_array_equal(out_dict[param], expected_dict[param])
+
+
 def test_kernel_calls_set_rng(vector_mcmc, mocker):
     seed = 1
     rng = np.random.default_rng(seed)

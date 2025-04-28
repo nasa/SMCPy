@@ -7,7 +7,7 @@ from ..paths import GeometricPath
 ABC = abc.ABCMeta("ABC", (object,), {"__slots__": ()})
 
 
-class MCMCKernel(ABC):
+class KernelBase(ABC):
     def __init__(self, mcmc_object, param_order, path, rng=None):
         self._mcmc = mcmc_object
         self._param_order = param_order
@@ -49,3 +49,18 @@ class MCMCKernel(ABC):
     @abc.abstractmethod
     def set_mcmc_rng(self, rng):
         return None
+
+    def _conv_param_array_to_dict(self, param_array):
+        return dict(zip(self.param_order, np.c_[param_array].T))
+
+    def _conv_param_dict_to_array(self, param_dict):
+        dim0 = 1
+        if not isinstance(param_dict[self.param_order[0]], (int, float)):
+            dim0 = len(param_dict[self.param_order[0]])
+        param_array = np.zeros((dim0, len(self.param_order)))
+
+        for i, k in enumerate(self.param_order):
+            if param_dict[k].dtype == "object":
+                param_array = param_array.astype("object")
+            param_array[:, i] = param_dict[k]
+        return param_array
