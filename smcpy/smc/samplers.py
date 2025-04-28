@@ -108,7 +108,7 @@ class FixedSampler(SamplerBase):
     def __init__(self, mcmc_kernel):
         """
         :param mcmc_kernel: a kernel object for conducting particle mutation
-        :type mcmc_kernel: MCMCKernel object
+        :type mcmc_kernel: KernelBase object
         """
         super().__init__(mcmc_kernel)
 
@@ -170,7 +170,7 @@ class AdaptiveSampler(SamplerBase):
     def __init__(self, mcmc_kernel):
         """
         :param mcmc_kernel: a kernel object for conducting particle mutation
-        :type mcmc_kernel: MCMCKernel object
+        :type mcmc_kernel: KernelBase object
         """
         self.req_phi_index = None
         super().__init__(mcmc_kernel)

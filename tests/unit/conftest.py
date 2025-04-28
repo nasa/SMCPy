@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
 
-from smcpy.mcmc.kernel_base import MCMCKernel
+from smcpy.mcmc.kernel_base import KernelBase
 
 
 @pytest.fixture
 def stub_mcmc_kernel(mocker):
-    stub_mcmc_kernel = mocker.Mock(MCMCKernel)
+    stub_mcmc_kernel = mocker.Mock(KernelBase)
     mocker.patch.object(
         stub_mcmc_kernel,
         "get_log_likelihoods",

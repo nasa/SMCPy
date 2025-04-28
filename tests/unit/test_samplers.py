@@ -4,7 +4,7 @@ import pytest
 from smcpy.resampler_rngs import *
 from smcpy.smc.particles import Particles
 from smcpy import FixedSampler, AdaptiveSampler
-from smcpy.mcmc.kernel_base import MCMCKernel
+from smcpy.mcmc.kernel_base import KernelBase
 from smcpy.paths import GeometricPath
 
 SAMPLERS = "smcpy.smc.samplers"
@@ -13,7 +13,7 @@ SAMPLER_BASE = "smcpy.smc.samplers"
 
 @pytest.fixture
 def mcmc_kernel(mocker):
-    return mocker.Mock(MCMCKernel)
+    return mocker.Mock(KernelBase)
 
 
 @pytest.fixture

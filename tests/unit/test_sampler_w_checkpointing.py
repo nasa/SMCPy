@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from smcpy import FixedSampler, AdaptiveSampler
-from smcpy.mcmc.kernel_base import MCMCKernel
+from smcpy.mcmc.kernel_base import KernelBase
 
 SAMPLER_BASE = "smcpy.smc.samplers"
 
@@ -18,7 +18,7 @@ class DummyResult:
 
 @pytest.fixture
 def mcmc_kernel(mocker):
-    return mocker.Mock(MCMCKernel)
+    return mocker.Mock(KernelBase)
 
 
 @pytest.fixture
