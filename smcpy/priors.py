@@ -20,7 +20,7 @@ class ImproperUniform:
         if self._upper is None:
             self._upper = np.inf
 
-    def pdf(self, x):
+    def logpdf(self, x):
         """
         :param x: input array
         :type x: 1D or 2D array; if 2D, must squeeze to 1D
@@ -32,7 +32,10 @@ class ImproperUniform:
 
         prior_pdf = np.zeros(array_x.size)
         in_bounds = (array_x >= self._lower) & (array_x <= self._upper)
-        return np.add(prior_pdf, 1, out=prior_pdf, where=in_bounds)
+        pdf = np.add(prior_pdf, 1, out=prior_pdf, where=in_bounds)
+        pdf = np.where(pdf == 0, -np.inf, pdf)
+        pdf[pdf != -np.inf] = np.log(pdf[pdf != -np.inf])
+        return pdf
 
 
 class InvWishart:
@@ -105,10 +108,12 @@ class ImproperCov:
     def dim(self):
         return self._dim
 
-    def pdf(self, samples):
+    def logpdf(self, samples):
         self._check_samples_shape(samples)
         covs = self._assemble_covs(samples)
         pdf = np.array([self._is_pos_semidef(x) for x in covs]).reshape(-1, 1)
+        pdf = np.where(pdf == 0, -np.inf, pdf)
+        pdf[pdf != -np.inf] = np.log(pdf[pdf != -np.inf])
         return pdf
 
     def _assemble_covs(self, samples):
@@ -170,11 +175,13 @@ class ConstrainedUniform:
 
         self._verify_inputs()
 
-    def pdf(self, samples):
+    def logpdf(self, samples):
         constr = self._constraint_function(samples).astype(int).reshape(-1, 1)
         if self._bounds is not None:
             bnd = self._are_within_bounds(samples)
             constr *= bnd
+        constr = np.where(constr == 0, -np.inf, constr)
+        constr[constr != -np.inf] = np.log(constr[constr != -np.inf])
         return constr
 
     def rvs(self, num_samples, random_state=None):

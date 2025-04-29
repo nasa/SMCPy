@@ -17,31 +17,31 @@ from smcpy.priors import ImproperUniform, InvWishart, ImproperCov, ConstrainedUn
 )
 def test_improper_uniform(sign, x, expected):
     prior = ImproperUniform()
-    assert np.array_equal(prior.pdf(sign * x), expected)
+    assert np.array_equal(prior.logpdf(sign * x), np.log(expected))
 
 
 @pytest.mark.parametrize("x", [np.ones((3, 2)), np.ones((2, 3))])
 def test_improper_uniform_shape_error(x):
     prior = ImproperUniform()
     with pytest.raises(ValueError):
-        prior.pdf(x)
+        prior.logpdf(x)
 
 
 @pytest.mark.parametrize(
     "bounds, expected",
     [
-        ((-5, 5), np.array([0, 1, 1, 1, 1, 1, 0])),
-        ((0, 5), np.array([0, 0, 0, 1, 1, 1, 0])),
-        ((0, None), np.array([0, 0, 0, 1, 1, 1, 1])),
-        ((None, None), np.array([1, 1, 1, 1, 1, 1, 1])),
-        ((None, 0), np.array([1, 1, 1, 1, 0, 0, 0])),
-        ((-10, None), np.array([0, 1, 1, 1, 1, 1, 1])),
+        ((-5, 5), np.array([-np.inf, 0, 0, 0, 0, 0, -np.inf])),
+        ((0, 5), np.array([-np.inf, -np.inf, -np.inf, 0, 0, 0, -np.inf])),
+        ((0, None), np.array([-np.inf, -np.inf, -np.inf, 0, 0, 0, 0])),
+        ((None, None), np.array([0, 0, 0, 0, 0, 0, 0])),
+        ((None, 0), np.array([0, 0, 0, 0, -np.inf, -np.inf, -np.inf])),
+        ((-10, None), np.array([-np.inf, 0, 0, 0, 0, 0, 0])),
     ],
 )
 def test_improper_uniform_bounds(bounds, expected):
     x = np.array([-1000, -5, -2, 0, 2, 5, 1000])
     prior = ImproperUniform(*bounds)
-    np.testing.assert_array_equal(prior.pdf(x), expected)
+    np.testing.assert_array_equal(prior.logpdf(x), expected)
 
 
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
@@ -163,19 +163,19 @@ def test_impropcov_dim():
 def test_impropcov_bad_shape(cov):
     p = ImproperCov(2)
     with pytest.raises(ValueError):
-        p.pdf(cov)
+        p.logpdf(cov)
 
 
 @pytest.mark.parametrize("posdefindex", [x for x in range(5)])
 def test_impropcov_probability_nd(posdefindex):
-    expected_prob = np.array([[0]] * 5)
+    expected_prob = np.array([[-np.inf]] * 5)
     cov = np.array([[1.0, 2, 0]] * 5)
 
     cov[posdefindex, :] = np.array([1, 0.5, 1.5])
-    expected_prob[posdefindex, 0] = 1
+    expected_prob[posdefindex, 0] = 0
 
     p = ImproperCov(2)
-    pdf = p.pdf(cov)
+    pdf = p.logpdf(cov)
 
     np.testing.assert_array_equal(pdf, expected_prob)
 
@@ -183,8 +183,12 @@ def test_impropcov_probability_nd(posdefindex):
 @pytest.mark.parametrize(
     "bounds,dim,expected_pdf",
     [
-        (None, 2, np.c_[[1, 0, 1, 0, 1, 1, 1, 1]]),
-        (np.array([[-0.2, -2], [5, 5]]), None, np.c_[[1, 0, 1, 0, 1, 0, 1, 1]]),
+        (None, 2, np.c_[[0, -np.inf, 0, -np.inf, 0, 0, 0, 0]]),
+        (
+            np.array([[-0.2, -2], [5, 5]]),
+            None,
+            np.c_[[0, -np.inf, 0, -np.inf, 0, -np.inf, 0, 0]],
+        ),
     ],
 )
 def test_constrainted_uniform_prior(bounds, dim, expected_pdf):
@@ -197,7 +201,7 @@ def test_constrainted_uniform_prior(bounds, dim, expected_pdf):
     p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func, dim=dim)
 
     assert p.dim == 2
-    np.testing.assert_array_equal(p.pdf(x), expected_pdf)
+    np.testing.assert_array_equal(p.logpdf(x), expected_pdf)
 
 
 def test_constrained_uniform_prior_raise_error_no_dim():
