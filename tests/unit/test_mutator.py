@@ -12,7 +12,7 @@ class DummyParticles:
         self.params = params
         self.log_likes = log_likes
         self.log_weights = log_weights
-        self.attrs = dict()
+        self.attrs = {}
 
     @property
     def total_unnorm_log_weight(self):

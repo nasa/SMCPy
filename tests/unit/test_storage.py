@@ -9,7 +9,7 @@ from smcpy.utils.storage import *
 
 class DummyParticles:
     def __init__(self, params, log_likes, log_weights):
-        self.attrs = dict()
+        self.attrs = {}
         self.log_likes = log_likes
         self.log_weights = log_weights
         self.param_dict = params

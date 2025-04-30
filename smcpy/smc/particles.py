@@ -78,7 +78,7 @@ class Particles(Checks):
         self._set_log_likes(log_likes)
         self._set_and_norm_log_weights(log_weights)
 
-        self.attrs = dict({"total_unnorm_log_weight": self._logsum(log_weights)})
+        self.attrs = {"total_unnorm_log_weight": self._logsum(log_weights)}
 
     @property
     def params(self):
