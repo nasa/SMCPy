@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
 
-from smcpy.priors import ImproperUniform, InvWishart, ImproperCov, ConstrainedUniform
+from smcpy.priors import (
+    ImproperUniform,
+    InvWishart,
+    ImproperCov,
+    ImproperConstrainedUniform,
+)
 
 
 @pytest.mark.parametrize("sign", [-1, 1])
@@ -198,7 +203,9 @@ def test_constrainted_uniform_prior(bounds, dim, expected_pdf):
         [[0, 0], [1, -2], [0.5, 0.5], [1, 1], [-0.1, 0.2], [-0.5, -0.5], [0, 1], [1, 0]]
     )
 
-    p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func, dim=dim)
+    p = ImproperConstrainedUniform(
+        bounds=bounds, constraint_function=constraint_func, dim=dim
+    )
 
     assert p.dim == 2
     np.testing.assert_array_equal(p.logpdf(x), expected_pdf)
@@ -206,7 +213,7 @@ def test_constrainted_uniform_prior(bounds, dim, expected_pdf):
 
 def test_constrained_uniform_prior_raise_error_no_dim():
     with pytest.raises(ValueError):
-        ConstrainedUniform(bounds=None, dim=None, constraint_function=None)
+        ImproperConstrainedUniform(bounds=None, dim=None, constraint_function=None)
 
 
 @pytest.mark.parametrize(
@@ -214,7 +221,7 @@ def test_constrained_uniform_prior_raise_error_no_dim():
 )
 def test_constrained_uniform_prior_raise_error_on_rvs_undefined_bounds(bounds):
     with pytest.raises(NotImplementedError):
-        p = ConstrainedUniform(bounds=bounds, dim=1, constraint_function=None)
+        p = ImproperConstrainedUniform(bounds=bounds, dim=1, constraint_function=None)
         p.rvs(2)
 
 
@@ -222,7 +229,7 @@ def test_constrained_uniform_prior_rvs():
     rng = np.random.default_rng()
     bounds = np.array([[-2, -2], [2, 2]])
     constraint_func = lambda x: x[:, 0] ** 2 + x[:, 1] ** 2 <= 1
-    p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func)
+    p = ImproperConstrainedUniform(bounds=bounds, constraint_function=constraint_func)
     samples = p.rvs(1000)
 
     assert samples.shape == (1000, 2)
@@ -233,7 +240,9 @@ def test_constrained_uniform_prior_rvs_seed(mocker):
     rng = mocker.Mock(np.random.default_rng(seed=1), autospec=True)
     rng.uniform.return_value = np.ones((1, 1))
     bounds = np.array([[-2], [2]])
-    p = ConstrainedUniform(constraint_function=lambda x: True, bounds=bounds, dim=1)
+    p = ImproperConstrainedUniform(
+        constraint_function=lambda x: True, bounds=bounds, dim=1
+    )
     p.rvs(1, random_state=rng)
 
     rng.uniform.assert_called_once_with(*bounds, (1, 1))
@@ -245,7 +254,7 @@ def test_constrained_uniform_prior_rvs_max_tries(mocker):
 
     bounds = np.array([[2, 2], [3, 3]])
     constraint_func = lambda x: np.prod(x, axis=1) < 1
-    p = ConstrainedUniform(
+    p = ImproperConstrainedUniform(
         bounds=bounds, constraint_function=constraint_func, max_rvs_tries=10
     )
 
@@ -256,6 +265,6 @@ def test_constrained_uniform_prior_rvs_max_tries(mocker):
 
 def test_contrained_uniform_raises_error_if_non_numpy_rng(mocker):
     non_np_rng = mocker.Mock()
-    p = ConstrainedUniform(constraint_function=None, bounds=np.c_[[0, 2]])
+    p = ImproperConstrainedUniform(constraint_function=None, bounds=np.c_[[0, 2]])
     with pytest.raises(TypeError):
         p.rvs(0, random_state=non_np_rng)

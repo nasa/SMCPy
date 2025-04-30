@@ -30,12 +30,9 @@ class ImproperUniform:
         if array_x.ndim > 1:
             raise ValueError("Input array must be 1D or must squeeze to 1D")
 
-        prior_pdf = np.zeros(array_x.size)
+        log_pdf = np.full(array_x.size, -np.inf)
         in_bounds = (array_x >= self._lower) & (array_x <= self._upper)
-        pdf = np.add(prior_pdf, 1, out=prior_pdf, where=in_bounds)
-        pdf = np.where(pdf == 0, -np.inf, pdf)
-        pdf[pdf != -np.inf] = np.log(pdf[pdf != -np.inf])
-        return pdf
+        return np.where(in_bounds, 0, log_pdf)
 
 
 class InvWishart:
@@ -113,7 +110,7 @@ class ImproperCov:
         covs = self._assemble_covs(samples)
         pdf = np.array([self._is_pos_semidef(x) for x in covs]).reshape(-1, 1)
         pdf = np.where(pdf == 0, -np.inf, pdf)
-        pdf[pdf != -np.inf] = np.log(pdf[pdf != -np.inf])
+        pdf[pdf != -np.inf] = 0
         return pdf
 
     def _assemble_covs(self, samples):
@@ -141,7 +138,7 @@ class ImproperCov:
             )
 
 
-class ConstrainedUniform:
+class ImproperConstrainedUniform:
     def __init__(self, constraint_function, dim=None, bounds=None, max_rvs_tries=1000):
         """
         :param constraint_function: a function that takes in an array of
@@ -157,9 +154,9 @@ class ConstrainedUniform:
         :param bounds: [optional] an array with shape (2, num_params) defining
             the lower and upper bounds for each parameter, respectively. If not
             provided, "dim" must be provided and only the constraint will be
-            used to determine prior probability (0 if False or 1 if True).
+            used to determine prior pdf (0 if False or 1 if True).
             Parameter vectors falling outside of the bounds will result in a
-            prior probability of 0.0 and 1.0 otherwise.
+            prior pdf of 0.0 and 1.0 otherwise.
         :type bounds: 2D array
         :param max_rvs_tries: [optional; default=1000] number of tries to
             generate random samples that satisfy the provided constraint.
@@ -181,7 +178,7 @@ class ConstrainedUniform:
             bnd = self._are_within_bounds(samples)
             constr *= bnd
         constr = np.where(constr == 0, -np.inf, constr)
-        constr[constr != -np.inf] = np.log(constr[constr != -np.inf])
+        constr[constr != -np.inf] = 0
         return constr
 
     def rvs(self, num_samples, random_state=None):
