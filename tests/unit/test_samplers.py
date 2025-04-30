@@ -37,7 +37,6 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
     num_steps = 10
     num_mcmc_samples = 2
     phi_sequence = np.arange(num_steps)
-    prog_bar = mocker.patch(SAMPLERS + ".tqdm", return_value=phi_sequence[2:])
 
     path = GeometricPath()
 
@@ -59,8 +58,6 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
 
     mocker.patch(SAMPLER_BASE + ".InMemoryStorage", return_value=result_mock)
 
-    update_bar = mocker.patch(SAMPLERS + ".set_bar")
-
     mcmc_kernel._mcmc = mocker.Mock()
     mcmc_kernel._mcmc._rank = rank
     comm = mcmc_kernel._mcmc._comm = mocker.Mock()
@@ -73,7 +70,6 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
         num_mcmc_samples,
         phi_sequence,
         ess_threshold,
-        progress_bar=prog_bar,
     )
 
     upd.assert_called_once_with(
@@ -84,12 +80,9 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
     )
     mut.assert_called_once_with(smc._mcmc_kernel)
 
-    np.testing.assert_array_equal(prog_bar.call_args[0][0], phi_sequence[1:])
-    update_bar.assert_called()
-
     if rank == 0:
         num_saves = len(result_mock.save_step.call_args_list)
-        assert num_saves == len(phi_sequence) - 1
+        assert num_saves == len(phi_sequence)
     assert mll == 34
     assert smc.step == mocked_mut_particles
 

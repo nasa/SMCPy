@@ -42,18 +42,19 @@ from .updater import Updater
 from ..resampler_rngs import *
 from ..utils.context_manager import ContextManager
 from ..utils.mpi_utils import rank_zero_output_only, rank_zero_run_only
-from ..utils.progress_bar import set_bar
+from ..utils.progress_bar import progress_bar
 from ..utils.storage import InMemoryStorage
 
 
 class SamplerBase:
-    def __init__(self, mcmc_kernel):
+    def __init__(self, mcmc_kernel, show_progress_bar):
         self._mcmc_kernel = mcmc_kernel
         self._initializer = Initializer(self._mcmc_kernel)
         self._mutator = Mutator(self._mcmc_kernel)
         self._updater = None
         self._step_list = []
         self._phi_sequence = []
+        self._show_progress_bar = show_progress_bar
 
         try:
             self._result = ContextManager.get_context()
@@ -99,18 +100,39 @@ class SamplerBase:
     def _save_step(self, step):
         self._result.save_step(step)
 
+    @progress_bar
+    def _init_progress_bar(self, phi_idx=-1):
+        pbar = False
+        bar_format = (
+            "{desc}: {percentage:.2f}%|{bar}| "
+            + "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
+        )
+        pbar = tqdm(total=1.0, bar_format=bar_format)
+        pbar.set_description(f"[ mutation ratio: {self.step.attrs['mutation_ratio']}")
+        pbar.update(self.phi_sequence[phi_idx])
+        return pbar
+
+    @progress_bar
+    def _update_progress_bar(self, pbar, dphi):
+        pbar.set_description(f"[ mutation ratio: {self.step.attrs['mutation_ratio']}")
+        pbar.update(dphi)
+
+    @progress_bar
+    def _close_progress_bar(self, pbar):
+        pbar.close()
+
 
 class FixedSampler(SamplerBase):
     """
     SMC sampler using a fixed phi sequence.
     """
 
-    def __init__(self, mcmc_kernel):
+    def __init__(self, mcmc_kernel, show_progress_bar=True):
         """
         :param mcmc_kernel: a kernel object for conducting particle mutation
         :type mcmc_kernel: KernelBase object
         """
-        super().__init__(mcmc_kernel)
+        super().__init__(mcmc_kernel, show_progress_bar)
 
     def sample(
         self,
@@ -118,7 +140,6 @@ class FixedSampler(SamplerBase):
         num_mcmc_samples,
         phi_sequence,
         ess_threshold,
-        progress_bar=True,
         resample_rng=standard,
         particles_warn_threshold=0.01,
     ):
@@ -135,8 +156,6 @@ class FixedSampler(SamplerBase):
             should be conducted; given as a fraction of num_particles and must
             be in the range [0, 1]
         :type ess_threshold: float
-        :param progress_bar: display progress bar during sampling
-        :type progress_bar: bool
         """
         self._updater = Updater(
             ess_threshold,
@@ -149,16 +168,11 @@ class FixedSampler(SamplerBase):
         self.step = self._initialize(num_particles)
 
         phi_iterator = self._phi_sequence[1:]
-        if progress_bar:
-            phi_iterator = tqdm(phi_iterator)
-        set_bar(phi_iterator, 1, self.step.attrs["mutation_ratio"], self._updater)
-
+        pbar = self._init_progress_bar(0)
         for i, phi in enumerate(phi_iterator):
             self._do_smc_step(phi, num_mcmc_samples)
-            set_bar(
-                phi_iterator, i + 2, self.step.attrs["mutation_ratio"], self._updater
-            )
-
+            self._update_progress_bar(pbar, self._mcmc_kernel.path.delta_phi)
+        self._close_progress_bar(pbar)
         return self._result, self._result.estimate_marginal_log_likelihoods()
 
 
@@ -167,13 +181,13 @@ class AdaptiveSampler(SamplerBase):
     SMC sampler using an adaptive phi sequence.
     """
 
-    def __init__(self, mcmc_kernel):
+    def __init__(self, mcmc_kernel, show_progress_bar=True):
         """
         :param mcmc_kernel: a kernel object for conducting particle mutation
         :type mcmc_kernel: KernelBase object
         """
         self.req_phi_index = None
-        super().__init__(mcmc_kernel)
+        super().__init__(mcmc_kernel, show_progress_bar)
 
     def sample(
         self,
@@ -181,7 +195,6 @@ class AdaptiveSampler(SamplerBase):
         num_mcmc_samples,
         target_ess=0.8,
         min_dphi=None,
-        progress_bar=True,
         resample_rng=standard,
         particles_warn_threshold=0.01,
     ):
@@ -197,8 +210,6 @@ class AdaptiveSampler(SamplerBase):
         :type target_ess: float
         :param min_dphi: minimum allowable delta phi for a given SMC step
         :type min_dphi: float
-        :param progress_bar: display progress bar during sampling
-        :type progress_bar: bool
         """
         if target_ess <= 0.0 or target_ess >= 1.0:
             raise ValueError
@@ -213,7 +224,7 @@ class AdaptiveSampler(SamplerBase):
 
         self.step = self._initialize(num_particles)
 
-        pbar = self._init_progress_bar(progress_bar)
+        pbar = self._init_progress_bar()
 
         while self._phi_sequence[-1] < 1:
             proposed_phi = self.optimize_step(
@@ -286,29 +297,3 @@ class AdaptiveSampler(SamplerBase):
 
     def _full_step_meets_target(self, phi_old, particles, target_ess):
         return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0
-
-    def _init_progress_bar(self, progress_bar):
-        pbar = False
-        if progress_bar:
-            bar_format = (
-                "{desc}: {percentage:.2f}%|{bar}| "
-                + "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
-            )
-            pbar = tqdm(total=1.0, bar_format=bar_format)
-            pbar.set_description(
-                f"[ mutation ratio: {self.step.attrs['mutation_ratio']}"
-            )
-            pbar.update(self.phi_sequence[-1])
-        return pbar
-
-    def _update_progress_bar(self, pbar, dphi):
-        if pbar:
-            pbar.set_description(
-                f"[ mutation ratio: {self.step.attrs['mutation_ratio']}"
-            )
-            pbar.update(dphi)
-
-    @staticmethod
-    def _close_progress_bar(pbar):
-        if pbar:
-            pbar.close()
