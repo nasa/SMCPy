@@ -31,7 +31,7 @@ AGREEMENT.
 """
 
 from .particles import Particles
-from ..mcmc.kernel_base import MCMCKernel
+from ..mcmc.kernel_base import KernelBase
 from copy import copy
 import numpy as np
 
@@ -44,7 +44,7 @@ class Mutator:
     def __init__(self, mcmc_kernel):
         """
         :param mcmc_kernel: a kernel object for conducting particle mutation
-        :type mcmc_kernel: MCMCKernel object
+        :type mcmc_kernel: KernelBase object
         """
         self.mcmc_kernel = mcmc_kernel
         self._compute_cov = True  # hidden option to turn off cov (used for objs)
@@ -55,9 +55,20 @@ class Mutator:
             particles.param_dict, num_samples, cov
         )
         new_particles = Particles(mutated[0], mutated[1], particles.log_weights)
-        new_particles._total_unlw = particles.total_unnorm_log_weight
-        new_particles.attrs.update({"phi": self._mcmc_kernel.path.phi})
+        new_particles.attrs.update(
+            {
+                "total_unnorm_log_weight": particles.total_unnorm_log_weight,
+                "phi": self._mcmc_kernel.path.phi,
+                "mutation_ratio": self._compute_mutation_ratio(
+                    particles, new_particles
+                ),
+            }
+        )
         return new_particles
+
+    def _compute_mutation_ratio(self, old_particles, new_particles):
+        mutated = ~np.all(new_particles.params == old_particles.params, axis=1)
+        return sum(mutated) / new_particles.params.shape[0]
 
     @property
     def mcmc_kernel(self):
@@ -65,6 +76,6 @@ class Mutator:
 
     @mcmc_kernel.setter
     def mcmc_kernel(self, mcmc_kernel):
-        if not isinstance(mcmc_kernel, MCMCKernel):
+        if not isinstance(mcmc_kernel, KernelBase):
             raise TypeError
         self._mcmc_kernel = mcmc_kernel

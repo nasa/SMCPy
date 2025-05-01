@@ -49,6 +49,7 @@ def test_initialize_particles_from_prior(mocker):
     np.testing.assert_array_almost_equal(particles.log_likes, log_likes)
     np.testing.assert_array_almost_equal(particles.log_weights, log_weights)
     assert particles.attrs["phi"] == 0
+    assert particles.attrs["mutation_ratio"] == 0
 
 
 def test_initialize_particles_from_proposal(mocker):
@@ -73,3 +74,4 @@ def test_initialize_particles_from_proposal(mocker):
     np.testing.assert_array_almost_equal(particles.log_likes, log_likes)
     np.testing.assert_array_almost_equal(particles.log_weights, log_weights)
     assert particles.attrs["phi"] == 0
+    assert particles.attrs["mutation_ratio"] == 0

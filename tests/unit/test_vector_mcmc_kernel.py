@@ -30,7 +30,7 @@ def test_kernel_instance(vector_mcmc, stub_model, data, priors):
     assert vmcmc._mcmc._eval_model == stub_model
     assert vmcmc._mcmc._data == data
     assert vmcmc._mcmc._priors == priors
-    assert vmcmc._param_order == tuple("a")
+    assert vmcmc.param_order == tuple("a")
 
 
 def test_sample_from_prior(vector_mcmc, mocker):
@@ -137,6 +137,24 @@ def test_convert_dict_to_array_when_objects(vector_mcmc):
     np.testing.assert_array_equal(array, np.array([[np.array, np.array]] * 3))
 
 
+@pytest.mark.parametrize(
+    "param_array, expected_dict",
+    (
+        [
+            np.array([[1, 2], [3, 4], [5, 6]]),
+            {"a": np.array([1, 3, 5]), "b": np.array([2, 4, 6])},
+        ],
+        [np.arange(2), {"a": np.array([0, 1])}],
+    ),
+)
+def test_convert_array_to_dict(vector_mcmc, param_array, expected_dict):
+    param_order = expected_dict.keys()
+    kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
+    out_dict = kernel._conv_param_array_to_dict(param_array=param_array)
+    for param in param_order:
+        np.testing.assert_array_equal(out_dict[param], expected_dict[param])
+
+
 def test_kernel_calls_set_rng(vector_mcmc, mocker):
     seed = 1
     rng = np.random.default_rng(seed)
@@ -158,3 +176,15 @@ def test_kernel_overwrites_with_default(vector_mcmc):
     kernel = VectorMCMCKernel(vector_mcmc, param_order=[], rng=None)
     assert kernel._mcmc.rng != orig_rng
     assert kernel.rng == kernel._mcmc.rng
+
+
+def test_convert_params_ele_to_string(vector_mcmc):
+    param_order = (0.0, 1, 1j, [], (), range(0, 9))
+    kernel = VectorMCMCKernel(vector_mcmc, param_order=param_order)
+    assert kernel.param_order == ("0.0", "1", "1j", "[]", "()", "range(0, 9)")
+
+
+@pytest.mark.parametrize("iterable", [[], (), {}, set(), ""])
+def test_convert_params_itr_to_tuple(vector_mcmc, iterable):
+    kernel = VectorMCMCKernel(vector_mcmc, iterable)
+    assert isinstance(kernel.param_order, tuple)

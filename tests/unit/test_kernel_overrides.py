@@ -63,10 +63,9 @@ def test_smc_step_updates_phi(mocker):
     path = GeometricPath()
     kernel = VectorMCMCKernel(mocker.Mock(), ["a", "b"], path=path)
 
-    sampler = SamplerBase(mcmc_kernel=kernel)
+    sampler = SamplerBase(mcmc_kernel=kernel, show_progress_bar=True)
     mocker.patch.object(sampler, "_updater")
     mocker.patch.object(sampler, "_mutator")
-    mocker.patch.object(sampler, "_compute_mutation_ratio")
     sampler.step = 1
 
     sampler._do_smc_step(phi=0.1, num_mcmc_samples=1)
@@ -79,10 +78,9 @@ def test_vectormcmc_kernel_phi_update_must_be_monotonic(mocker):
     path.phi = 0.5
     kernel = VectorMCMCKernel(mocker.Mock(), ["a", "b"], path=path)
 
-    sampler = SamplerBase(mcmc_kernel=kernel)
+    sampler = SamplerBase(mcmc_kernel=kernel, show_progress_bar=True)
     mocker.patch.object(sampler, "_updater")
     mocker.patch.object(sampler, "_mutator")
-    mocker.patch.object(sampler, "_compute_mutation_ratio")
     sampler.step = 1
 
     with pytest.raises(ValueError):

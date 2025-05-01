@@ -35,7 +35,7 @@ import numpy as np
 from copy import copy
 
 from .particles import Particles
-from ..mcmc.kernel_base import MCMCKernel
+from ..mcmc.kernel_base import KernelBase
 from ..utils.single_rank_comm import SingleRankComm
 
 
@@ -49,7 +49,7 @@ class Initializer:
     def __init__(self, mcmc_kernel):
         """
         :param mcmc_kernel: a kernel object for conducting particle mutation
-        :type mcmc_kernel: MCMCKernel object
+        :type mcmc_kernel: KernelBase object
         """
         self.mcmc_kernel = mcmc_kernel
 
@@ -59,7 +59,7 @@ class Initializer:
 
     @mcmc_kernel.setter
     def mcmc_kernel(self, mcmc_kernel):
-        if not isinstance(mcmc_kernel, MCMCKernel):
+        if not isinstance(mcmc_kernel, KernelBase):
             raise TypeError
         self._mcmc_kernel = mcmc_kernel
 
@@ -74,5 +74,5 @@ class Initializer:
         log_weights = np.array([np.log(1 / num_particles)] * num_particles)
 
         particles = Particles(params, log_likes, log_weights)
-        particles.attrs.update({"phi": 0})
+        particles.attrs.update({"phi": 0, "mutation_ratio": 0})
         return particles

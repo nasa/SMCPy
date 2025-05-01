@@ -74,13 +74,11 @@ class Particles(Checks):
         self._param_names = None
         self._num_particles = None
 
-        self.attrs = dict()
-
         self._set_params(params)
         self._set_log_likes(log_likes)
         self._set_and_norm_log_weights(log_weights)
 
-        self._total_unlw = self._logsum(log_weights)
+        self.attrs = {"total_unnorm_log_weight": self._logsum(log_weights)}
 
     @property
     def params(self):
@@ -112,7 +110,7 @@ class Particles(Checks):
 
     @property
     def total_unnorm_log_weight(self):
-        return self._total_unlw
+        return self.attrs["total_unnorm_log_weight"]
 
     @property
     def log_weights(self):
