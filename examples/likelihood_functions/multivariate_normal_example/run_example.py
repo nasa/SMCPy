@@ -6,7 +6,7 @@ import seaborn as sns
 from scipy.stats import uniform
 
 from smcpy import MVNormal, ImproperCov, VectorMCMC, VectorMCMCKernel
-from smcpy.samplers import AdaptiveSampler
+from smcpy import AdaptiveSampler
 from smcpy.utils.plotter import plot_mcmc_chain, plot_pairwise
 
 NUM_SNAPSHOTS = 50
@@ -53,12 +53,12 @@ if __name__ == "__main__":
     param_order = ["a", "b"] + [f"cov{i}" for i in range(len(idx1))]
     log_like_args = [None] * len(idx1)  # estimate all variances/covariances
 
-    priors = [uniform(0.0, 6.0), uniform(0.0, 6.0), ImproperCov(3, dof=5, S=np.eye(3))]
+    priors = [uniform(0.0, 6.0), uniform(0.0, 6.0), ImproperCov(3)]
 
     mcmc = VectorMCMC(eval_model, noisy_data, priors, log_like_args, MVNormal)
     kernel = VectorMCMCKernel(mcmc, param_order)
     smc = AdaptiveSampler(kernel)
-    steps, mll = smc.sample(num_particles, 20, progress_bar=True)
+    steps, mll = smc.sample(num_particles, 20)
 
     # plotting
     ground_truth = np.concatenate((TRUE_PARAMS.flatten(), TRUE_COV[idx1, idx2]))

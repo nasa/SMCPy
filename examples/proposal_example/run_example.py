@@ -45,13 +45,12 @@ if __name__ == "__main__":
 
     # initialize from prior
     mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=("a", "b"))
-    smc = Sampler(mcmc_kernel)
+    smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
     reg_step_list, mll_list = smc.sample(
         num_particles=NUM_PARTICLES,
         num_mcmc_samples=5,
         phi_sequence=phi_sequence,
         ess_threshold=1.0,
-        progress_bar=True,
     )
 
     # initialize from proposal
@@ -59,13 +58,12 @@ if __name__ == "__main__":
     mcmc_kernel = VectorMCMCKernel(
         vector_mcmc, param_order=("a", "b"), path=GeometricPath(proposal=proposal_dist)
     )
-    smc = Sampler(mcmc_kernel)
+    smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
     prop_step_list, mll_list = smc.sample(
         num_particles=NUM_PARTICLES,
         num_mcmc_samples=5,
         phi_sequence=phi_sequence,
         ess_threshold=1.0,
-        progress_bar=True,
     )
 
     plot_target_means(Prior=reg_step_list, Proposal=prop_step_list)
