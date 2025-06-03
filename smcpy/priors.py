@@ -93,13 +93,15 @@ class InvWishart:
 class ImproperCov:
     """
     Improper uniform prior distribution over all positive definite covariance
-    matrices. Sampling from this distribution is not possible and thus a
-    proposal distribution should be used (see smcpy.proposals).
+    matrices. If sampling using the rvs method, will return samples from an
+    Inverse Wishart distribution with degrees of freedom dof and scale matrix S.
     """
 
-    def __init__(self, num_cov_cols):
+    def __init__(self, num_cov_cols, dof=None, S=None):
         self._ncols = num_cov_cols
         self._dim = int(num_cov_cols * (num_cov_cols + 1) / 2)
+        self._iw_dof = dof if dof is not None else num_cov_cols
+        self._iw_scale = S if S is not None else np.eye(self._ncols)
 
     @property
     def dim(self):
@@ -112,6 +114,13 @@ class ImproperCov:
         pdf = np.where(pdf == 0, -np.inf, pdf)
         pdf[pdf != -np.inf] = 0
         return pdf
+
+    def rvs(self, num_samples, random_state=None):
+        cov = invwishart(self._iw_dof, self._iw_scale).rvs(
+            num_samples, random_state=random_state
+        )
+        idx1, idx2 = np.triu_indices(self._ncols)
+        return cov[:, idx1, idx2]
 
     def _assemble_covs(self, samples):
         covs = np.zeros((samples.shape[0], self._ncols, self._ncols))

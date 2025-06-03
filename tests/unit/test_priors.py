@@ -268,3 +268,22 @@ def test_contrained_uniform_raises_error_if_non_numpy_rng(mocker):
     p = ImproperConstrainedUniform(constraint_function=None, bounds=np.c_[[0, 2]])
     with pytest.raises(TypeError):
         p.rvs(0, random_state=non_np_rng)
+
+
+@pytest.mark.parametrize(
+    "dof, scale, expdof, expscale",
+    [(None, None, 2, np.eye(2)), (3, np.ones((2, 2)), 3, np.ones((2, 2)))],
+)
+def test_impropcov_rvs(mocker, dof, scale, expdof, expscale):
+    mock_invwis = mocker.Mock()
+    mock_invwis.rvs.return_value = np.arange(8).reshape(2, 2, 2)
+    mock_invwis_class = mocker.patch(
+        "smcpy.priors.invwishart", return_value=mock_invwis
+    )
+    p = ImproperCov(2, dof, scale)
+    samples = p.rvs(5)
+
+    assert mock_invwis_class.call_args[0][0] == expdof
+    np.testing.assert_array_equal(mock_invwis_class.call_args[0][1], expscale)
+    mock_invwis.rvs.asser_called_once_with(5)
+    np.testing.assert_array_equal(samples, np.array([[0, 1, 3], [4, 5, 7]]))
