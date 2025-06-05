@@ -72,9 +72,8 @@ class MVNHierarchModel:
         dim = self._inputs.shape[1]
         cov = np.zeros((self._inputs.shape[0], dim, dim))
         i, j = np.triu_indices(dim)
-        k, l = np.tril_indices(dim)
         cov[:, i, j] = self._hyperparams
-        cov[:, k, l] = self._hyperparams
+        cov[:, j, i] = self._hyperparams
         return cov
 
     def _compute_squared_mahalanobis(self, data):
