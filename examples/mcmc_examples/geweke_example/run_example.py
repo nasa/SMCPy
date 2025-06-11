@@ -3,7 +3,7 @@ import numpy as np
 from scipy.signal import welch
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
-from smcpy import ImproperUniform
+from smcpy.priors import ImproperUniform
 from smcpy.utils.plotter import *
 from smcpy.utils.geweke import compute_geweke
 

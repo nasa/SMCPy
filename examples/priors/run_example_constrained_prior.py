@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from smcpy.priors import ConstrainedUniform
+from smcpy.priors import ImproperConstrainedUniform
 from smcpy import VectorMCMC, VectorMCMCKernel, AdaptiveSampler
 
 if __name__ == "__main__":
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     model = lambda x: np.ones((x.shape[0], 10))
     bounds = np.array([[-1, -1], [1, 1]])
     constraint_func = lambda x: x[:, 0] ** 2 + x[:, 1] ** 2 <= 1
-    p = ConstrainedUniform(bounds=bounds, constraint_function=constraint_func)
+    p = ImproperConstrainedUniform(bounds=bounds, constraint_function=constraint_func)
 
     mcmc = VectorMCMC(model, data, priors=[p], log_like_args=1)
     kernel = VectorMCMCKernel(mcmc, param_order=["x", "y"])

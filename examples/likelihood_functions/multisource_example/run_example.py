@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from smcpy import MultiSourceNormal, ImproperUniform
+from smcpy import MultiSourceNormal
+from smcpy.priors import ImproperUniform
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.utils.plotter import plot_mcmc_chain
 

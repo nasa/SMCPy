@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     smc = AdaptiveSampler(mcmc_kernel)
     step_list, mll_list = smc.sample(
-        num_particles=500, num_mcmc_samples=5, target_ess=0.7, progress_bar=True
+        num_particles=500, num_mcmc_samples=5, target_ess=0.7
     )
     print(f"phi_sequence={smc.phi_sequence}")
     print(f"fbf norm index={smc.req_phi_index}")

@@ -58,7 +58,7 @@ def test_approx_hierarch_call(mocker):
     np.testing.assert_array_almost_equal(log_likes, expected_log_likes)
 
 
-@pytest.mark.parametrize("n_inputs,n_hyper", [(2, 3), (4, 10)])
+@pytest.mark.parametrize("n_inputs, n_hyper", [(2, 3), (4, 10)])
 def test_hierarch_mvnormal_model_init(n_inputs, n_hyper):
     n_samples = 10
     n_total = n_inputs + n_hyper
@@ -67,6 +67,13 @@ def test_hierarch_mvnormal_model_init(n_inputs, n_hyper):
 
     np.testing.assert_array_equal(model._inputs, inputs[:, :n_inputs])
     np.testing.assert_array_equal(model._hyperparams, inputs[:, n_inputs:])
+
+    assert model._cov.shape[1] == model._cov.shape[2]
+    np.testing.assert_array_equal(model._cov, np.transpose(model._cov, (0, 2, 1)))
+    np.testing.assert_array_equal(
+        model._cov[0][np.triu_indices(n_inputs)],
+        np.arange(n_inputs, n_total),
+    )
 
 
 @pytest.mark.parametrize("n_inputs,n_hyper", [(1, 3), (7, 5), (15, 294)])

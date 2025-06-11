@@ -57,15 +57,12 @@ if __name__ == "__main__":
             num_mcmc_samples=5,
             ess_threshold=0.7,
             phi_sequence=phi_seq,
-            progress_bar=True,
         )
 
     # Restart SMC run (can even use a different sampler if desired)
     with HDF5Storage(filename, mode="a"):
         smc = AdaptiveSampler(mcmc_kernel)
-        results, mll = smc.sample(
-            num_particles=500, num_mcmc_samples=5, target_ess=0.8, progress_bar=True
-        )
+        results, mll = smc.sample(num_particles=500, num_mcmc_samples=5, target_ess=0.8)
 
     print("marginal log likelihood = {}".format(mll[-1]))
     print("parameter means = {}".format(results[-1].compute_mean()))
