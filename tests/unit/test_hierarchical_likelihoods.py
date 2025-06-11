@@ -58,28 +58,8 @@ def test_approx_hierarch_call(mocker):
     np.testing.assert_array_almost_equal(log_likes, expected_log_likes)
 
 
-@pytest.mark.parametrize(
-    "n_inputs, n_hyper, expected_cov",
-    [
-        (2, 3, np.array([[[2.0, 3.0], [3.0, 4.0]]] * 10)),
-        (
-            4,
-            10,
-            np.array(
-                [
-                    [
-                        [4.0, 5.0, 6.0, 7.0],
-                        [5.0, 8.0, 9.0, 10.0],
-                        [6.0, 9.0, 11.0, 12.0],
-                        [7.0, 10.0, 12.0, 13.0],
-                    ]
-                ]
-                * 10
-            ),
-        ),
-    ],
-)
-def test_hierarch_mvnormal_model_init(n_inputs, n_hyper, expected_cov):
+@pytest.mark.parametrize("n_inputs, n_hyper", [(2, 3), (4, 10)])
+def test_hierarch_mvnormal_model_init(n_inputs, n_hyper):
     n_samples = 10
     n_total = n_inputs + n_hyper
     inputs = np.tile(np.arange(n_total), (n_samples, 1))
@@ -87,7 +67,14 @@ def test_hierarch_mvnormal_model_init(n_inputs, n_hyper, expected_cov):
 
     np.testing.assert_array_equal(model._inputs, inputs[:, :n_inputs])
     np.testing.assert_array_equal(model._hyperparams, inputs[:, n_inputs:])
-    np.testing.assert_array_equal(model._cov, expected_cov)
+
+    symmetric_matrix = model._cov[0]
+    assert symmetric_matrix.shape[0] == symmetric_matrix.shape[1]
+    np.testing.assert_array_equal(symmetric_matrix, symmetric_matrix.T)
+    np.testing.assert_array_equal(
+        symmetric_matrix[np.triu_indices(n_inputs)],
+        np.arange(n_total - 1, n_inputs - 1, -1)[::-1],
+    )
 
 
 @pytest.mark.parametrize("n_inputs,n_hyper", [(1, 3), (7, 5), (15, 294)])
