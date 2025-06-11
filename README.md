@@ -87,7 +87,7 @@ marked by the dashed red line. The true values for this example were K = 1.67
 and g = 4.62. More details can be found in the [spring mass
 example](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/run_example.py). To run this model in
 parallel using MPI, the MCMC kernel just needs to be built with the
-ParallelMCMC class in place of VectorMCMC. More details can be found in the
+ParallelVectorMCMC class in place of VectorMCMC. More details can be found in the
 [MPI example](https://github.com/nasa/SMCPy/blob/main/examples/mpi_example/run_example.py).
 
 <p align="center">
@@ -95,7 +95,7 @@ ParallelMCMC class in place of VectorMCMC. More details can be found in the
 </p>
 
 To run this model in parallel using MPI, the MCMC kernel just needs to be built
-with the ParallelMCMC class in place of VectorMCMC. More details can be found
+with the ParallelVectorMCMC class in place of VectorMCMC. More details can be found
 in the MPI example (smcpy/examples/mpi_example/).
 
 Tests
@@ -180,4 +180,3 @@ UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
 PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
 ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
-

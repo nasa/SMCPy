@@ -5,10 +5,11 @@ import pytest
 from collections import namedtuple
 
 from smcpy.smc.initializer import Initializer
+from smcpy import VectorMCMC, VectorMCMCKernel
+from smcpy.paths import GeometricPath
 
 
 class StubParticles:
-
     def __init__(self, params, log_likes, log_weights):
         self.params = params
         self.log_likes = log_likes
@@ -18,59 +19,59 @@ class StubParticles:
 
 @pytest.fixture
 def initializer(stub_mcmc_kernel, mocker):
-    mocker.patch('smcpy.smc.initializer.Particles', new=StubParticles)
+    mocker.patch("smcpy.smc.initializer.Particles", new=StubParticles)
     initializer = Initializer(stub_mcmc_kernel)
     return initializer
 
 
 def test_mcmc_kernel_not_kernel_instance():
     with pytest.raises(TypeError):
-        initializer = Initializer(None, None)
+        Initializer(None, None)
 
 
-def test_initialize_particles_from_prior(initializer, mocker):
-    particles = initializer.init_particles_from_prior(5)
+def test_initialize_particles_from_prior(mocker):
+    params = np.ones((4, 3))
+    log_likes = np.ones((4, 1))
+    log_weights = np.log(np.full_like(log_likes, 0.25))
+    priors = [mocker.Mock()]
+    priors[0].rvs.return_value = np.ones((4, 3))
+    rng = mocker.Mock(np.random.default_rng(), autospec=True)
 
-    expected_a_vals = [1, 1, 1, 2, 2]
-    expected_b_vals = [2, 2, 2, 3, 3]
-    expected_log_like = [0.1, 0.1, 0.1, 0.2, 0.2]
-    expected_log_weight = [np.log(1 / len(expected_a_vals))] \
-                           * len(expected_a_vals)
+    vmcmc = VectorMCMC(None, None, priors)
+    kernel = VectorMCMCKernel(vmcmc, ["a", "b", "c"], rng=rng)
+    mocker.patch.object(kernel, "get_log_likelihoods", return_value=log_likes)
 
-    np.testing.assert_array_almost_equal(particles.params['a'], expected_a_vals)
-    np.testing.assert_array_almost_equal(particles.params['b'], expected_b_vals)
-    np.testing.assert_array_almost_equal(particles.log_likes,
-                                         expected_log_like)
-    np.testing.assert_array_almost_equal(particles.log_weights,
-                                         expected_log_weight)
-    assert particles.attrs['phi'] == 0
+    init = Initializer(kernel)
+    particles = init.initialize_particles(num_particles=4)
+
+    priors[0].rvs.assert_called_once_with(4, random_state=rng)
+    np.testing.assert_array_almost_equal(particles.params, params)
+    np.testing.assert_array_almost_equal(particles.log_likes, log_likes)
+    np.testing.assert_array_almost_equal(particles.log_weights, log_weights)
+    assert particles.attrs["phi"] == 0
+    assert particles.attrs["mutation_ratio"] == 0
 
 
-@pytest.mark.parametrize('dataframe', [True, False])
-def test_initialize_particles_from_samples(initializer, dataframe, mocker):
+def test_initialize_particles_from_proposal(mocker):
+    params = np.ones((4, 3))
+    log_likes = np.ones((4, 1))
+    log_weights = np.log(np.full_like(log_likes, 0.25))
+    proposal = mocker.Mock()
+    proposal.rvs.return_value = np.ones((4, 3))
+    rng = mocker.Mock(np.random.default_rng(), autospec=True)
 
-    expected_a_params = [3, 3, 3, 4, 4]
-    expected_b_params = [1, 1, 1, 2, 2]
-    expected_log_like = np.array([[0.1, 0.1, 0.1, 0.2, 0.2]]).T
-    expected_log_prior = np.array([[0.2, 0.2, 0.2, 0.3, 0.3]]).T
-    expected_log_weight = np.array([[-0.1, -0.1, -0.1, -0.1, -0.1]]).T
+    path = GeometricPath(proposal=proposal)
 
-    samples = {'a': np.array(expected_a_params),
-               'b': np.array(expected_b_params)}
+    vmcmc = VectorMCMC(None, None, None)
+    kernel = VectorMCMCKernel(vmcmc, ["a", "b", "c"], path, rng=rng)
+    mocker.patch.object(kernel, "get_log_likelihoods", return_value=log_likes)
 
-    proposal_pdensities = np.exp(np.array(samples['a']) * 0.1)
+    init = Initializer(kernel)
+    particles = init.initialize_particles(num_particles=4)
 
-    mocker.patch.object(initializer.mcmc_kernel, 'get_log_likelihoods',
-                        return_value=np.array([[0.1, 0.1, 0.1, 0.2, 0.2]]).T)
-    mocker.patch.object(initializer.mcmc_kernel, 'get_log_priors',
-                        return_value=np.array([[0.2, 0.2, 0.2, 0.3, 0.3]]).T)
-
-    if dataframe:
-        samples = pandas.DataFrame(samples)
-    particles = initializer.init_particles_from_samples(samples,
-                                                        proposal_pdensities)
-
-    np.testing.assert_array_equal(particles.params['a'], expected_a_params)
-    np.testing.assert_array_equal(particles.params['b'], expected_b_params)
-    np.testing.assert_array_equal(particles.log_likes, expected_log_like)
-    np.testing.assert_array_almost_equal(particles.log_weights, expected_log_weight)
+    proposal.rvs.assert_called_once_with(4, random_state=rng)
+    np.testing.assert_array_almost_equal(particles.params, params)
+    np.testing.assert_array_almost_equal(particles.log_likes, log_likes)
+    np.testing.assert_array_almost_equal(particles.log_weights, log_weights)
+    assert particles.attrs["phi"] == 0
+    assert particles.attrs["mutation_ratio"] == 0

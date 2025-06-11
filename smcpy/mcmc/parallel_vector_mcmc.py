@@ -4,21 +4,22 @@ from .vector_mcmc import VectorMCMC
 from ..log_likelihoods import Normal
 
 
-class ParallelMCMC(VectorMCMC):
-    '''
+class ParallelVectorMCMC(VectorMCMC):
+    """
     Enables use of MPI to split model evaluations over a distributed memory
     system.
 
-    ParallelMCMC is set up such that all positive ranks have effectively
+    ParallelVectorMCMC is set up such that all positive ranks have effectively
     garbage values. These garbage values serve the purpose of allowing the
     MCMCBase class, which was not written with MPI in mind, to function
     normally and propagate objects of the right shape and type. At the end of
-    an analysis that uses the ParallelMCMC class, outputs on positive ranks
+    an analysis that uses the ParallelVectorMCMC class, outputs on positive ranks
     should be discarded and ONLY the output from rank 0 should be used.
-    '''
+    """
 
-    def __init__(self, model, data, priors, mpi_comm, log_like_args=None,
-                 log_like_func=Normal):
+    def __init__(
+        self, model, data, priors, mpi_comm, log_like_args=None, log_like_func=Normal
+    ):
         self._comm = mpi_comm
         self._size = mpi_comm.Get_size()
         self._rank = mpi_comm.Get_rank()
