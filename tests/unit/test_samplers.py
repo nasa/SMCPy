@@ -444,9 +444,10 @@ def test_fixed_time_take_max_phi(mocker, mcmc_kernel):
     assert original_phi == expected_take_adaptive
 
 
-def test_fixed_time_sampler_function_calls(mocker, mcmc_kernel):
+def test_fixed_time_sampler_function_calls(mocker, mcmc_kernel, result_mock):
     num_particles = 100
 
+    mocker.patch(SAMPLER_BASE + ".InMemoryStorage", return_value=result_mock)
     _do_smc_step_mock = mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
     optimize_step_mock = mocker.patch(
         SAMPLERS + ".AdaptiveSampler.optimize_step",
@@ -461,7 +462,8 @@ def test_fixed_time_sampler_function_calls(mocker, mcmc_kernel):
     smc = FixedTimeSampler(
         mcmc_kernel=mcmc_kernel, wall_time=100, show_progress_bar=False
     )
-    smc.sample(num_particles=num_particles, num_mcmc_samples=1)
+    _, mll = smc.sample(num_particles=num_particles, num_mcmc_samples=1)
 
+    assert mll == 34
     _do_smc_step_mock.assert_called()
     optimize_step_mock.assert_called()

@@ -332,7 +332,7 @@ class FixedTimeSampler(AdaptiveSampler):
     ):
         self._start_time = time.time()
 
-        super().sample(
+        res, res_mll = super().sample(
             num_particles=num_particles,
             num_mcmc_samples=num_mcmc_samples,
             target_ess=target_ess,
@@ -340,6 +340,8 @@ class FixedTimeSampler(AdaptiveSampler):
             resample_rng=resample_rng,
             particles_warn_threshold=particles_warn_threshold,
         )
+
+        return res, res_mll
 
     def _do_smc_step(self, phi, num_mcmc_samples):
         super()._do_smc_step(phi=phi, num_mcmc_samples=num_mcmc_samples)
