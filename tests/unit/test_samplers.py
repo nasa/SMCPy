@@ -3,7 +3,7 @@ import pytest
 
 from smcpy.resampler_rngs import *
 from smcpy.smc.particles import Particles
-from smcpy import FixedSampler, AdaptiveSampler
+from smcpy import FixedSampler, AdaptiveSampler, FixedTimeSampler
 from smcpy.mcmc.kernel_base import KernelBase
 from smcpy.paths import GeometricPath
 
@@ -338,3 +338,130 @@ def test_valid_target_ess(target_ess, mcmc_kernel):
         smc.sample(
             num_particles=num_particles, num_mcmc_samples=2, target_ess=target_ess
         )
+
+
+def test_fixed_time_initialized(mcmc_kernel):
+    smc = FixedTimeSampler(mcmc_kernel=mcmc_kernel, wall_time=1)
+
+    assert smc.wall_time == 1
+    assert smc.final_time == 0.95
+    assert smc.buffer_time == 0.8
+
+    assert smc._time_per_step_sequence == [0]
+    assert smc._buffer_phi == None
+    assert smc._start_time == None
+    assert smc._previous_step_time == None
+    assert smc._previous_phi == None
+    assert smc._phi_linear_slope == None
+
+
+def test_fixed_time_track_time_elapsed(mocker, mcmc_kernel):
+    mcmc_kernel.path = GeometricPath()
+    smc = FixedTimeSampler(mcmc_kernel=mcmc_kernel, wall_time=100)
+    smc._start_time = 1
+
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert len(smc._time_per_step_sequence) == 2
+
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert len(smc._time_per_step_sequence) == 3
+
+
+def test_fixed_time_check_fixed_slope_and_buffer_phi(mocker, mcmc_kernel):
+    rel_correction = 0.5
+    time_buffer_knockdown_factor = 0.8
+    wall_time = 100
+
+    mocker.patch("time.time", side_effect=[49, 50, 51])
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+    mocker.patch(
+        SAMPLERS + ".AdaptiveSampler.optimize_step",
+        side_effect=[np.exp(-0.9), np.exp(-0.6), np.exp(-0.2)],
+    )
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        wall_time=wall_time,
+        rel_correction=rel_correction,
+        time_buffer_knockdown_factor=time_buffer_knockdown_factor,
+    )
+    smc._start_time = 1
+
+    smc.optimize_step(particles=1, phi_old=1)
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert smc._phi_linear_slope == None
+    assert smc._buffer_phi == None
+
+    smc.optimize_step(particles=1, phi_old=1)
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    np.testing.assert_almost_equal(smc._phi_linear_slope, 0.02)
+    assert smc._buffer_phi == np.exp(-0.6)
+
+    smc.optimize_step(particles=1, phi_old=1)
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    np.testing.assert_almost_equal(smc._phi_linear_slope, 0.02)
+    assert smc._buffer_phi == np.exp(-0.6)
+
+
+def test_fixed_time_take_max_phi(mocker, mcmc_kernel):
+    rel_correction = 0.5
+    time_buffer_knockdown_factor = 0.8
+    wall_time = 100
+
+    mocker.patch("time.time", side_effect=[35, 50, 57.5, 65])
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+    mocker.patch(
+        SAMPLERS + ".AdaptiveSampler.optimize_step",
+        side_effect=[np.exp(-0.9), np.exp(-0.6), np.exp(-0.4), np.exp(-0.1)],
+    )
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        wall_time=wall_time,
+        rel_correction=rel_correction,
+        time_buffer_knockdown_factor=time_buffer_knockdown_factor,
+    )
+    smc._start_time = 1
+
+    expected_take_loglinear = np.exp(-0.3)
+    expected_take_adaptive = np.exp(-0.1)
+
+    original_phi = smc.optimize_step(particles=1, phi_old=1)
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert original_phi == np.exp(-0.9)
+
+    original_phi = smc.optimize_step(particles=1, phi_old=1)
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert original_phi == np.exp(-0.6)
+
+    original_phi = smc.optimize_step(particles=1, phi_old=1)
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert original_phi == expected_take_loglinear
+
+    original_phi = smc.optimize_step(particles=1, phi_old=1)
+    assert original_phi == expected_take_adaptive
+
+
+def test_fixed_time_sampler_function_calls(mocker, mcmc_kernel):
+    num_particles = 100
+
+    _do_smc_step_mock = mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+    optimize_step_mock = mocker.patch(
+        SAMPLERS + ".AdaptiveSampler.optimize_step",
+        side_effect=np.linspace(0.1, 1, 10),
+    )
+
+    path = GeometricPath()
+    mcmc_kernel.get_log_likelihoods.return_value = np.ones((num_particles, 1))
+    mcmc_kernel.sample_from_proposal.return_value = {"a": np.ones(num_particles)}
+    mcmc_kernel.path = path
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel, wall_time=100, show_progress_bar=False
+    )
+    smc.sample(num_particles=num_particles, num_mcmc_samples=1)
+
+    _do_smc_step_mock.assert_called()
+    optimize_step_mock.assert_called()
