@@ -1,4 +1,4 @@
-from .smc.samplers import FixedSampler, AdaptiveSampler
+from .smc.samplers import FixedSampler, AdaptiveSampler, FixedTimeSampler
 from .priors import ImproperConstrainedUniform, InvWishart, ImproperCov
 from .log_likelihoods import Normal, MultiSourceNormal, MVNormal
 from .mcmc.vector_mcmc import VectorMCMC
