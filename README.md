@@ -1,7 +1,5 @@
 SMCPy - **S**equential **M**onte **C**arlo with **Py**thon 
 ==========================================================================
-[![Build Status](https://travis-ci.com/nasa/SMCPy.svg?branch=master)](https://travis-ci.com/nasa/SMCPy) &nbsp;[![Coverage Status](https://coveralls.io/repos/github/nasa/SMCPy/badge.svg?branch=master)](https://coveralls.io/github/nasa/SMCPy?branch=master)
-
 
 ## Description
 SMCPy is an open-source package for performing uncertainty quantification using
