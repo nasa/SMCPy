@@ -59,7 +59,7 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     assert mutated_particles.log_weights == 3
     assert mutated_particles.total_unnorm_log_weight == 99
     assert mutated_particles.attrs["phi"] == 1
-    assert mutated_particles.attrs["mutation_ratio"] == 1
+    assert mutated_particles.attrs["mutation_ratio"] == 0
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
         mocked_particles.param_dict, num_samples, cov
