@@ -1,5 +1,6 @@
 SMCPy - **S**equential **M**onte **C**arlo with **Py**thon 
 ==========================================================================
+[![Build](https://github.com/XxJuliaTruongxX/SMCPy/actions/workflows/tests.yml/badge.svg)](https://github.com/XxJuliaTruongxX/SMCPy/actions)
 
 ## Description
 SMCPy is an open-source package for performing uncertainty quantification using
