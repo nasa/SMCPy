@@ -123,7 +123,7 @@ class SamplerBase:
         pbar.close()
 
 
-class FixedSampler(SamplerBase):
+class FixedPhiSampler(SamplerBase):
     """
     SMC sampler using a fixed phi sequence.
     """
@@ -304,21 +304,18 @@ class FixedTimeSampler(AdaptiveSampler):
     def __init__(
         self,
         mcmc_kernel,
-        wall_time,
+        time,
         show_progress_bar=True,
-        rel_correction=0.8,
-        time_buffer_knockdown_factor=0.95,
+        norm_time_threshold=0.8,
+        time_knockdown_factor=0.95,
     ):
-        self.wall_time = wall_time
-        self.buffer_time = self.wall_time * rel_correction
-        self.final_time = self.wall_time * time_buffer_knockdown_factor
+        self.time = time
+        self.buffer_time = self.time * norm_time_threshold
+        self.final_time = self.time * time_knockdown_factor
 
         self._time_per_step_sequence = [0]
         self._buffer_phi = None
         self._start_time = None
-        self._previous_step_time = None
-        self._previous_phi = None
-        self._phi_linear_slope = None
         super().__init__(mcmc_kernel, show_progress_bar)
 
     def sample(
@@ -346,43 +343,30 @@ class FixedTimeSampler(AdaptiveSampler):
     def _do_smc_step(self, phi, num_mcmc_samples):
         super()._do_smc_step(phi=phi, num_mcmc_samples=num_mcmc_samples)
 
-        self._previous_step_time = time.time()
+        previous_step_time = time.time()
 
-        if (
-            not self._phi_linear_slope
-            and self._previous_phi
-            and self._previous_step_time
-            and self._previous_step_time >= self.buffer_time
-        ):
-            self._phi_linear_slope = (0 - np.log(self._previous_phi)) / (
-                self.final_time - self._previous_step_time
-            )
-            self._buffer_phi = self._previous_phi
+        if not self._buffer_phi and previous_step_time >= self.buffer_time:
+            self._buffer_phi = phi
 
-        self._time_per_step_sequence.append(self._previous_step_time - self._start_time)
+        self._time_per_step_sequence.append(previous_step_time - self._start_time)
 
     def optimize_step(self, particles, phi_old, target_ess=1):
         curr_adaptive_phi = super().optimize_step(
             particles=particles, phi_old=phi_old, target_ess=target_ess
         )
 
-        highest_adaptive = None
-        if self._previous_step_time and self._previous_step_time >= self.buffer_time:
+        if self._time_per_step_sequence[-1] >= self.buffer_time:
             estimated_future_time = (
-                self._time_per_step_sequence[-1] - self._time_per_step_sequence[-2]
-            ) + self._previous_step_time
+                2 * self._time_per_step_sequence[-1] - self._time_per_step_sequence[-2]
+            )
 
-            highest_adaptive = max(
-                np.log(curr_adaptive_phi),
+            return 10 ** max(
+                np.log10(curr_adaptive_phi),
                 np.interp(
                     estimated_future_time,
                     [self.buffer_time, self.final_time],
-                    [np.log(self._buffer_phi), 0],
+                    [np.log10(self._buffer_phi), 0],
                 ),
             )
 
-        else:
-            highest_adaptive = np.log(curr_adaptive_phi)
-
-        self._previous_phi = np.exp(highest_adaptive)
-        return self._previous_phi
+        return curr_adaptive_phi
