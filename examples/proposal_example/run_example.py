@@ -7,7 +7,7 @@ from scipy.stats import uniform, multivariate_normal
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy import FixedSampler as Sampler
+from smcpy import FixedPhiSampler as Sampler
 from smcpy.paths import GeometricPath
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], "../"))
