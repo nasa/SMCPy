@@ -122,7 +122,7 @@ class HDF5Storage(BaseStorage):
     def _open_h5(self, mode):
         self._refresh_filesystem_metadata()
 
-        h5 = h5py.File(self._filename, mode)
+        h5 = h5py.File(self._filename, mode, track_order=True)
         self._len = len(h5.keys())
         return h5
 
