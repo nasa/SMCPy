@@ -420,6 +420,7 @@ def test_fixed_time_predict_buffer_phi(mocker, mcmc_kernel):
 
     mocker.patch("time.time", side_effect=[26, 49])
     mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=0.1)
     smc = FixedTimeSampler(
         mcmc_kernel=mcmc_kernel,
         time=time,
@@ -430,6 +431,9 @@ def test_fixed_time_predict_buffer_phi(mocker, mcmc_kernel):
 
     smc._do_smc_step(phi=0.6, num_mcmc_samples=1)
     assert smc._buffer_phi == 0.6
+
+    output_phi = smc.optimize_step(particles=1, phi_old=1)
+    assert output_phi == 0.6
 
     smc._do_smc_step(phi=0.6, num_mcmc_samples=1)
     assert smc._buffer_phi == 0.6

@@ -365,7 +365,7 @@ class FixedTimeSampler(AdaptiveSampler):
             particles=particles, phi_old=phi_old, target_ess=target_ess
         )
 
-        if self._time_history[-1] >= self.buffer_time:
+        if self._buffer_phi:
             estimated_future_time = 2 * self._time_history[-1] - self._time_history[-2]
 
             return 10 ** max(
