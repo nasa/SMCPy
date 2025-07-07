@@ -309,9 +309,8 @@ class FixedTimeSampler(AdaptiveSampler):
         norm_time_threshold=0.8,
         time_knockdown_factor=0.95,
     ):
-        self.time = time
-        self.buffer_time = self.time * norm_time_threshold
-        self.final_time = self.time * time_knockdown_factor
+        self.buffer_time = time * norm_time_threshold
+        self.final_time = time * time_knockdown_factor
 
         self._time_history = [0]
         self._buffer_phi = None
@@ -346,7 +345,11 @@ class FixedTimeSampler(AdaptiveSampler):
         previous_step_time = time.time() - self._start_time
         self._time_history.append(previous_step_time)
 
-        if self._buffer_phi is None and self._time_history[-1] >= self.buffer_time:
+        estimated_future_time = 2 * self._time_history[-1] - self._time_history[-2]
+        if self._buffer_phi is None and (
+            self._time_history[-1] >= self.buffer_time
+            or estimated_future_time >= self.buffer_time
+        ):
             self._buffer_phi = phi
 
     def optimize_step(self, particles, phi_old, target_ess=1):

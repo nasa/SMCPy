@@ -355,7 +355,6 @@ def test_fixed_time_initialized(
         time_knockdown_factor=time_knockdown_factor,
     )
 
-    assert smc.time == time
     assert smc.buffer_time == norm_time_threshold * time
     assert smc.final_time == time_knockdown_factor * time
 
@@ -363,7 +362,6 @@ def test_fixed_time_initialized(
 def test_fixed_time_initialized_default(mcmc_kernel):
     smc = FixedTimeSampler(mcmc_kernel=mcmc_kernel, time=1)
 
-    assert smc.time == 1
     assert smc.buffer_time == 0.8
     assert smc.final_time == 0.95
 
@@ -394,7 +392,7 @@ def test_fixed_time_check_buffer_phi(mocker, mcmc_kernel):
     time_knockdown_factor = 0.8
     time = 100
 
-    mocker.patch("time.time", side_effect=[49, 51, 52])
+    mocker.patch("time.time", side_effect=[2, 51, 52])
     mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
 
     smc = FixedTimeSampler(
@@ -412,6 +410,28 @@ def test_fixed_time_check_buffer_phi(mocker, mcmc_kernel):
     assert smc._buffer_phi == 0.6
 
     smc._do_smc_step(phi=0.9, num_mcmc_samples=1)
+    assert smc._buffer_phi == 0.6
+
+
+def test_fixed_time_predict_buffer_phi(mocker, mcmc_kernel):
+    norm_time_threshold = 0.5
+    time_knockdown_factor = 0.8
+    time = 100
+
+    mocker.patch("time.time", side_effect=[26, 49])
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+        norm_time_threshold=norm_time_threshold,
+        time_knockdown_factor=time_knockdown_factor,
+    )
+    smc._start_time = 1
+
+    smc._do_smc_step(phi=0.6, num_mcmc_samples=1)
+    assert smc._buffer_phi == 0.6
+
+    smc._do_smc_step(phi=0.6, num_mcmc_samples=1)
     assert smc._buffer_phi == 0.6
 
 
@@ -457,6 +477,7 @@ def test_fixed_time_relative_time(mocker, mcmc_kernel):
         time_knockdown_factor=time_knockdown_factor,
     )
     smc._start_time = 50
+    smc._time_history.append(49)
 
     smc._do_smc_step(phi=1, num_mcmc_samples=1)
     assert smc._buffer_phi == None
