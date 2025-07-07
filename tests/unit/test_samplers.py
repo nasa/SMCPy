@@ -435,6 +435,20 @@ def test_fixed_time_predict_buffer_phi(mocker, mcmc_kernel):
     assert smc._buffer_phi == 0.6
 
 
+def test_fixed_time_predict_phi_overshoot(mocker, mcmc_kernel):
+    time = 100
+
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step")
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+    )
+    smc._time_history.append(50)
+
+    phi = smc.optimize_step(particles=1, phi_old=1)
+    assert phi == 1
+
+
 @pytest.mark.parametrize("optimize_phi, expected_output", (((0.1, 0.5)), ((0.9, 0.9))))
 def test_fixed_time_take_max_phi(mocker, mcmc_kernel, optimize_phi, expected_output):
     norm_time_threshold = 0.0

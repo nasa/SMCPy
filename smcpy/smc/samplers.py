@@ -353,6 +353,14 @@ class FixedTimeSampler(AdaptiveSampler):
             self._buffer_phi = phi
 
     def optimize_step(self, particles, phi_old, target_ess=1):
+        if len(self._time_history) >= 2:
+            estimated_future_time = (
+                2 * (self._time_history[-1] - self._time_history[-2])
+                + self._time_history[-1]
+            )
+            if estimated_future_time > self.final_time:
+                return 1
+
         curr_adaptive_phi = super().optimize_step(
             particles=particles, phi_old=phi_old, target_ess=target_ess
         )
