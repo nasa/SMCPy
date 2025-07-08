@@ -443,7 +443,9 @@ def test_fixed_time_predict_buffer_phi(mocker, mcmc_kernel):
 
 
 @pytest.mark.parametrize("last_time_history", ((30), (50)))
-def test_fixed_time_predict_phi_overshoot(mocker, mcmc_kernel, last_time_history):
+def test_fixed_time_phi_equal_one_when_time_overshoot(
+    mocker, mcmc_kernel, last_time_history
+):
     time = 100
     time_knockdown_factor = 0.9
 
@@ -476,6 +478,33 @@ def test_fixed_time_take_max_phi(mocker, mcmc_kernel, optimize_phi, expected_out
 
     original_phi = smc.optimize_step(particles=1, phi_old=1)
     assert original_phi == expected_output
+
+
+@pytest.mark.parametrize(
+    "time_history, expected_estimated_future_time",
+    ((([0], 0), ([1], 2), ([5], 10), ([1, 5], 9), ([5, 10], 15), ([3, 7], 11))),
+)
+def test_fixed_time_calculate_estimated_future_time_in_interp(
+    mocker, mcmc_kernel, time_history, expected_estimated_future_time
+):
+    time = 100
+
+    numpy_mock = mocker.patch("numpy.interp", return_value=0.888)
+
+    mocker.patch(
+        SAMPLERS + ".AdaptiveSampler.optimize_step",
+        return_value=0.999,
+    )
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+    )
+    smc._buffer_phi = 1
+    smc._time_history.extend(time_history)
+
+    smc.optimize_step(particles=1, phi_old=1)
+    numpy_mock.assert_called_once_with(expected_estimated_future_time, [80, 95], [0, 0])
 
 
 def test_fixed_time_return_default_adaptive_phi(mocker, mcmc_kernel):
