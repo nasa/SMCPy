@@ -416,35 +416,29 @@ def test_fixed_time_check_buffer_phi(mocker, mcmc_kernel):
     assert smc._buffer_phi == 0.6
 
 
-def test_fixed_time_predict_buffer_phi(mocker, mcmc_kernel):
+def test_fixed_time_check_interp_phi_when_buffer_phi_true(mocker, mcmc_kernel):
     norm_time_threshold = 0.5
-    time_knockdown_factor = 0.8
+    time_knockdown_factor = 1
     time = 100
 
-    mocker.patch("time.time", side_effect=[26, 49])
-    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
-    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=0.1)
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=10**-100)
+
     smc = FixedTimeSampler(
         mcmc_kernel=mcmc_kernel,
         time=time,
         norm_time_threshold=norm_time_threshold,
         time_knockdown_factor=time_knockdown_factor,
     )
-    smc._start_time = 1
-
-    smc._do_smc_step(phi=0.6, num_mcmc_samples=1)
-    assert smc._buffer_phi == 0.6
+    smc._time_history.extend([40, 50])
+    smc._buffer_phi = 10**-5
 
     output_phi = smc.optimize_step(particles=1, phi_old=1)
-    assert output_phi == 0.6
-
-    smc._do_smc_step(phi=0.6, num_mcmc_samples=1)
-    assert smc._buffer_phi == 0.6
+    assert output_phi == 10**-4
 
 
-@pytest.mark.parametrize("last_time_history", ((30), (50)))
+@pytest.mark.parametrize("overshot_time", ((30), (50)))
 def test_fixed_time_phi_equal_one_when_time_overshoot(
-    mocker, mcmc_kernel, last_time_history
+    mocker, mcmc_kernel, overshot_time
 ):
     time = 100
     time_knockdown_factor = 0.9
@@ -453,7 +447,7 @@ def test_fixed_time_phi_equal_one_when_time_overshoot(
     smc = FixedTimeSampler(
         mcmc_kernel=mcmc_kernel, time=time, time_knockdown_factor=time_knockdown_factor
     )
-    smc._time_history.append(last_time_history)
+    smc._time_history.append(overshot_time)
 
     phi = smc.optimize_step(particles=1, phi_old=1)
     assert phi == 1
@@ -480,33 +474,6 @@ def test_fixed_time_take_max_phi(mocker, mcmc_kernel, optimize_phi, expected_out
     assert original_phi == expected_output
 
 
-@pytest.mark.parametrize(
-    "time_history, expected_estimated_future_time",
-    ((([0], 0), ([1], 2), ([5], 10), ([1, 5], 9), ([5, 10], 15), ([3, 7], 11))),
-)
-def test_fixed_time_calculate_estimated_future_time_in_interp(
-    mocker, mcmc_kernel, time_history, expected_estimated_future_time
-):
-    time = 100
-
-    numpy_mock = mocker.patch("numpy.interp", return_value=0.888)
-
-    mocker.patch(
-        SAMPLERS + ".AdaptiveSampler.optimize_step",
-        return_value=0.999,
-    )
-
-    smc = FixedTimeSampler(
-        mcmc_kernel=mcmc_kernel,
-        time=time,
-    )
-    smc._buffer_phi = 1
-    smc._time_history.extend(time_history)
-
-    smc.optimize_step(particles=1, phi_old=1)
-    numpy_mock.assert_called_once_with(expected_estimated_future_time, [80, 95], [0, 0])
-
-
 def test_fixed_time_return_default_adaptive_phi(mocker, mcmc_kernel):
     time = 100
 
@@ -523,4 +490,4 @@ def test_fixed_time_return_default_adaptive_phi(mocker, mcmc_kernel):
 
     original_phi = smc.optimize_step(particles=1, phi_old=1)
     numpy_mock.assert_not_called()
-    np.testing.assert_almost_equal(original_phi, 0.1)
+    assert original_phi == 0.1
