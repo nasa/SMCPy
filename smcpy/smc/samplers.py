@@ -317,6 +317,10 @@ class FixedTimeSampler(AdaptiveSampler):
         self._start_time = None
         super().__init__(mcmc_kernel, show_progress_bar)
 
+    @property
+    def prev_time_step(self):
+        return self._time_history[-1] - self._time_history[-2]
+
     def sample(
         self,
         num_particles,
@@ -342,23 +346,16 @@ class FixedTimeSampler(AdaptiveSampler):
     def _do_smc_step(self, phi, num_mcmc_samples):
         super()._do_smc_step(phi=phi, num_mcmc_samples=num_mcmc_samples)
 
-        previous_step_time = time.time() - self._start_time
-        self._time_history.append(previous_step_time)
+        self._time_history.append(time.time() - self._start_time)
 
-        estimated_future_time = 2 * self._time_history[-1] - self._time_history[-2]
-        if self._buffer_phi is None and (
-            self._time_history[-1] >= self.buffer_time
-            or estimated_future_time >= self.buffer_time
-        ):
+        estimated_future_time = self.prev_time_step + self._time_history[-1]
+        if self._buffer_phi is None and estimated_future_time >= self.buffer_time:
             self._buffer_phi = phi
 
     def optimize_step(self, particles, phi_old, target_ess=1):
         if len(self._time_history) >= 2:
-            estimated_future_time = (
-                2 * (self._time_history[-1] - self._time_history[-2])
-                + self._time_history[-1]
-            )
-            if estimated_future_time > self.final_time:
+            estimated_future_time = 2 * (self.prev_time_step) + self._time_history[-1]
+            if estimated_future_time >= self.final_time:
                 return 1
 
         curr_adaptive_phi = super().optimize_step(
@@ -366,7 +363,7 @@ class FixedTimeSampler(AdaptiveSampler):
         )
 
         if self._buffer_phi:
-            estimated_future_time = 2 * self._time_history[-1] - self._time_history[-2]
+            estimated_future_time = 2 * self.prev_time_step
 
             return 10 ** max(
                 np.log10(curr_adaptive_phi),
