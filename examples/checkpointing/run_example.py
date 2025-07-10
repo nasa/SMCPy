@@ -6,7 +6,7 @@ from scipy.stats import uniform
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy import FixedSampler, AdaptiveSampler
+from smcpy import FixedPhiSampler, AdaptiveSampler
 from smcpy.utils.plotter import *
 from smcpy.utils.storage import HDF5Storage
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     # Run SMC with an incomplete phi sequence (terminates before phi = 1)
     phi_seq = np.linspace(0, 0.25, num_smc_steps)
     with HDF5Storage(filename, mode="w"):
-        smc = FixedSampler(mcmc_kernel)
+        smc = FixedPhiSampler(mcmc_kernel)
         results, mll = smc.sample(
             num_particles=500,
             num_mcmc_samples=5,

@@ -170,7 +170,7 @@ def test_overwrite_mode(mocker, tmpdir):
 
     storage._open_h5("w")
 
-    h5_mock.assert_called_once_with(filename, "w")
+    h5_mock.assert_called_once_with(filename, "w", track_order=True)
 
 
 def test_os_scandir_params(mocker, tmpdir):

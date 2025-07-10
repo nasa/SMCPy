@@ -3,7 +3,7 @@ import pytest
 
 from smcpy.resampler_rngs import *
 from smcpy.smc.particles import Particles
-from smcpy import FixedSampler, AdaptiveSampler
+from smcpy import FixedPhiSampler, AdaptiveSampler, FixedTimeSampler
 from smcpy.mcmc.kernel_base import KernelBase
 from smcpy.paths import GeometricPath
 
@@ -64,7 +64,7 @@ def test_fixed_phi_sample(mocker, proposal, rank, prog_bar, mcmc_kernel, result_
     mocker.patch.object(comm, "bcast", new=lambda x, root: x)
     ess_threshold = 0.2
 
-    smc = FixedSampler(mcmc_kernel)
+    smc = FixedPhiSampler(mcmc_kernel)
     step_list, mll = smc.sample(
         num_particles,
         num_mcmc_samples,
@@ -316,7 +316,7 @@ def test_optimize_step_does_not_alter_req_phi_list(mocker, mcmc_kernel):
     "sampler, kwargs",
     (
         (AdaptiveSampler, {}),
-        (FixedSampler, {"phi_sequence": [0, 0.5, 1], "ess_threshold": 0.8}),
+        (FixedPhiSampler, {"phi_sequence": [0, 0.5, 1], "ess_threshold": 0.8}),
     ),
 )
 def test_sampling_strategy_passed_through(sampler, mcmc_kernel, kwargs):
@@ -338,3 +338,156 @@ def test_valid_target_ess(target_ess, mcmc_kernel):
         smc.sample(
             num_particles=num_particles, num_mcmc_samples=2, target_ess=target_ess
         )
+
+
+@pytest.mark.parametrize(
+    "norm_time_threshold, time_knockdown_factor", (((1, 0), (0, 1), (0.5, 0.5)))
+)
+def test_fixed_time_initialized(
+    mcmc_kernel, norm_time_threshold, time_knockdown_factor
+):
+    time = 10
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+        norm_time_threshold=norm_time_threshold,
+        time_knockdown_factor=time_knockdown_factor,
+    )
+
+    assert smc.buffer_time == norm_time_threshold * time
+    assert smc.final_time == time_knockdown_factor * time
+
+
+def test_fixed_time_initialized_default(mcmc_kernel):
+    smc = FixedTimeSampler(mcmc_kernel=mcmc_kernel, time=1)
+
+    assert smc.buffer_time == 0.8
+    assert smc.final_time == 0.95
+
+    assert smc._time_history == [0]
+    assert smc._buffer_phi == None
+    assert smc._start_time == None
+
+
+def test_fixed_time_track_time_elapsed(mocker, mcmc_kernel):
+    smc = FixedTimeSampler(mcmc_kernel=mcmc_kernel, time=100)
+    smc._start_time = 1
+
+    mocker.patch("time.time", side_effect=[2, 4, 7])
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert smc._time_history == [0, 1]
+    assert smc.prev_time_step == 1
+
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert smc._time_history == [0, 1, 3]
+    assert smc.prev_time_step == 2
+
+    smc._do_smc_step(phi=1, num_mcmc_samples=1)
+    assert smc._time_history == [0, 1, 3, 6]
+    assert smc.prev_time_step == 3
+
+
+def test_fixed_time_check_buffer_phi(mocker, mcmc_kernel):
+    norm_time_threshold = 0.5
+    time_knockdown_factor = 0.8
+    time = 100
+
+    mocker.patch("time.time", side_effect=[2, 51, 52])
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+        norm_time_threshold=norm_time_threshold,
+        time_knockdown_factor=time_knockdown_factor,
+    )
+    smc._start_time = 1
+
+    smc._do_smc_step(phi=0.1, num_mcmc_samples=1)
+    assert smc._buffer_phi == None
+
+    smc._do_smc_step(phi=0.6, num_mcmc_samples=1)
+    assert smc._buffer_phi == 0.6
+
+    smc._do_smc_step(phi=0.9, num_mcmc_samples=1)
+    assert smc._buffer_phi == 0.6
+
+
+def test_fixed_time_check_interp_phi_when_buffer_phi_true(mocker, mcmc_kernel):
+    norm_time_threshold = 0.5
+    time_knockdown_factor = 1
+    time = 100
+
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=10**-100)
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+        norm_time_threshold=norm_time_threshold,
+        time_knockdown_factor=time_knockdown_factor,
+    )
+    smc._time_history.extend([40, 50])
+    smc._buffer_phi = 10**-5
+
+    output_phi = smc.optimize_step(particles=1, phi_old=1)
+    assert output_phi == 10**-4
+
+
+@pytest.mark.parametrize("overshot_time", ((30), (50)))
+def test_fixed_time_phi_equal_one_when_time_overshoot(
+    mocker, mcmc_kernel, overshot_time
+):
+    time = 100
+    time_knockdown_factor = 0.9
+
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=0.999)
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel, time=time, time_knockdown_factor=time_knockdown_factor
+    )
+    smc._time_history.append(overshot_time)
+
+    phi = smc.optimize_step(particles=1, phi_old=1)
+    assert phi == 1
+
+
+@pytest.mark.parametrize("optimize_phi, expected_output", (((0.1, 0.5)), ((0.9, 0.9))))
+def test_fixed_time_take_max_phi(mocker, mcmc_kernel, optimize_phi, expected_output):
+    norm_time_threshold = 0.0
+    time_knockdown_factor = 0.8
+    time = 100
+
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=optimize_phi)
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+        norm_time_threshold=norm_time_threshold,
+        time_knockdown_factor=time_knockdown_factor,
+    )
+    smc._buffer_phi = 0.5
+    smc._time_history.append(0)
+
+    original_phi = smc.optimize_step(particles=1, phi_old=1)
+    assert original_phi == expected_output
+
+
+def test_fixed_time_return_default_adaptive_phi(mocker, mcmc_kernel):
+    time = 100
+
+    numpy_mock = mocker.patch("numpy.interp")
+    mocker.patch(
+        SAMPLERS + ".AdaptiveSampler.optimize_step",
+        return_value=0.1,
+    )
+
+    smc = FixedTimeSampler(
+        mcmc_kernel=mcmc_kernel,
+        time=time,
+    )
+
+    original_phi = smc.optimize_step(particles=1, phi_old=1)
+    numpy_mock.assert_not_called()
+    assert original_phi == 0.1

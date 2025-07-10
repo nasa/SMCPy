@@ -90,16 +90,14 @@ class HDF5Storage(BaseStorage):
     @property
     def phi_sequence(self):
         h5 = self._open_h5("r")
-        phi_sequence = [h5[i].attrs["phi"] for i in sorted(h5.keys(), key=int)]
+        phi_sequence = [h5[i].attrs["phi"] for i in h5.keys()]
         self._close(h5)
         return phi_sequence
 
     @property
     def mut_ratio_sequence(self):
         h5 = self._open_h5("r")
-        mut_ratio_sequence = [
-            h5[i].attrs["mutation_ratio"] for i in sorted(h5.keys(), key=int)
-        ]
+        mut_ratio_sequence = [h5[i].attrs["mutation_ratio"] for i in h5.keys()]
         self._close(h5)
         return mut_ratio_sequence
 
@@ -122,7 +120,7 @@ class HDF5Storage(BaseStorage):
     def _open_h5(self, mode):
         self._refresh_filesystem_metadata()
 
-        h5 = h5py.File(self._filename, mode)
+        h5 = h5py.File(self._filename, mode, track_order=True)
         self._len = len(h5.keys())
         return h5
 

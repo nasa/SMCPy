@@ -1,13 +1,4 @@
-import re
 from setuptools import setup
-
-
-def get_property(prop, project):
-    result = re.search(
-        r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop),
-        open(project + "/__init__.py").read(),
-    )
-    return result.group(1)
 
 
 with open("README.md", "r") as fh:
@@ -15,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="smcpy",
-    version=get_property("__version__", "smcpy"),
+    version='0.1.6',
     author="Patrick Leser",
     author_email="patrick.e.leser@nasa.gov",
     description="A package for performing uncertainty quantification using a parallelized sequential Monte Carlo sampler.",
@@ -34,13 +25,10 @@ setup(
         "pytest",
         "pytest-mock",
     ],
-    python_requires="~=3.4",
+    python_requires=">=3.6",
+    license="NOSA v1.3",
     classifiers=[
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
         "Development Status :: 3 - Alpha",
     ],
