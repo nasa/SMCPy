@@ -1,5 +1,5 @@
 from .smc.samplers import FixedSampler, AdaptiveSampler
-from .priors import ImproperConstrainedUniform, InvWishart, ImproperCov
+from .priors import ImproperConstrainedUniform, InvWishart, ImproperCov, ImproperUniform
 from .log_likelihoods import Normal, MultiSourceNormal, MVNormal
 from .mcmc.vector_mcmc import VectorMCMC
 from .mcmc.parallel_vector_mcmc import ParallelVectorMCMC
