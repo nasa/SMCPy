@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="smcpy",
-    version='0.1.6',
+    version="0.1.6",
     author="Patrick Leser",
     author_email="patrick.e.leser@nasa.gov",
     description="A package for performing uncertainty quantification using a parallelized sequential Monte Carlo sampler.",

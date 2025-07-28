@@ -162,7 +162,7 @@ def test_hdf5storage_neg_indexing(tmpdir, mock_particles):
         storage[-3]
 
 
-def test_overwrite_mode(mocker, tmpdir):
+def test_hdf5storage_overwrite_mode(mocker, tmpdir):
     h5_mock = mocker.patch("smcpy.utils.storage.h5py.File")
 
     filename = tmpdir / "test.h5"
@@ -173,7 +173,7 @@ def test_overwrite_mode(mocker, tmpdir):
     h5_mock.assert_called_once_with(filename, "w", track_order=True)
 
 
-def test_os_scandir_params(mocker, tmpdir):
+def test_hdf5storage_os_scandir_params(mocker, tmpdir):
     filename = tmpdir / "test.h5"
 
     mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
@@ -184,14 +184,14 @@ def test_os_scandir_params(mocker, tmpdir):
 
 
 @pytest.mark.parametrize("mode", [1, 1000, "b", "abc", "A", "W"])
-def test_invalid_input_mode(tmpdir, mode):
+def test_hdf5storage_invalid_input_mode(tmpdir, mode):
     filename = tmpdir / "test.h5"
 
     with pytest.raises(ValueError):
         HDF5Storage(filename=filename, mode=mode)
 
 
-def test_mode_default(tmpdir):
+def test_hdf5storage_mode_default(tmpdir):
     filename = tmpdir / "test.h5"
     storage = HDF5Storage(filename=filename)
 
@@ -199,16 +199,153 @@ def test_mode_default(tmpdir):
 
 
 @pytest.mark.parametrize("mode", ["w", "a"])
-def test_mode_write(tmpdir, mode):
+def test_hdf5storage_mode_write(tmpdir, mode):
     filename = tmpdir / "test.h5"
     storage = HDF5Storage(filename=filename, mode=mode)
 
     assert storage._mode == mode
 
 
-def test_first_save_step_changes_mode(tmpdir, mock_particles):
+def test_hdf5storage_first_save_step_changes_mode(tmpdir, mock_particles):
     filename = tmpdir / "test.h5"
     storage = HDF5Storage(filename=filename, mode="w")
 
     storage.save_step(mock_particles)
     assert storage._mode == "a"
+
+
+def test_picklestorage_no_restart_file_not_exist(tmpdir):
+    f = tmpdir / "test.txt"
+    storage = PickleStorage(str(f))
+    assert not storage.is_restart
+
+
+def test_picklestorage_file_not_exist_write(tmpdir):
+    f = tmpdir / "test.txt"
+    storage = PickleStorage(str(f), mode="w+b")
+    assert not storage.is_restart
+
+
+def test_picklestorage_no_restart_write_mode(tmpdir):
+    f = tmpdir / "test.txt"
+    f.write_text("test", encoding="ascii")
+    storage = PickleStorage(str(f), mode="w+b")
+    assert not storage.is_restart
+
+
+def test_picklestorage_restart(tmpdir, mocker):
+    f = tmpdir / "test.pkl"
+    f.write_text("test", encoding="ascii")
+    mocker.patch("smcpy.utils.storage.PickleStorage._init_length_on_restart")
+    storage = PickleStorage(str(f))
+    assert storage.is_restart
+
+
+def test_picklestorage_save(tmpdir, mock_particles):
+    storage = PickleStorage(filename=tmpdir / "test.pkl")
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
+
+    def test_particles(p):
+        np.testing.assert_array_equal(p.params, mock_particles.params)
+        np.testing.assert_array_equal(p.log_likes, mock_particles.log_likes)
+        np.testing.assert_array_equal(p.log_weights, mock_particles.log_weights)
+        for key, val in mock_particles.param_dict.items():
+            np.testing.assert_array_equal(p.param_dict[key], val)
+        assert p.attrs == {"phi": 2, "mutation_ratio": 1, "total_unnorm_log_weight": 99}
+
+    assert isinstance(storage[0], DummyParticles)
+    [test_particles(p) for p in storage]
+    assert storage.phi_sequence == [2, 2]
+    assert storage.mut_ratio_sequence == [1, 1]
+
+
+def test_picklestorage_load_existing(tmpdir, mock_particles):
+    storage = PickleStorage(filename=tmpdir / "test.pkl")
+    mp2 = copy.deepcopy(mock_particles)
+    mp2.attrs["phi"] = 1
+    mp2.attrs["mutation_ratio"] = 0
+    [storage.save_step(mock_particles) for _ in range(12)]  # 2 digits tests sort
+    storage.save_step(mp2)
+
+    storage = PickleStorage(filename=tmpdir / "test.pkl")
+    storage.save_step(mock_particles)
+
+    assert storage.phi_sequence == [2] * 12 + [1, 2]
+    assert storage.mut_ratio_sequence == [1] * 12 + [0, 1]
+
+
+def test_picklestorage_length(tmpdir, mock_particles):
+    storage = PickleStorage(filename=tmpdir / "test.pkl")
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
+
+    assert len(storage) == 2
+
+
+def test_picklestorage_neg_indexing(tmpdir, mock_particles):
+    storage = PickleStorage(filename=tmpdir / "test.pkl")
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
+
+    assert storage[-1]
+    assert storage[-2]
+    assert storage[0]
+    assert storage[1]
+
+    with pytest.raises(IndexError):
+        storage[2]
+    with pytest.raises(IndexError):
+        storage[-3]
+
+
+def test_picklestorage_overwrite_mode(mocker, tmpdir):
+    pickle_mock = mocker.patch("smcpy.utils.storage.open")
+
+    filename = tmpdir / "test.pkl"
+    storage = PickleStorage(filename=filename, mode="w+b")
+
+    storage._open_file("w+b")
+
+    pickle_mock.assert_called_once_with(filename, "w+b")
+
+
+def test_picklestorage_os_scandir_params(mocker, tmpdir):
+    filename = tmpdir / "test.pkl"
+
+    mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
+    storage = PickleStorage(filename=filename)
+    storage._open_file("r+b")
+
+    mock_scandir.assert_called_once_with(tmpdir)
+
+
+@pytest.mark.parametrize("mode", [1, 1000, "b", "abc", "A", "W"])
+def test_picklestorage_invalid_input_mode(tmpdir, mode):
+    filename = tmpdir / "test.pkl"
+
+    with pytest.raises(ValueError):
+        PickleStorage(filename=filename, mode=mode)
+
+
+def test_picklestorage_mode_default(tmpdir):
+    filename = tmpdir / "test.pkl"
+    storage = PickleStorage(filename=filename)
+
+    assert storage._mode == "r+b"
+
+
+@pytest.mark.parametrize("mode", ["w+b", "r+b"])
+def test_picklestorage_mode_write(tmpdir, mode):
+    filename = tmpdir / "test.pkl"
+    storage = PickleStorage(filename=filename, mode=mode)
+
+    assert storage._mode == mode
+
+
+def test_picklestorage_first_save_step_changes_mode(tmpdir, mock_particles):
+    filename = tmpdir / "test.h5"
+    storage = PickleStorage(filename=filename, mode="w+b")
+
+    storage.save_step(mock_particles)
+    assert storage._mode == "r+b"
