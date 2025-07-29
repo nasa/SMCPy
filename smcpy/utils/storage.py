@@ -1,12 +1,14 @@
 import h5py
 import numpy as np
 import os
+import pickle
 
 from abc import abstractmethod
 from pathlib import Path
 
 from ..smc.particles import Particles
 from .context_manager import ContextManager
+from collections import defaultdict
 
 
 class BaseStorage(ContextManager):
@@ -167,15 +169,15 @@ class HDF5Storage(BaseStorage):
 
 
 class PickleStorage(BaseStorage):
-    def __init__(self, filename, mode="r+b"):
-        if mode != "r+b" and mode != "w+b":
+    def __init__(self, filename, mode="rb+"):
+        if mode != "rb+" and mode != "wb":
             raise ValueError
 
         super().__init__()
         self._filename = Path(filename)
         self._len = 0
         self._mode = mode
-        if os.path.exists(filename) and mode == "r+b":
+        if os.path.exists(filename) and mode == "rb+":
             self._init_length_on_restart()
             self.is_restart = True
 
@@ -197,17 +199,21 @@ class PickleStorage(BaseStorage):
         self._close(pickle_file)
         return mut_ratio_sequence
 
+    def _load_data(self, file):
+        file.seek(0)
+        data = pickle.load(file)
+        return data
+
     def save_step(self, step):
         file = self._open_file(self._mode)
         if os.path.getsize(self._filename) != 0:
             data = self._load_data(file)
-            self._len = len(data.keys())
+            self._len = len(self)
         else:
             data = defaultdict(dict)
 
-        self._mode = "r+b"
+        self._mode = "rb+"
 
-        data[str(len(self))] = {}
         step_grp = data[str(len(self))]
 
         step_grp["log_likes"] = step.log_likes
@@ -226,14 +232,13 @@ class PickleStorage(BaseStorage):
 
         file.seek(0)
         pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
-        file.truncate()
         self._close(file)
 
     def _open_file(self, mode):
         self._refresh_filesystem_metadata()
 
         if not os.path.exists(self._filename):
-            file = open(self._filename, "w+b")
+            file = open(self._filename, "wb")
             return file
 
         file = open(self._filename, mode)
@@ -242,15 +247,14 @@ class PickleStorage(BaseStorage):
 
         return file
 
-    def _load_data(self, file):
-        file.seek(0)
-        data = pickle.load(file)
-        return data
-
     def _close(self, file):
-        data = self._load_data(file)
-        self._len = len(data.keys())
         file.close()
+        self._len = self._get_keys()
+
+    def _get_keys(self):
+        with open(self._filename, "rb") as pickle_file:
+            data = self._load_data(pickle_file)
+            return len(data.keys())
 
     def __getitem__(self, idx):
         pickle_file = self._open_file("rb")

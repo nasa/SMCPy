@@ -222,14 +222,14 @@ def test_picklestorage_no_restart_file_not_exist(tmpdir):
 
 def test_picklestorage_file_not_exist_write(tmpdir):
     f = tmpdir / "test.txt"
-    storage = PickleStorage(str(f), mode="w+b")
+    storage = PickleStorage(str(f), mode="wb")
     assert not storage.is_restart
 
 
 def test_picklestorage_no_restart_write_mode(tmpdir):
     f = tmpdir / "test.txt"
     f.write_text("test", encoding="ascii")
-    storage = PickleStorage(str(f), mode="w+b")
+    storage = PickleStorage(str(f), mode="wb")
     assert not storage.is_restart
 
 
@@ -303,11 +303,11 @@ def test_picklestorage_overwrite_mode(mocker, tmpdir):
     pickle_mock = mocker.patch("smcpy.utils.storage.open")
 
     filename = tmpdir / "test.pkl"
-    storage = PickleStorage(filename=filename, mode="w+b")
+    storage = PickleStorage(filename=filename, mode="rb+")
 
-    storage._open_file("w+b")
+    storage._open_file("wb")
 
-    pickle_mock.assert_called_once_with(filename, "w+b")
+    pickle_mock.assert_called_once_with(filename, "wb")
 
 
 def test_picklestorage_os_scandir_params(mocker, tmpdir):
@@ -315,7 +315,7 @@ def test_picklestorage_os_scandir_params(mocker, tmpdir):
 
     mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
     storage = PickleStorage(filename=filename)
-    storage._open_file("r+b")
+    storage._open_file("rb+")
 
     mock_scandir.assert_called_once_with(tmpdir)
 
@@ -332,10 +332,10 @@ def test_picklestorage_mode_default(tmpdir):
     filename = tmpdir / "test.pkl"
     storage = PickleStorage(filename=filename)
 
-    assert storage._mode == "r+b"
+    assert storage._mode == "rb+"
 
 
-@pytest.mark.parametrize("mode", ["w+b", "r+b"])
+@pytest.mark.parametrize("mode", ["wb", "rb+"])
 def test_picklestorage_mode_write(tmpdir, mode):
     filename = tmpdir / "test.pkl"
     storage = PickleStorage(filename=filename, mode=mode)
@@ -345,7 +345,7 @@ def test_picklestorage_mode_write(tmpdir, mode):
 
 def test_picklestorage_first_save_step_changes_mode(tmpdir, mock_particles):
     filename = tmpdir / "test.h5"
-    storage = PickleStorage(filename=filename, mode="w+b")
+    storage = PickleStorage(filename=filename, mode="wb")
 
     storage.save_step(mock_particles)
-    assert storage._mode == "r+b"
+    assert storage._mode == "rb+"
