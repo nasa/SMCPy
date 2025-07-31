@@ -8,7 +8,6 @@ from pathlib import Path
 
 from ..smc.particles import Particles
 from .context_manager import ContextManager
-from collections import defaultdict
 
 
 class BaseStorage(ContextManager):
@@ -169,23 +168,33 @@ class HDF5Storage(BaseStorage):
 
 
 class PickleStorage(BaseStorage):
-    def __init__(self, filename, mode="rb+"):
-        if mode != "rb+" and mode != "wb":
+    def __init__(self, filename, mode="ab"):
+        if mode != "ab" and mode != "wb":
             raise ValueError
 
         super().__init__()
         self._filename = Path(filename)
         self._len = 0
         self._mode = mode
-        if os.path.exists(filename) and mode == "rb+":
+        if os.path.exists(filename) and mode == "ab":
             self._init_length_on_restart()
             self.is_restart = True
+
+    def _load_data(self, pickle_file):
+        data = []
+        try:
+            while True:
+                object = pickle.load(pickle_file)
+                data.append(object)
+        except EOFError:
+            pass
+        return data
 
     @property
     def phi_sequence(self):
         pickle_file = self._open_file("rb")
         data = self._load_data(pickle_file)
-        phi_sequence = [data[i]["attrs"]["phi"] for i in sorted(data.keys(), key=int)]
+        phi_sequence = [obj.attrs["phi"] for obj in data]
         self._close(pickle_file)
         return phi_sequence
 
@@ -193,88 +202,59 @@ class PickleStorage(BaseStorage):
     def mut_ratio_sequence(self):
         pickle_file = self._open_file("rb")
         data = self._load_data(pickle_file)
-        mut_ratio_sequence = [
-            data[i]["attrs"]["mutation_ratio"] for i in sorted(data.keys(), key=int)
-        ]
+        mut_ratio_sequence = [obj.attrs["mutation_ratio"] for obj in data]
         self._close(pickle_file)
         return mut_ratio_sequence
 
-    def _load_data(self, file):
-        file.seek(0)
-        data = pickle.load(file)
-        return data
-
     def save_step(self, step):
         file = self._open_file(self._mode)
-        if os.path.getsize(self._filename) != 0:
-            data = self._load_data(file)
-            self._len = len(self)
-        else:
-            data = defaultdict(dict)
-
-        self._mode = "rb+"
-
-        step_grp = data[str(len(self))]
-
-        step_grp["log_likes"] = step.log_likes
-        step_grp["log_weights"] = step.log_weights
-
-        step_grp["attrs"] = {
-            "phi": step.attrs["phi"],
-            "total_unnorm_log_weight": step.total_unnorm_log_weight,
-            "mutation_ratio": step.attrs["mutation_ratio"],
-        }
-
-        step_grp["params"] = {}
-        param_grp = step_grp["params"]
-        for key, array in step.param_dict.items():
-            param_grp[key] = array
-
-        file.seek(0)
-        pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
+        self._mode = "ab"
+        pickle.dump(step, file, pickle.HIGHEST_PROTOCOL)
         self._close(file)
 
     def _open_file(self, mode):
         self._refresh_filesystem_metadata()
-
-        if not os.path.exists(self._filename):
-            file = open(self._filename, "wb")
-            return file
-
         file = open(self._filename, mode)
-        data = self._load_data(file)
-        self._len = len(data.keys())
+        if mode == "wb":
+            self._len == 0
+        else:
+            self._len = self._get_data_length()
 
         return file
 
     def _close(self, file):
         file.close()
-        self._len = self._get_keys()
+        self._len = self._get_data_length()
 
-    def _get_keys(self):
-        with open(self._filename, "rb") as pickle_file:
-            data = self._load_data(pickle_file)
-            return len(data.keys())
+    def _get_data_length(self):
+        count = 0
+
+        with open(self._filename, "rb") as f:
+            try:
+                while True:
+                    pickle.load(f)
+                    count += 1
+            except Exception:
+                pass
+        return count
 
     def __getitem__(self, idx):
         pickle_file = self._open_file("rb")
-        data = self._load_data(pickle_file)
-        step_grp = data[self._format_index(idx)]
+        idx = self._format_index(idx)
+        for i in range(idx + 1):
+            step = pickle.load(pickle_file)
 
-        kwargs = {k: v[:] for k, v in step_grp.items() if k not in ("params", "attrs")}
-        kwargs["params"] = {k: v[:] for k, v in step_grp["params"].items()}
-        particles = Particles(**kwargs)
-        particles.attrs = {k: v for k, v in step_grp["attrs"].items()}
-
-        self._close(pickle_file)
-        return particles
+            if i == idx:
+                break
+        step.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
+        return step
 
     def _format_index(self, idx):
         if idx < 0:
             idx = len(self) + idx
         if idx < 0 or idx >= len(self):
             raise IndexError(f"index {idx} out of range.")
-        return str(idx)
+        return idx
 
     def __next__(self):
         try:

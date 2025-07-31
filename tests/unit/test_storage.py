@@ -33,6 +33,31 @@ def mock_particles(mocker):
     return mock_particles
 
 
+from unittest.mock import Mock
+
+
+class DummyClass:
+    def get_ones(self):
+        return np.ones(10)
+
+
+@pytest.fixture
+def mock_nested_classes(mocker):
+    mocker.patch("smcpy.utils.storage.Particles", new=DummyParticles)
+
+    dummy_class1 = DummyClass()
+    dummy_class2 = DummyClass()
+    param_dict = {
+        "1": dummy_class1,
+    }
+    log_likes = np.ones((10, 1))
+    log_weights = np.ones((10, 1))
+    mock_particles = DummyParticles(param_dict, log_likes, log_weights)
+    mock_particles.total_unnorm_log_weight = 99
+    mock_particles.attrs = {"phi": 2, "mutation_ratio": 1}
+    return mock_particles
+
+
 def test_inmemorystorage_save(mocker):
     mocks = [mocker.Mock() for _ in range(3)]
     for i, mock in enumerate(mocks):
@@ -241,17 +266,19 @@ def test_picklestorage_restart(tmpdir, mocker):
     assert storage.is_restart
 
 
-def test_picklestorage_save(tmpdir, mock_particles):
+def test_picklestorage_save(tmpdir, mock_nested_classes):
     storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_particles)
-    storage.save_step(mock_particles)
+    storage.save_step(mock_nested_classes)
+    storage.save_step(mock_nested_classes)
 
     def test_particles(p):
-        np.testing.assert_array_equal(p.params, mock_particles.params)
-        np.testing.assert_array_equal(p.log_likes, mock_particles.log_likes)
-        np.testing.assert_array_equal(p.log_weights, mock_particles.log_weights)
-        for key, val in mock_particles.param_dict.items():
-            np.testing.assert_array_equal(p.param_dict[key], val)
+        np.testing.assert_array_equal(
+            p.params[0][0].get_ones(), mock_nested_classes.params[0][0].get_ones()
+        )
+        np.testing.assert_array_equal(p.log_likes, mock_nested_classes.log_likes)
+        np.testing.assert_array_equal(p.log_weights, mock_nested_classes.log_weights)
+        for _, dummy_class in mock_nested_classes.param_dict.items():
+            np.testing.assert_array_equal(dummy_class.get_ones(), np.ones(10))
         assert p.attrs == {"phi": 2, "mutation_ratio": 1, "total_unnorm_log_weight": 99}
 
     assert isinstance(storage[0], DummyParticles)
@@ -260,33 +287,33 @@ def test_picklestorage_save(tmpdir, mock_particles):
     assert storage.mut_ratio_sequence == [1, 1]
 
 
-def test_picklestorage_load_existing(tmpdir, mock_particles):
+def test_picklestorage_load_existing(tmpdir, mock_nested_classes):
     storage = PickleStorage(filename=tmpdir / "test.pkl")
-    mp2 = copy.deepcopy(mock_particles)
+    mp2 = copy.deepcopy(mock_nested_classes)
     mp2.attrs["phi"] = 1
     mp2.attrs["mutation_ratio"] = 0
-    [storage.save_step(mock_particles) for _ in range(12)]  # 2 digits tests sort
+    [storage.save_step(mock_nested_classes) for _ in range(12)]  # 2 digits tests sort
     storage.save_step(mp2)
 
     storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_particles)
+    storage.save_step(mock_nested_classes)
 
     assert storage.phi_sequence == [2] * 12 + [1, 2]
     assert storage.mut_ratio_sequence == [1] * 12 + [0, 1]
 
 
-def test_picklestorage_length(tmpdir, mock_particles):
+def test_picklestorage_length(tmpdir, mock_nested_classes):
     storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_particles)
-    storage.save_step(mock_particles)
+    storage.save_step(mock_nested_classes)
+    storage.save_step(mock_nested_classes)
 
     assert len(storage) == 2
 
 
-def test_picklestorage_neg_indexing(tmpdir, mock_particles):
+def test_picklestorage_neg_indexing(tmpdir, mock_nested_classes):
     storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_particles)
-    storage.save_step(mock_particles)
+    storage.save_step(mock_nested_classes)
+    storage.save_step(mock_nested_classes)
 
     assert storage[-1]
     assert storage[-2]
@@ -303,7 +330,7 @@ def test_picklestorage_overwrite_mode(mocker, tmpdir):
     pickle_mock = mocker.patch("smcpy.utils.storage.open")
 
     filename = tmpdir / "test.pkl"
-    storage = PickleStorage(filename=filename, mode="rb+")
+    storage = PickleStorage(filename=filename, mode="ab")
 
     storage._open_file("wb")
 
@@ -315,7 +342,7 @@ def test_picklestorage_os_scandir_params(mocker, tmpdir):
 
     mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
     storage = PickleStorage(filename=filename)
-    storage._open_file("rb+")
+    storage._open_file("ab")
 
     mock_scandir.assert_called_once_with(tmpdir)
 
@@ -332,10 +359,10 @@ def test_picklestorage_mode_default(tmpdir):
     filename = tmpdir / "test.pkl"
     storage = PickleStorage(filename=filename)
 
-    assert storage._mode == "rb+"
+    assert storage._mode == "ab"
 
 
-@pytest.mark.parametrize("mode", ["wb", "rb+"])
+@pytest.mark.parametrize("mode", ["wb", "ab"])
 def test_picklestorage_mode_write(tmpdir, mode):
     filename = tmpdir / "test.pkl"
     storage = PickleStorage(filename=filename, mode=mode)
@@ -343,9 +370,9 @@ def test_picklestorage_mode_write(tmpdir, mode):
     assert storage._mode == mode
 
 
-def test_picklestorage_first_save_step_changes_mode(tmpdir, mock_particles):
+def test_picklestorage_first_save_step_changes_mode(tmpdir, mock_nested_classes):
     filename = tmpdir / "test.h5"
     storage = PickleStorage(filename=filename, mode="wb")
 
-    storage.save_step(mock_particles)
-    assert storage._mode == "rb+"
+    storage.save_step(mock_nested_classes)
+    assert storage._mode == "ab"
