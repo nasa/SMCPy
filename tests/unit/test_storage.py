@@ -37,7 +37,8 @@ from unittest.mock import Mock
 
 
 class DummyClass:
-    zeros = np.zeros(10)
+    def __init__(self):
+        self.zeros = np.zeros(10)
 
     def get_ones(self):
         return np.ones(10)
