@@ -241,11 +241,11 @@ class PickleStorage(BaseStorage):
     def __getitem__(self, idx):
         pickle_file = self._open_file("rb")
         idx = self._format_index(idx)
-        for i in range(idx + 1):
+
+        step = pickle.load(pickle_file)
+        for _ in range(idx):
             step = pickle.load(pickle_file)
 
-            if i == idx:
-                break
         step.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
         return step
 

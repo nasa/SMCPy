@@ -37,6 +37,8 @@ from unittest.mock import Mock
 
 
 class DummyClass:
+    zeros = np.zeros(10)
+
     def get_ones(self):
         return np.ones(10)
 
@@ -46,7 +48,7 @@ def mock_nested_classes(mocker):
     mocker.patch("smcpy.utils.storage.Particles", new=DummyParticles)
 
     dummy_class1 = DummyClass()
-    dummy_class2 = DummyClass()
+
     param_dict = {
         "1": dummy_class1,
     }
@@ -277,8 +279,14 @@ def test_picklestorage_save(tmpdir, mock_nested_classes):
         )
         np.testing.assert_array_equal(p.log_likes, mock_nested_classes.log_likes)
         np.testing.assert_array_equal(p.log_weights, mock_nested_classes.log_weights)
-        for _, dummy_class in mock_nested_classes.param_dict.items():
-            np.testing.assert_array_equal(dummy_class.get_ones(), np.ones(10))
+        for key, dummy_class in mock_nested_classes.param_dict.items():
+            get_dummy_class_particles = p.param_dict[key]
+            np.testing.assert_array_equal(
+                get_dummy_class_particles.get_ones(), dummy_class.get_ones()
+            )
+            np.testing.assert_array_equal(
+                get_dummy_class_particles.zeros, dummy_class.zeros
+            )
         assert p.attrs == {"phi": 2, "mutation_ratio": 1, "total_unnorm_log_weight": 99}
 
     assert isinstance(storage[0], DummyParticles)
