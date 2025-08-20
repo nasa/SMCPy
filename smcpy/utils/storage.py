@@ -78,7 +78,9 @@ class InMemoryStorage(BaseStorage):
 class HDF5Storage(BaseStorage):
     def __init__(self, filename, mode="a"):
         if mode != "a" and mode != "w":
-            raise ValueError
+            raise ValueError(
+                "Available modes are 'a' (default, read/append) and 'w' (overwrite)."
+            )
 
         super().__init__()
         self._filename = Path(filename)
@@ -170,7 +172,9 @@ class HDF5Storage(BaseStorage):
 class PickleStorage(BaseStorage):
     def __init__(self, filename, mode="a"):
         if mode != "a" and mode != "w":
-            raise ValueError
+            raise ValueError(
+                "Available modes are 'a' (default, read/append) and 'w' (overwrite)."
+            )
 
         super().__init__()
         self._filename = Path(filename)
@@ -180,7 +184,8 @@ class PickleStorage(BaseStorage):
             self._init_length_on_restart()
             self.is_restart = True
 
-    def _load_data(self, pickle_file):
+    def _load_data(self):
+        pickle_file = self._open_file("rb")
         data = []
         try:
             while True:
@@ -188,22 +193,19 @@ class PickleStorage(BaseStorage):
                 data.append(object)
         except EOFError:
             pass
+        self._close(pickle_file)
         return data
 
     @property
     def phi_sequence(self):
-        pickle_file = self._open_file("rb")
-        data = self._load_data(pickle_file)
+        data = self._load_data()
         phi_sequence = [obj.attrs["phi"] for obj in data]
-        self._close(pickle_file)
         return phi_sequence
 
     @property
     def mut_ratio_sequence(self):
-        pickle_file = self._open_file("rb")
-        data = self._load_data(pickle_file)
+        data = self._load_data()
         mut_ratio_sequence = [obj.attrs["mutation_ratio"] for obj in data]
-        self._close(pickle_file)
         return mut_ratio_sequence
 
     def save_step(self, step):
@@ -234,7 +236,7 @@ class PickleStorage(BaseStorage):
                 while True:
                     pickle.load(f)
                     count += 1
-            except Exception:
+            except EOFError:
                 pass
         return count
 
@@ -247,6 +249,7 @@ class PickleStorage(BaseStorage):
             step = pickle.load(pickle_file)
 
         step.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
+        self._close(pickle_file)
         return step
 
     def _format_index(self, idx):
