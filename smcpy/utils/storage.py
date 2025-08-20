@@ -90,20 +90,20 @@ class HDF5Storage(BaseStorage):
 
     @property
     def phi_sequence(self):
-        h5 = self._open_h5("r")
+        h5 = self._open_file("r")
         phi_sequence = [h5[i].attrs["phi"] for i in h5.keys()]
         self._close(h5)
         return phi_sequence
 
     @property
     def mut_ratio_sequence(self):
-        h5 = self._open_h5("r")
+        h5 = self._open_file("r")
         mut_ratio_sequence = [h5[i].attrs["mutation_ratio"] for i in h5.keys()]
         self._close(h5)
         return mut_ratio_sequence
 
     def save_step(self, step):
-        h5 = self._open_h5(self._mode)
+        h5 = self._open_file(self._mode)
         self._mode = "a"
         step_grp = h5.create_group(str(len(self)))
         step_grp.attrs["phi"] = step.attrs["phi"]
@@ -118,7 +118,7 @@ class HDF5Storage(BaseStorage):
 
         self._close(h5)
 
-    def _open_h5(self, mode):
+    def _open_file(self, mode):
         self._refresh_filesystem_metadata()
 
         h5 = h5py.File(self._filename, mode, track_order=True)
@@ -130,7 +130,7 @@ class HDF5Storage(BaseStorage):
         h5.close()
 
     def __getitem__(self, idx):
-        h5 = self._open_h5("r")
+        h5 = self._open_file("r")
         step_grp = h5[self._format_index(idx)]
 
         kwargs = {k: v[:] for k, v in step_grp.items() if k != "params"}
@@ -160,7 +160,7 @@ class HDF5Storage(BaseStorage):
         return self._len
 
     def _init_length_on_restart(self):
-        h5 = self._open_h5("r")
+        h5 = self._open_file("r")
         self._close(h5)
 
     def _refresh_filesystem_metadata(self):
@@ -168,15 +168,15 @@ class HDF5Storage(BaseStorage):
 
 
 class PickleStorage(BaseStorage):
-    def __init__(self, filename, mode="ab"):
-        if mode != "ab" and mode != "wb":
+    def __init__(self, filename, mode="a"):
+        if mode != "a" and mode != "w":
             raise ValueError
 
         super().__init__()
         self._filename = Path(filename)
         self._len = 0
-        self._mode = mode
-        if os.path.exists(filename) and mode == "ab":
+        self._mode = mode + "b"
+        if os.path.exists(filename) and mode == "a":
             self._init_length_on_restart()
             self.is_restart = True
 

@@ -2,8 +2,6 @@ import copy
 import numpy as np
 import pytest
 
-from pathlib import Path
-
 from smcpy.utils.storage import *
 
 
@@ -19,39 +17,10 @@ class DummyParticles:
 @pytest.fixture
 def mock_particles(mocker):
     mocker.patch("smcpy.utils.storage.Particles", new=DummyParticles)
-    mock_particles = mocker.Mock()
-    mock_particles.params = np.array([[2] * 10, [0] * 10, [1] * 10]).T
-    mock_particles.param_dict = {
+    param_dict = {
         "1": np.ones(10) * 2,
         "0": np.zeros(10),
         "2": np.ones(10),
-    }
-    mock_particles.log_likes = np.ones((10, 1))
-    mock_particles.log_weights = np.ones((10, 1))
-    mock_particles.total_unnorm_log_weight = 99
-    mock_particles.attrs = {"phi": 2, "mutation_ratio": 1}
-    return mock_particles
-
-
-from unittest.mock import Mock
-
-
-class DummyClass:
-    def __init__(self):
-        self.zeros = np.zeros(10)
-
-    def get_ones(self):
-        return np.ones(10)
-
-
-@pytest.fixture
-def mock_nested_classes(mocker):
-    mocker.patch("smcpy.utils.storage.Particles", new=DummyParticles)
-
-    dummy_class1 = DummyClass()
-
-    param_dict = {
-        "1": dummy_class1,
     }
     log_likes = np.ones((10, 1))
     log_weights = np.ones((10, 1))
@@ -59,6 +28,11 @@ def mock_nested_classes(mocker):
     mock_particles.total_unnorm_log_weight = 99
     mock_particles.attrs = {"phi": 2, "mutation_ratio": 1}
     return mock_particles
+
+
+parametrize_file_storage = pytest.mark.parametrize(
+    "storage_type, extension_type", [(HDF5Storage, "h5"), (PickleStorage, "pkl")]
+)
 
 
 def test_inmemorystorage_save(mocker):
@@ -105,35 +79,59 @@ def test_inmemorystorage_cannot_restart():
     assert not storage.is_restart
 
 
-def test_hdf5storage_no_restart_file_not_exist(tmpdir):
+@parametrize_file_storage
+def test_file_storage_no_restart_file_not_exist(tmpdir, storage_type, extension_type):
     f = tmpdir / "test.txt"
-    storage = HDF5Storage(str(f))
+    storage = storage_type(str(f))
     assert not storage.is_restart
 
 
-def test_hdf5storage_file_not_exist_write(tmpdir):
+@parametrize_file_storage
+def test_file_storage_not_exist_write(tmpdir, storage_type, extension_type):
     f = tmpdir / "test.txt"
-    storage = HDF5Storage(str(f), mode="w")
+    storage = storage_type(str(f), mode="w")
     assert not storage.is_restart
 
 
-def test_hdf5storage_no_restart_write_mode(tmpdir):
+@parametrize_file_storage
+def test_file_storage_no_restart_write_mode(tmpdir, storage_type, extension_type):
     f = tmpdir / "test.txt"
     f.write_text("test", encoding="ascii")
-    storage = HDF5Storage(str(f), mode="w")
+    storage = storage_type(str(f), mode="w")
     assert not storage.is_restart
 
 
-def test_hdf5storage_restart(tmpdir, mocker):
-    f = tmpdir / "test.h5"
+@parametrize_file_storage
+def test_file_storage_restart(tmpdir, mocker, storage_type, extension_type):
+    f = tmpdir / f"test.{extension_type}"
     f.write_text("test", encoding="ascii")
-    mocker.patch("smcpy.utils.storage.HDF5Storage._init_length_on_restart")
-    storage = HDF5Storage(str(f))
+    mocker.patch(f"smcpy.utils.storage.{storage_type.__name__}._init_length_on_restart")
+    storage = storage_type(str(f))
     assert storage.is_restart
 
 
-def test_hdf5storage_save(tmpdir, mock_particles):
-    storage = HDF5Storage(filename=tmpdir / "test.h5")
+@parametrize_file_storage
+def test_file_storage_os_scandir_params(mocker, tmpdir, storage_type, extension_type):
+    filename = tmpdir / f"test.{extension_type}"
+
+    mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
+    storage = storage_type(filename=filename)
+    storage._open_file("a")
+
+    mock_scandir.assert_called_once_with(tmpdir)
+
+
+@parametrize_file_storage
+@pytest.mark.parametrize("mode", [1, 1000, "b", "abc", "A", "W"])
+def test_file_storage_invalid_input_mode(tmpdir, mode, storage_type, extension_type):
+    filename = tmpdir / f"test.{extension_type}"
+    with pytest.raises(ValueError):
+        storage_type(filename=filename, mode=mode)
+
+
+@parametrize_file_storage
+def test_file_storage_save(tmpdir, mock_particles, storage_type, extension_type):
+    storage = storage_type(filename=tmpdir / f"test.{extension_type}")
     storage.save_step(mock_particles)
     storage.save_step(mock_particles)
 
@@ -151,31 +149,38 @@ def test_hdf5storage_save(tmpdir, mock_particles):
     assert storage.mut_ratio_sequence == [1, 1]
 
 
-def test_hdf5storage_load_existing(tmpdir, mock_particles):
-    storage = HDF5Storage(filename=tmpdir / "test.h5")
+@parametrize_file_storage
+def test_file_storage_load_existing(
+    tmpdir, mock_particles, storage_type, extension_type
+):
+    storage = storage_type(filename=tmpdir / f"test.{extension_type}")
     mp2 = copy.deepcopy(mock_particles)
     mp2.attrs["phi"] = 1
     mp2.attrs["mutation_ratio"] = 0
     [storage.save_step(mock_particles) for _ in range(12)]  # 2 digits tests sort
     storage.save_step(mp2)
 
-    storage = HDF5Storage(filename=tmpdir / "test.h5")
+    storage = storage_type(filename=tmpdir / f"test.{extension_type}")
     storage.save_step(mock_particles)
 
     assert storage.phi_sequence == [2] * 12 + [1, 2]
     assert storage.mut_ratio_sequence == [1] * 12 + [0, 1]
 
 
-def test_hdf5storage_length(tmpdir, mock_particles):
-    storage = HDF5Storage(filename=tmpdir / "test.h5")
+@parametrize_file_storage
+def test_file_storage_length(tmpdir, mock_particles, storage_type, extension_type):
+    storage = storage_type(filename=tmpdir / f"test.{extension_type}")
     storage.save_step(mock_particles)
     storage.save_step(mock_particles)
 
     assert len(storage) == 2
 
 
-def test_hdf5storage_neg_indexing(tmpdir, mock_particles):
-    storage = HDF5Storage(filename=tmpdir / "test.h5")
+@parametrize_file_storage
+def test_file_storage_neg_indexing(
+    tmpdir, mock_particles, storage_type, extension_type
+):
+    storage = storage_type(filename=tmpdir / f"test.{extension_type}")
     storage.save_step(mock_particles)
     storage.save_step(mock_particles)
 
@@ -196,27 +201,9 @@ def test_hdf5storage_overwrite_mode(mocker, tmpdir):
     filename = tmpdir / "test.h5"
     storage = HDF5Storage(filename=filename, mode="a")
 
-    storage._open_h5("w")
+    storage._open_file("w")
 
     h5_mock.assert_called_once_with(filename, "w", track_order=True)
-
-
-def test_hdf5storage_os_scandir_params(mocker, tmpdir):
-    filename = tmpdir / "test.h5"
-
-    mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
-    storage = HDF5Storage(filename=filename)
-    storage._open_h5("a")
-
-    mock_scandir.assert_called_once_with(tmpdir)
-
-
-@pytest.mark.parametrize("mode", [1, 1000, "b", "abc", "A", "W"])
-def test_hdf5storage_invalid_input_mode(tmpdir, mode):
-    filename = tmpdir / "test.h5"
-
-    with pytest.raises(ValueError):
-        HDF5Storage(filename=filename, mode=mode)
 
 
 def test_hdf5storage_mode_default(tmpdir):
@@ -242,126 +229,15 @@ def test_hdf5storage_first_save_step_changes_mode(tmpdir, mock_particles):
     assert storage._mode == "a"
 
 
-def test_picklestorage_no_restart_file_not_exist(tmpdir):
-    f = tmpdir / "test.txt"
-    storage = PickleStorage(str(f))
-    assert not storage.is_restart
-
-
-def test_picklestorage_file_not_exist_write(tmpdir):
-    f = tmpdir / "test.txt"
-    storage = PickleStorage(str(f), mode="wb")
-    assert not storage.is_restart
-
-
-def test_picklestorage_no_restart_write_mode(tmpdir):
-    f = tmpdir / "test.txt"
-    f.write_text("test", encoding="ascii")
-    storage = PickleStorage(str(f), mode="wb")
-    assert not storage.is_restart
-
-
-def test_picklestorage_restart(tmpdir, mocker):
-    f = tmpdir / "test.pkl"
-    f.write_text("test", encoding="ascii")
-    mocker.patch("smcpy.utils.storage.PickleStorage._init_length_on_restart")
-    storage = PickleStorage(str(f))
-    assert storage.is_restart
-
-
-def test_picklestorage_save(tmpdir, mock_nested_classes):
-    storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_nested_classes)
-    storage.save_step(mock_nested_classes)
-
-    def test_particles(p):
-        np.testing.assert_array_equal(
-            p.params[0][0].get_ones(), mock_nested_classes.params[0][0].get_ones()
-        )
-        np.testing.assert_array_equal(p.log_likes, mock_nested_classes.log_likes)
-        np.testing.assert_array_equal(p.log_weights, mock_nested_classes.log_weights)
-        for key, dummy_class in mock_nested_classes.param_dict.items():
-            get_dummy_class_particles = p.param_dict[key]
-            np.testing.assert_array_equal(
-                get_dummy_class_particles.get_ones(), dummy_class.get_ones()
-            )
-            np.testing.assert_array_equal(
-                get_dummy_class_particles.zeros, dummy_class.zeros
-            )
-        assert p.attrs == {"phi": 2, "mutation_ratio": 1, "total_unnorm_log_weight": 99}
-
-    assert isinstance(storage[0], DummyParticles)
-    [test_particles(p) for p in storage]
-    assert storage.phi_sequence == [2, 2]
-    assert storage.mut_ratio_sequence == [1, 1]
-
-
-def test_picklestorage_load_existing(tmpdir, mock_nested_classes):
-    storage = PickleStorage(filename=tmpdir / "test.pkl")
-    mp2 = copy.deepcopy(mock_nested_classes)
-    mp2.attrs["phi"] = 1
-    mp2.attrs["mutation_ratio"] = 0
-    [storage.save_step(mock_nested_classes) for _ in range(12)]  # 2 digits tests sort
-    storage.save_step(mp2)
-
-    storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_nested_classes)
-
-    assert storage.phi_sequence == [2] * 12 + [1, 2]
-    assert storage.mut_ratio_sequence == [1] * 12 + [0, 1]
-
-
-def test_picklestorage_length(tmpdir, mock_nested_classes):
-    storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_nested_classes)
-    storage.save_step(mock_nested_classes)
-
-    assert len(storage) == 2
-
-
-def test_picklestorage_neg_indexing(tmpdir, mock_nested_classes):
-    storage = PickleStorage(filename=tmpdir / "test.pkl")
-    storage.save_step(mock_nested_classes)
-    storage.save_step(mock_nested_classes)
-
-    assert storage[-1]
-    assert storage[-2]
-    assert storage[0]
-    assert storage[1]
-
-    with pytest.raises(IndexError):
-        storage[2]
-    with pytest.raises(IndexError):
-        storage[-3]
-
-
 def test_picklestorage_overwrite_mode(mocker, tmpdir):
     pickle_mock = mocker.patch("smcpy.utils.storage.open")
 
     filename = tmpdir / "test.pkl"
-    storage = PickleStorage(filename=filename, mode="ab")
+    storage = PickleStorage(filename=filename, mode="a")
 
     storage._open_file("wb")
 
     pickle_mock.assert_called_once_with(filename, "wb")
-
-
-def test_picklestorage_os_scandir_params(mocker, tmpdir):
-    filename = tmpdir / "test.pkl"
-
-    mock_scandir = mocker.patch("smcpy.utils.storage.os.scandir")
-    storage = PickleStorage(filename=filename)
-    storage._open_file("ab")
-
-    mock_scandir.assert_called_once_with(tmpdir)
-
-
-@pytest.mark.parametrize("mode", [1, 1000, "b", "abc", "A", "W"])
-def test_picklestorage_invalid_input_mode(tmpdir, mode):
-    filename = tmpdir / "test.pkl"
-
-    with pytest.raises(ValueError):
-        PickleStorage(filename=filename, mode=mode)
 
 
 def test_picklestorage_mode_default(tmpdir):
@@ -371,17 +247,17 @@ def test_picklestorage_mode_default(tmpdir):
     assert storage._mode == "ab"
 
 
-@pytest.mark.parametrize("mode", ["wb", "ab"])
+@pytest.mark.parametrize("mode", ["w", "a"])
 def test_picklestorage_mode_write(tmpdir, mode):
     filename = tmpdir / "test.pkl"
     storage = PickleStorage(filename=filename, mode=mode)
 
-    assert storage._mode == mode
+    assert storage._mode == mode + "b"
 
 
-def test_picklestorage_first_save_step_changes_mode(tmpdir, mock_nested_classes):
+def test_picklestorage_first_save_step_changes_mode(tmpdir, mock_particles):
     filename = tmpdir / "test.h5"
-    storage = PickleStorage(filename=filename, mode="wb")
+    storage = PickleStorage(filename=filename, mode="w")
 
-    storage.save_step(mock_nested_classes)
+    storage.save_step(mock_particles)
     assert storage._mode == "ab"
