@@ -49,7 +49,7 @@ jobs:
 
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/smcpy
+      url: https://test.pypi.org/p/test-smcpy
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
