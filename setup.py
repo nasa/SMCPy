@@ -1,11 +1,14 @@
 from setuptools import setup
+import os
 
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+package_name = os.environ.get("PACKAGE_NAME", "smcpy")
+
 setup(
-    name="smcpy",
+    name=package_name,
     version="0.1.6",
     author="Patrick Leser",
     author_email="patrick.e.leser@nasa.gov",
