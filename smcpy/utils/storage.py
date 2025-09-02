@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 import os
+import pickle
 
 from abc import abstractmethod
 from pathlib import Path
@@ -77,7 +78,9 @@ class InMemoryStorage(BaseStorage):
 class HDF5Storage(BaseStorage):
     def __init__(self, filename, mode="a"):
         if mode != "a" and mode != "w":
-            raise ValueError
+            raise ValueError(
+                "Available modes are 'a' (default, read/append) and 'w' (overwrite)."
+            )
 
         super().__init__()
         self._filename = Path(filename)
@@ -89,22 +92,20 @@ class HDF5Storage(BaseStorage):
 
     @property
     def phi_sequence(self):
-        h5 = self._open_h5("r")
-        phi_sequence = [h5[i].attrs["phi"] for i in sorted(h5.keys(), key=int)]
+        h5 = self._open_file("r")
+        phi_sequence = [h5[i].attrs["phi"] for i in h5.keys()]
         self._close(h5)
         return phi_sequence
 
     @property
     def mut_ratio_sequence(self):
-        h5 = self._open_h5("r")
-        mut_ratio_sequence = [
-            h5[i].attrs["mutation_ratio"] for i in sorted(h5.keys(), key=int)
-        ]
+        h5 = self._open_file("r")
+        mut_ratio_sequence = [h5[i].attrs["mutation_ratio"] for i in h5.keys()]
         self._close(h5)
         return mut_ratio_sequence
 
     def save_step(self, step):
-        h5 = self._open_h5(self._mode)
+        h5 = self._open_file(self._mode)
         self._mode = "a"
         step_grp = h5.create_group(str(len(self)))
         step_grp.attrs["phi"] = step.attrs["phi"]
@@ -119,10 +120,10 @@ class HDF5Storage(BaseStorage):
 
         self._close(h5)
 
-    def _open_h5(self, mode):
+    def _open_file(self, mode):
         self._refresh_filesystem_metadata()
 
-        h5 = h5py.File(self._filename, mode)
+        h5 = h5py.File(self._filename, mode, track_order=True)
         self._len = len(h5.keys())
         return h5
 
@@ -131,7 +132,7 @@ class HDF5Storage(BaseStorage):
         h5.close()
 
     def __getitem__(self, idx):
-        h5 = self._open_h5("r")
+        h5 = self._open_file("r")
         step_grp = h5[self._format_index(idx)]
 
         kwargs = {k: v[:] for k, v in step_grp.items() if k != "params"}
@@ -161,8 +162,117 @@ class HDF5Storage(BaseStorage):
         return self._len
 
     def _init_length_on_restart(self):
-        h5 = self._open_h5("r")
+        h5 = self._open_file("r")
         self._close(h5)
+
+    def _refresh_filesystem_metadata(self):
+        os.scandir(self._filename.parent)
+
+
+class PickleStorage(BaseStorage):
+    def __init__(self, filename, mode="a"):
+        if mode != "a" and mode != "w":
+            raise ValueError(
+                "Available modes are 'a' (default, read/append) and 'w' (overwrite)."
+            )
+
+        super().__init__()
+        self._filename = Path(filename)
+        self._len = 0
+        self._mode = mode + "b"
+        if os.path.exists(filename) and mode == "a":
+            self._init_length_on_restart()
+            self.is_restart = True
+
+    def _load_data(self):
+        pickle_file = self._open_file("rb")
+        data = []
+        try:
+            while True:
+                object = pickle.load(pickle_file)
+                data.append(object)
+        except EOFError:
+            pass
+        self._close(pickle_file)
+        return data
+
+    @property
+    def phi_sequence(self):
+        data = self._load_data()
+        phi_sequence = [obj.attrs["phi"] for obj in data]
+        return phi_sequence
+
+    @property
+    def mut_ratio_sequence(self):
+        data = self._load_data()
+        mut_ratio_sequence = [obj.attrs["mutation_ratio"] for obj in data]
+        return mut_ratio_sequence
+
+    def save_step(self, step):
+        file = self._open_file(self._mode)
+        self._mode = "ab"
+        pickle.dump(step, file, pickle.HIGHEST_PROTOCOL)
+        self._close(file)
+
+    def _open_file(self, mode):
+        self._refresh_filesystem_metadata()
+        file = open(self._filename, mode)
+        if mode == "wb":
+            self._len == 0
+        else:
+            self._len = self._get_data_length()
+
+        return file
+
+    def _close(self, file):
+        file.close()
+        self._len = self._get_data_length()
+
+    def _get_data_length(self):
+        count = 0
+
+        with open(self._filename, "rb") as f:
+            try:
+                while True:
+                    pickle.load(f)
+                    count += 1
+            except EOFError:
+                pass
+        return count
+
+    def __getitem__(self, idx):
+        pickle_file = self._open_file("rb")
+        idx = self._format_index(idx)
+
+        step = pickle.load(pickle_file)
+        for _ in range(idx):
+            step = pickle.load(pickle_file)
+
+        step.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
+        self._close(pickle_file)
+        return step
+
+    def _format_index(self, idx):
+        if idx < 0:
+            idx = len(self) + idx
+        if idx < 0 or idx >= len(self):
+            raise IndexError(f"index {idx} out of range.")
+        return idx
+
+    def __next__(self):
+        try:
+            output = self[self._idx]
+            self._idx += 1
+            return output
+        except IndexError:
+            raise StopIteration
+
+    def __len__(self):
+        return self._len
+
+    def _init_length_on_restart(self):
+        pickle_file = self._open_file("rb")
+        self._close(pickle_file)
 
     def _refresh_filesystem_metadata(self):
         os.scandir(self._filename.parent)

@@ -1,5 +1,6 @@
 SMCPy - **S**equential **M**onte **C**arlo with **Py**thon 
 ==========================================================================
+[![Build](https://github.com/nasa/SMCPy/actions/workflows/tests.yml/badge.svg)](https://github.com/nasa/SMCPy/actions)
 
 ## Description
 SMCPy is an open-source package for performing uncertainty quantification using
@@ -39,7 +40,7 @@ versions of those presented in the following articles, respectively:
 
 The first is a simple likelihood tempering approach in which the tempering
 sequence is fixed and user-specified
-([FixedSampler](https://github.com/nasa/SMCPy/blob/8b7813106de077c80992ba37d2d85944d6cce40c/smcpy/samplers.py#L44)).
+([FixedPhiSampler](https://github.com/nasa/SMCPy/blob/8b7813106de077c80992ba37d2d85944d6cce40c/smcpy/samplers.py#L44)).
 The second is an adaptive approach that chooses the tempering steps based on a
 target effective sample size ([AdaptiveSampler](https://github.com/nasa/SMCPy/blob/8b7813106de077c80992ba37d2d85944d6cce40c/smcpy/samplers.py#L92)).
 

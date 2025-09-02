@@ -31,6 +31,7 @@ AGREEMENT.
 """
 
 import numpy as np
+import time
 
 from abc import ABC, abstractmethod
 from scipy.optimize import bisect
@@ -122,7 +123,7 @@ class SamplerBase:
         pbar.close()
 
 
-class FixedSampler(SamplerBase):
+class FixedPhiSampler(SamplerBase):
     """
     SMC sampler using a fixed phi sequence.
     """
@@ -297,3 +298,81 @@ class AdaptiveSampler(SamplerBase):
 
     def _full_step_meets_target(self, phi_old, particles, target_ess):
         return self.predict_ess_margin(1, phi_old, particles, target_ess) > 0
+
+
+class FixedTimeSampler(AdaptiveSampler):
+    def __init__(
+        self,
+        mcmc_kernel,
+        time,
+        show_progress_bar=True,
+        norm_time_threshold=0.8,
+        time_knockdown_factor=0.95,
+    ):
+        self.buffer_time = time * norm_time_threshold
+        self.final_time = time * time_knockdown_factor
+
+        self._time_history = [0]
+        self._buffer_phi = None
+        self._start_time = None
+        super().__init__(mcmc_kernel, show_progress_bar)
+
+    @property
+    def prev_time_step(self):
+        return self._time_history[-1] - self._time_history[-2]
+
+    def sample(
+        self,
+        num_particles,
+        num_mcmc_samples,
+        target_ess=0.8,
+        min_dphi=None,
+        resample_rng=standard,
+        particles_warn_threshold=0.01,
+    ):
+        self._start_time = time.time()
+
+        res, res_mll = super().sample(
+            num_particles=num_particles,
+            num_mcmc_samples=num_mcmc_samples,
+            target_ess=target_ess,
+            min_dphi=min_dphi,
+            resample_rng=resample_rng,
+            particles_warn_threshold=particles_warn_threshold,
+        )
+
+        return res, res_mll
+
+    def _do_smc_step(self, phi, num_mcmc_samples):
+        super()._do_smc_step(phi=phi, num_mcmc_samples=num_mcmc_samples)
+
+        self._time_history.append(time.time() - self._start_time)
+
+        estimated_future_time = self.prev_time_step + self._time_history[-1]
+        if self._buffer_phi is None and estimated_future_time >= self.buffer_time:
+            self._buffer_phi = phi
+
+    def optimize_step(self, particles, phi_old, target_ess=1):
+        if len(self._time_history) >= 2:
+            estimated_two_step_future_time = (
+                2 * (self.prev_time_step) + self._time_history[-1]
+            )
+            if estimated_two_step_future_time >= self.final_time:
+                return 1
+
+        curr_adaptive_phi = super().optimize_step(
+            particles=particles, phi_old=phi_old, target_ess=target_ess
+        )
+
+        if self._buffer_phi:
+            estimated_future_time = self.prev_time_step + self._time_history[-1]
+            return 10 ** max(
+                np.log10(curr_adaptive_phi),
+                np.interp(
+                    estimated_future_time,
+                    [self.buffer_time, self.final_time],
+                    [np.log10(self._buffer_phi), 0],
+                ),
+            )
+
+        return curr_adaptive_phi
