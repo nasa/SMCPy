@@ -9,7 +9,7 @@ package_name = os.environ.get("PACKAGE_NAME", "smcpy")
 
 setup(
     name=package_name,
-    version="0.1.6",
+    version="0.1.7",
     author="Patrick Leser",
     author_email="patrick.e.leser@nasa.gov",
     description="A package for performing uncertainty quantification using a parallelized sequential Monte Carlo sampler.",
