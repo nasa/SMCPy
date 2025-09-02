@@ -199,7 +199,7 @@ def test_hdf5storage_overwrite_mode(mocker, tmpdir):
     h5_mock = mocker.patch("smcpy.utils.storage.h5py.File")
 
     filename = tmpdir / "test.h5"
-    storage = HDF5Storage(filename=filename, mode="a")
+    storage = HDF5Storage(filename=filename)
 
     storage._open_file("w")
 
@@ -233,7 +233,7 @@ def test_picklestorage_overwrite_mode(mocker, tmpdir):
     pickle_mock = mocker.patch("smcpy.utils.storage.open")
 
     filename = tmpdir / "test.pkl"
-    storage = PickleStorage(filename=filename, mode="a")
+    storage = PickleStorage(filename=filename)
 
     storage._open_file("wb")
 
@@ -261,3 +261,17 @@ def test_picklestorage_first_save_step_changes_mode(tmpdir, mock_particles):
 
     storage.save_step(mock_particles)
     assert storage._mode == "ab"
+
+
+def test_picklestorage_array_objects(tmpdir, mock_particles):
+    storage = PickleStorage(filename=tmpdir / f"test.pkl")
+    mock_particles.params = [list() for _ in range(3)]
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
+
+    def test_changed_array(p):
+        for obj in p.params:
+            print(obj)
+            assert isinstance(obj, list)
+
+    [test_changed_array(p) for p in storage]
