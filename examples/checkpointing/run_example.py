@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import multiprocessing
 import numpy as np
 import time
 
@@ -6,9 +7,8 @@ from scipy.stats import uniform
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
-from smcpy import FixedPhiSampler, AdaptiveSampler
-from smcpy.utils.plotter import *
-from smcpy.utils.storage import HDF5Storage
+from smcpy import AdaptiveSampler
+from smcpy.utils.storage import HDF5Storage as Storage
 
 
 def eval_model(theta):
@@ -20,25 +20,26 @@ def eval_model(theta):
 
 def generate_data(eval_model, std_dev, plot=True):
     y_true = eval_model(np.array([[2, 3.5]]))
-    noisy_data = y_true + np.random.normal(0, std_dev, y_true.shape)
-    if plot:
-        plot_noisy_data(x, y_true, noisy_data)
+    noisy_data = y_true + np.random.default_rng(34).normal(0, std_dev, y_true.shape)
     return noisy_data
 
 
-def plot_noisy_data(x, y_true, noisy_data):
-    fig, ax = plt.subplots(1)
-    ax.plot(x.flatten(), y_true.flatten(), "-k")
-    ax.plot(x.flatten(), noisy_data.flatten(), "o")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    plt.show()
+def kill_after_timeout(run_smc, timeout_seconds):
+    process = multiprocessing.Process(target=run_smc)
+    process.start()
+    process.join(timeout_seconds)
+
+    if process.is_alive():
+        print(f"\n>> Killing run_pysips after {timeout_seconds} seconds.")
+        process.terminate()
+        process.join()
+    else:
+        print("Function completed naturally.")
 
 
 if __name__ == "__main__":
-    np.random.seed(200)
 
-    filename = "example.h5"
+    checkpoint_file = "example.h5"
 
     num_smc_steps = 5
     std_dev = 2
@@ -46,24 +47,34 @@ if __name__ == "__main__":
 
     priors = [uniform(0.0, 6.0), uniform(0.0, 6.0)]
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
-    mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=("a", "b"))
+    mcmc_kernel = VectorMCMCKernel(
+        vector_mcmc, param_order=("a", "b"), rng=np.random.default_rng(34)
+    )
 
-    # Run SMC with an incomplete phi sequence (terminates before phi = 1)
-    phi_seq = np.linspace(0, 0.25, num_smc_steps)
-    with HDF5Storage(filename, mode="w"):
-        smc = FixedPhiSampler(mcmc_kernel)
-        results, mll = smc.sample(
-            num_particles=500,
-            num_mcmc_samples=5,
-            ess_threshold=0.7,
-            phi_sequence=phi_seq,
-        )
+    # Setup function for running SMC w/ storage context
+    def run_smc(mode="w"):  # mode = 'w' will create a new checkpoint file
+        with Storage(checkpoint_file, mode=mode):  # can use any available backend
+            smc = AdaptiveSampler(mcmc_kernel)
+            results, mll = smc.sample(
+                num_particles=500, num_mcmc_samples=5, target_ess=0.8
+            )
+        return results, mll
 
-    # Restart SMC run (can even use a different sampler if desired)
-    with HDF5Storage(filename, mode="a"):
-        smc = AdaptiveSampler(mcmc_kernel)
-        results, mll = smc.sample(num_particles=500, num_mcmc_samples=5, target_ess=0.8)
+    # Start run but kill after 7 seconds (incomplete run)
+    kill_after_timeout(run_smc, timeout_seconds=7)
 
+    # Restart SMC run and allow run to complete
+    print(">> Restarting SMC run...")
+    results, mll = run_smc(mode="a")
+
+    # Print results to console
     print("marginal log likelihood = {}".format(mll[-1]))
     print("parameter means = {}".format(results[-1].compute_mean()))
-    plot_pairwise(results[-1].params, results[-1].weights, param_names=["a", "b"])
+    print("phi sequence = {}".format(np.array(results.phi_sequence)))
+
+    # Show that SMC will not run again once complete (if mode != 'w')
+    print(">> Try restarting again...")
+    results, mll = run_smc(mode="a")
+
+    # Print results to console
+    print("marginal log likelihood = {} (unchanged)".format(mll[-1]))
