@@ -108,15 +108,16 @@ class SamplerBase:
             "{desc}: {percentage:.2f}%|{bar}| "
             + "phi: {n:.5f}/{total_fmt} [{elapsed}<{remaining}"
         )
-        pbar = tqdm(total=1.0, bar_format=bar_format)
+        pbar = tqdm(
+            total=1.0, bar_format=bar_format, initial=self.phi_sequence[phi_idx]
+        )
         pbar.set_description(f"[ mutation ratio: {self.step.attrs['mutation_ratio']}")
-        pbar.update(self.phi_sequence[phi_idx])
         return pbar
 
     @progress_bar
-    def _update_progress_bar(self, pbar, dphi):
+    def _update_progress_bar(self, pbar):
         pbar.set_description(f"[ mutation ratio: {self.step.attrs['mutation_ratio']}")
-        pbar.update(dphi)
+        pbar.update(self.phi_sequence[-1] - self.phi_sequence[-2])
 
     @progress_bar
     def _close_progress_bar(self, pbar):
@@ -172,7 +173,7 @@ class FixedPhiSampler(SamplerBase):
         pbar = self._init_progress_bar(0)
         for i, phi in enumerate(phi_iterator):
             self._do_smc_step(phi, num_mcmc_samples)
-            self._update_progress_bar(pbar, self._mcmc_kernel.path.delta_phi)
+            self._update_progress_bar(pbar)
         self._close_progress_bar(pbar)
         return self._result, self._result.estimate_marginal_log_likelihoods()
 
@@ -234,7 +235,7 @@ class AdaptiveSampler(SamplerBase):
             proposed_phi = self._verify_min_dphi(proposed_phi, min_dphi)
             self._do_smc_step(proposed_phi, num_mcmc_samples)
             self._phi_sequence.append(proposed_phi)
-            self._update_progress_bar(pbar, self._mcmc_kernel.path.delta_phi)
+            self._update_progress_bar(pbar)
 
         self._close_progress_bar(pbar)
 
