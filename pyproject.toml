@@ -1,3 +1,46 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["name", "version"]
+authors = [
+    {name = "Patrick Leser", email = "patrick.e.leser@nasa.gov"}
+]
+description = "A package for performing uncertainty quantification using a parallelized sequential Monte Carlo sampler."
+readme = "README.md"
+license = {text = "NOSA v1.3"}
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+]
+dependencies = [
+    "numpy",
+    "h5py",
+    "matplotlib",
+    "tqdm",
+    "scipy",
+    "pandas",
+    "seaborn",
+]
+
+[project.urls]
+Homepage = "https://github.com/nasa/SMCPy"
+Repository = "https://github.com/nasa/SMCPy"
+
+[tool.setuptools.packages.find]
+include = ["smcpy*"]
+exclude = ['demos']
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
+fallback_version = "0.0.0"
