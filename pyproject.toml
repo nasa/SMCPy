@@ -3,7 +3,8 @@ requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-dynamic = ["name", "version"]
+dynamic = ["version"]
+name = "smcpy"
 authors = [
     {name = "Patrick Leser", email = "patrick.e.leser@nasa.gov"}
 ]
