@@ -33,7 +33,7 @@ Repository = "https://github.com/nasa/SMCPy"
 
 [tool.setuptools.packages.find]
 include = ["smcpy*"]
-exclude = ['demos']
+exclude = ['examples']
 
 [project.optional-dependencies]
 dev = [
