@@ -49,53 +49,55 @@ Incubator (HPCI) at NASA Langley Research Center.
 
 ## Example Usage
 
+We'll set up a toy example -- estimating the slope an intercept of a line given only noisy observations of that line.
 ```python
 import numpy as np
+import seaborn as sns
+import pandas as pd
 
 from scipy.stats import uniform
 
-from spring_mass_model import SpringMassModel
-from smcpy.utils.plotter import plot_pairwise
 from smcpy import AdaptiveSampler, VectorMCMC, VectorMCMCKernel
+from smcpy.utils.noise_generator import generate_noisy_data
 
 
-# Load data
-std_dev = 0.5
-displacement_data = np.genfromtxt('noisy_data.txt')
+def model(params):
+    return params[:, [0]] * np.linspace(0.5, 2.5, 100) + params[:, [1]]
 
-# Define prior distributions & MCMC kernel
-priors = [uniform(0, 10), uniform(0, 10)]
-vector_mcmc = VectorMCMC(model.evaluate, displacement_data, priors, std_dev)
-mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=('K', 'g'))
 
-# SMC sampling
-smc = AdaptiveSampler(mcmc_kernel)
-step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=5, target_ess=0.8)
+if __name__ == "__main__":
 
-# Display results
-print(f'parameter means = {step_list[-1].compute_mean()}')
-plot_pairwise(step_list[-1].params, step_list[-1].weights, save=True,
-              param_labels=['K', 'g'])
+    std_dev = 0.5
+    true_params = np.array([[2, 3.5]]) # true but unknown (to be estimated)
+    noisy_data = generate_noisy_data(model(true_params), std_dev)
+    priors = [uniform(-6, 12.0), uniform(-6, 12.0)]
+
+    vector_mcmc = VectorMCMC(model, noisy_data, priors, std_dev)
+    mcmc_kernel = VectorMCMCKernel(vector_mcmc, ("slope", "intercept"))
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    step_list, mll_list = smc.sample(num_particles=500, num_mcmc_samples=10)
+
+    print(f"marginal log likelihood = {mll_list[-1]}")
+    print(f"parameter means = {step_list[-1].compute_mean()}")
+
+    sns.pairplot(pd.DataFrame(step_list[-1].param_dict))
+    sns.mpl.pyplot.savefig("pairwise.png")
 ```
-
-The above code produces probabilistic estimates of K, the spring stiffness
-divided by mass, and g, the gravitational constant on some unknown planet.
-These estimates are in the form of weighted particles and can be visualized by
-plotting the pairwise weights as shown below. The mean of each parameter is
-marked by the dashed red line. The true values for this example were K = 1.67
-and g = 4.62. More details can be found in the [spring mass
-example](https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/run_example.py). To run this model in
-parallel using MPI, the MCMC kernel just needs to be built with the
-ParallelVectorMCMC class in place of VectorMCMC. More details can be found in the
-[MPI example](https://github.com/nasa/SMCPy/blob/main/examples/mpi_example/run_example.py).
-
+### Output
+```bash
+[ mutation ratio: 1.0: : 100.00%|███████████████████████████████████████| phi: 1.00000/1.0 [00:00<00:00
+marginal log likelihood = -76.27987428009173
+parameter means = {'slope': np.float64(2.0148875448007013), 'intercept': np.float64(3.523915137965013)}
+```
+Plotting is easy with `seaborn`:
 <p align="center">
-<img src="https://github.com/nasa/SMCPy/blob/main/examples/spring_mass/spring_mass_smc_example.png" width="400" alt="Pairwise plot"/>
+<img src="https://github.com/nasa/SMCPy/blob/main/examples/linear_example/pairwise.png" width="400" alt="Pairwise plot"/>
 </p>
 
-To run this model in parallel using MPI, the MCMC kernel just needs to be built
-with the ParallelVectorMCMC class in place of VectorMCMC. More details can be found
-in the MPI example (smcpy/examples/mpi_example/).
+To run this example in parallel using MPI, the MCMC kernel just needs to be built with the
+`ParallelVectorMCMC` class in place of `VectorMCMC`. More details can be found in the
+[MPI example](https://github.com/nasa/SMCPy/blob/main/examples/mpi_example/run_example.py).
 
 Tests
 -----
@@ -147,6 +149,7 @@ This software was funded by and developed under the High Performance Computing I
 
 ## Authors
 * Patrick Leser
+* Julia Truong
 * Michael Wang
 
 # License
