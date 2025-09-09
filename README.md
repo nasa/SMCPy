@@ -49,7 +49,7 @@ Incubator (HPCI) at NASA Langley Research Center.
 
 ## Example Usage
 
-We'll set up a toy example -- estimating the slope an intercept of a line given only noisy observations of that line.
+We'll set up a toy example: estimating the slope and intercept of a line given only noisy observations of points along that line.
 ```python
 import numpy as np
 import seaborn as sns
