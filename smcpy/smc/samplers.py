@@ -377,3 +377,78 @@ class FixedTimeSampler(AdaptiveSampler):
             )
 
         return curr_adaptive_phi
+
+
+class MaxStepSampler(AdaptiveSampler):
+    def __init__(
+        self,
+        mcmc_kernel,
+        max_steps,
+        show_progress_bar=True,
+        norm_step_threshold=0.8,
+    ):
+        """
+        SMC sampler that limits the number of SMC steps to a maximum value.
+
+        :param mcmc_kernel: a kernel object for conducting particle mutation
+        :type mcmc_kernel: KernelBase object
+        :param max_steps: maximum number of SMC steps allowed
+        :type max_steps: int
+        :param norm_step_threshold: fraction of max_steps at which to start buffering
+        :type norm_step_threshold: float
+        """
+        self.buffer_step = int(max_steps * norm_step_threshold) - 1
+        self.final_step = int(max_steps) - 1
+
+        self._step_count = 0
+        self._buffer_phi = None
+        super().__init__(mcmc_kernel, show_progress_bar)
+
+    def sample(
+        self,
+        num_particles,
+        num_mcmc_samples,
+        target_ess=0.8,
+        min_dphi=None,
+        resample_rng=standard,
+        particles_warn_threshold=0.01,
+    ):
+        self._step_count = 0
+
+        res, res_mll = super().sample(
+            num_particles=num_particles,
+            num_mcmc_samples=num_mcmc_samples,
+            target_ess=target_ess,
+            min_dphi=min_dphi,
+            resample_rng=resample_rng,
+            particles_warn_threshold=particles_warn_threshold,
+        )
+
+        return res, res_mll
+
+    def _do_smc_step(self, phi, num_mcmc_samples):
+        super()._do_smc_step(phi=phi, num_mcmc_samples=num_mcmc_samples)
+        self._step_count += 1
+
+        if self._buffer_phi is None and self._step_count > self.buffer_step:
+            self._buffer_phi = phi
+
+    def optimize_step(self, particles, phi_old, target_ess=1):
+        if self._step_count >= self.final_step:
+            return 1.0
+
+        curr_adaptive_phi = super().optimize_step(
+            particles=particles, phi_old=phi_old, target_ess=target_ess
+        )
+
+        if self._buffer_phi:
+            return 10 ** max(
+                np.log10(curr_adaptive_phi),
+                np.interp(
+                    self._step_count,
+                    [self.buffer_step, self.final_step],
+                    [np.log10(self._buffer_phi), 0],
+                ),
+            )
+
+        return curr_adaptive_phi
