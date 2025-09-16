@@ -596,7 +596,7 @@ def test_max_step_check_interp_phi_when_buffer_phi_exists(
 
 
 @pytest.mark.parametrize("optimize_phi, expected_output", [(0.01, 0.1), (0.9, 0.9)])
-def test_max_step_take_max_phi(mocker, mcmc_kernel, optimize_phi, expected_output):
+def test_max_step_uses_max_phi_when_buffer_phi_exists(mocker, mcmc_kernel, optimize_phi, expected_output):
     norm_step_threshold = 0.0
     max_steps = 2
 
