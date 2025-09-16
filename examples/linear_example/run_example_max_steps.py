@@ -1,12 +1,9 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import time
 
 from scipy.stats import uniform
 
 from smcpy import MaxStepSampler, VectorMCMCKernel, VectorMCMC
-
-# from smcpy.utils.plotter import *
 
 
 TRUE_PARAMS = np.array([[2, 3.5]])
@@ -20,21 +17,9 @@ def eval_model(theta):
     return a * np.arange(100) + b
 
 
-def generate_data(eval_model, plot=True):
+def generate_data(eval_model):
     y_true = eval_model(TRUE_PARAMS)
-    noisy_data = y_true + np.random.normal(0, TRUE_STD, y_true.shape)
-    if plot:
-        plot_noisy_data(x, y_true, noisy_data)
-    return noisy_data
-
-
-def plot_noisy_data(x, y_true, noisy_data):
-    fig, ax = plt.subplots(1)
-    ax.plot(x.flatten(), y_true.flatten(), "-k")
-    ax.plot(x.flatten(), noisy_data.flatten(), "o")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    plt.show()
+    return y_true + np.random.normal(0, TRUE_STD, y_true.shape)
 
 
 if __name__ == "__main__":
@@ -43,7 +28,7 @@ if __name__ == "__main__":
     max_smc_steps = 10
     norm_step_threshold = 0.5
     std_dev = 2
-    noisy_data = generate_data(eval_model, plot=False)
+    noisy_data = generate_data(eval_model)
 
     priors = [uniform(0.0, 6.0), uniform(0.0, 6.0)]
     vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
@@ -64,5 +49,3 @@ if __name__ == "__main__":
     print("------|----------")
     for i, value in enumerate(smc.phi_sequence):
         print(f"{i:5d} | {value:5.3e}")
-
-    # plot_pairwise(step_list[-1].params, step_list[-1].weights, param_names=["a", "b"])
