@@ -3,7 +3,7 @@ import pytest
 
 from smcpy.resampler_rngs import *
 from smcpy.smc.particles import Particles
-from smcpy import FixedPhiSampler, AdaptiveSampler, FixedTimeSampler
+from smcpy import FixedPhiSampler, AdaptiveSampler, FixedTimeSampler, MaxStepSampler
 from smcpy.mcmc.kernel_base import KernelBase
 from smcpy.paths import GeometricPath
 
@@ -490,4 +490,142 @@ def test_fixed_time_return_default_adaptive_phi(mocker, mcmc_kernel):
 
     original_phi = smc.optimize_step(particles=1, phi_old=1)
     numpy_mock.assert_not_called()
+    assert original_phi == 0.1
+
+
+@pytest.mark.parametrize("norm_step_threshold", [0.5, 0.8, 1.0])
+def test_max_step_initialized(mcmc_kernel, norm_step_threshold):
+    max_steps = 20
+
+    smc = MaxStepSampler(
+        mcmc_kernel=mcmc_kernel,
+        max_steps=max_steps,
+        norm_step_threshold=norm_step_threshold,
+    )
+
+    assert smc.buffer_step == int(max_steps * norm_step_threshold) - 1
+    assert smc.final_step == max_steps - 1
+
+
+def test_max_step_initialized_default(mcmc_kernel):
+    max_steps = 25
+    smc = MaxStepSampler(mcmc_kernel=mcmc_kernel, max_steps=max_steps)
+
+    assert smc.buffer_step == int(25 * 0.8) - 1  # 19
+    assert smc.final_step == 24
+
+    assert smc._step_count == 0
+    assert smc._buffer_phi is None
+
+
+def test_max_step_track_steps(mocker, mcmc_kernel):
+    max_steps = 10
+    smc = MaxStepSampler(mcmc_kernel=mcmc_kernel, max_steps=max_steps)
+
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+
+    smc._do_smc_step(phi=0.1, num_mcmc_samples=1)
+    assert smc._step_count == 1
+
+    smc._do_smc_step(phi=0.3, num_mcmc_samples=1)
+    assert smc._step_count == 2
+
+    smc._do_smc_step(phi=0.5, num_mcmc_samples=1)
+    assert smc._step_count == 3
+
+
+def test_max_step_check_buffer_phi(mocker, mcmc_kernel):
+    norm_step_threshold = 0.5
+    max_steps = 10
+
+    mocker.patch(SAMPLERS + ".SamplerBase._do_smc_step")
+
+    smc = MaxStepSampler(
+        mcmc_kernel=mcmc_kernel,
+        max_steps=max_steps,
+        norm_step_threshold=norm_step_threshold,
+    )
+
+    # Before buffer threshold
+    for i in range(4):  # first 4 steps
+        smc._do_smc_step(phi=0.1 * (i + 1), num_mcmc_samples=1)
+        assert smc._buffer_phi is None
+
+    # At buffer threshold (5th step)
+    smc._do_smc_step(phi=0.5, num_mcmc_samples=1)
+    assert smc._buffer_phi == 0.5
+
+    # After buffer threshold
+    smc._do_smc_step(phi=0.9, num_mcmc_samples=1)
+    assert smc._buffer_phi == 0.5
+
+
+def test_max_step_phi_equal_one_when_step_limit_reached(mocker, mcmc_kernel):
+    max_steps = 10
+
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=0.5)
+    smc = MaxStepSampler(mcmc_kernel=mcmc_kernel, max_steps=max_steps)
+    smc._step_count = 9
+
+    phi = smc.optimize_step(particles=mocker.Mock(), phi_old=0.8)
+    assert phi == 1.0
+
+
+@pytest.mark.parametrize(
+    "step,expected_phi",
+    [(5, 10**-4), (6, 10**-3), (7, 10**-2), (8, 10**-1), (9, 10**0)],
+)
+def test_max_step_check_interp_phi_when_buffer_phi_exists(
+    mocker, mcmc_kernel, step, expected_phi
+):
+    norm_step_threshold = 0.5
+    max_steps = 10
+
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=10**-100)
+
+    smc = MaxStepSampler(
+        mcmc_kernel=mcmc_kernel,
+        max_steps=max_steps,
+        norm_step_threshold=norm_step_threshold,
+    )
+    smc._step_count = step  # Between buffer (5) and final (10)
+    smc._buffer_phi = 10**-5
+
+    output_phi = smc.optimize_step(particles=mocker.Mock(), phi_old=0.1)
+    assert output_phi == expected_phi
+
+
+@pytest.mark.parametrize("optimize_phi, expected_output", [(0.01, 0.1), (0.9, 0.9)])
+def test_max_step_take_max_phi(mocker, mcmc_kernel, optimize_phi, expected_output):
+    norm_step_threshold = 0.0
+    max_steps = 2
+
+    mocker.patch(SAMPLERS + ".AdaptiveSampler.optimize_step", return_value=optimize_phi)
+
+    smc = MaxStepSampler(
+        mcmc_kernel=mcmc_kernel,
+        max_steps=max_steps,
+        norm_step_threshold=norm_step_threshold,
+    )
+    smc._buffer_phi = 10e-3
+    smc._step_count = 0
+
+    original_phi = smc.optimize_step(particles=mocker.Mock(), phi_old=0.1)
+    assert original_phi == expected_output
+
+
+def test_max_step_return_default_adaptive_phi(mocker, mcmc_kernel):
+    max_steps = 10
+
+    interp_mock = mocker.patch("numpy.interp")
+    mocker.patch(
+        SAMPLERS + ".AdaptiveSampler.optimize_step",
+        return_value=0.1,
+    )
+
+    smc = MaxStepSampler(mcmc_kernel=mcmc_kernel, max_steps=max_steps)
+    smc._step_count = 1
+
+    original_phi = smc.optimize_step(particles=mocker.Mock(), phi_old=0.05)
+    interp_mock.assert_not_called()
     assert original_phi == 0.1
