@@ -31,6 +31,7 @@ class VectorMCMC:
         self._priors = priors
         self._log_like_func = log_like_func(self.evaluate_model, data, log_like_args)
         self._rng = np.random.default_rng()
+        self._scale_factor = 1
 
     @property
     def rng(self):
@@ -55,9 +56,11 @@ class VectorMCMC:
             num_accepted = num_particles - np.sum(rejected)
 
             if num_accepted < inputs.shape[0] * 0.3:
-                cov = cov * 1 / 5
+                self._scale_factor *= 1 / 5
+                cov = cov * self._scale_factor
             if num_accepted > inputs.shape[0] * 0.7:
-                cov = cov * 2
+                self._scale_factor *= 2
+                cov = cov * self._scale_factor
 
         return inputs, log_like
 
