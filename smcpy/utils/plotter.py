@@ -30,7 +30,6 @@ ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 AGREEMENT.
 """
 
-import imp
 import matplotlib.pyplot as plt
 import numpy as np
 import os
