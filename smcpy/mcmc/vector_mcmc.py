@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 
+from scipy.stats import multivariate_normal
 from tqdm import tqdm
 
 from ..log_likelihoods import Normal
@@ -129,7 +130,7 @@ class VectorMCMC:
         chol = self._ensure_psd_cov_and_do_chol_decomp(cov)
         z = self.rng.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
-        return inputs + delta
+        return inputs + delta, cov
 
     def acceptance_ratio(
         self,
@@ -139,6 +140,8 @@ class VectorMCMC:
         old_log_like,
         new_log_priors,
         old_log_priors,
+        new_proposal_covariance,
+        old_proposal_covariance,
     ):
         old_log_post = self.evaluate_log_posterior(
             old_inputs, old_log_like, old_log_priors
@@ -146,6 +149,32 @@ class VectorMCMC:
         new_log_post = self.evaluate_log_posterior(
             new_inputs, new_log_like, new_log_priors
         )
+
+        if old_proposal_covariance is not new_proposal_covariance:
+            old_proposal_covariance = (
+                old_proposal_covariance
+                + np.eye(old_proposal_covariance.shape[1]) * 1e-12
+            )
+            new_proposal_covariance = (
+                old_proposal_covariance
+                + np.eye(new_proposal_covariance.shape[1]) * 1e-12
+            )
+            q_new_given_old = multivariate_normal.logpdf(
+                new_inputs, old_inputs, old_proposal_covariance
+            )
+            q_old_given_new = multivariate_normal.logpdf(
+                old_inputs, new_inputs, new_proposal_covariance
+            )
+
+            eps = np.finfo(float).eps
+            q_new_given_old = np.maximum(q_new_given_old, eps)
+            q_old_given_new = np.maximum(q_old_given_new, eps)
+
+            log_proposal_ratio = q_old_given_new - q_new_given_old
+
+            log_alpha = (new_log_post - old_log_post) + log_proposal_ratio
+            alpha = np.exp(np.minimum(0, log_alpha))
+            return alpha.reshape(-1, 1)
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
     @rank_zero_output_only
@@ -169,12 +198,19 @@ class VectorMCMC:
         return log_priors, log_like
 
     def _perform_mcmc_step(self, inputs, cov, log_like, log_priors):
-        new_inputs = self.proposal(inputs, cov)
+        new_inputs, new_cov = self.proposal(inputs, cov)
         new_log_priors = self.evaluate_log_priors(new_inputs)
         new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors, new_inputs)
 
         accpt_ratio = self.acceptance_ratio(
-            new_inputs, inputs, new_log_like, log_like, new_log_priors, log_priors
+            new_inputs,
+            inputs,
+            new_log_like,
+            log_like,
+            new_log_priors,
+            log_priors,
+            new_cov,
+            cov,
         )
 
         rejected = self.get_rejections(accpt_ratio)

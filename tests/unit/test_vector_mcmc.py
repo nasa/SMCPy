@@ -111,7 +111,7 @@ def test_vectorized_proposal(vector_mcmc, inputs, mocker):
     cov = np.eye(n_param)
     expected_proposal = inputs + 1
 
-    proposal = vector_mcmc.proposal(inputs, cov=cov)
+    proposal, new_cov = vector_mcmc.proposal(inputs, cov=cov)
 
     np.testing.assert_array_equal(proposal, expected_proposal)
     chol_mock.assert_called_once_with(cov)
@@ -145,11 +145,15 @@ def test_vectorized_proposal_non_psd_cov(vector_mcmc, mocker):
         (np.array([[1, 1, 1]] * 4), np.array([[2, 2, 2]] * 4)),
     ),
 )
-def test_vectorized_accept_ratio(vector_mcmc, new_inputs, old_inputs, mocker):
+def test_vectorized_accept_ratio_same_covariances(
+    vector_mcmc, new_inputs, old_inputs, mocker
+):
     mocked_new_log_likelihood = np.ones([new_inputs.shape[0], 1])
     mocked_old_log_likelihood = np.ones([new_inputs.shape[0], 1])
     mocked_new_log_priors = new_inputs
     mocked_old_log_priors = old_inputs
+    new_cov = None
+    old_cov = None
 
     accpt_ratio = vector_mcmc.acceptance_ratio(
         new_inputs,
@@ -158,10 +162,55 @@ def test_vectorized_accept_ratio(vector_mcmc, new_inputs, old_inputs, mocker):
         mocked_old_log_likelihood,
         mocked_new_log_priors,
         mocked_old_log_priors,
+        new_cov,
+        old_cov,
     )
 
     expected = np.exp(np.array([[4 - 7.0]] * new_inputs.shape[0]))
     np.testing.assert_array_equal(accpt_ratio, expected)
+
+
+def test_acceptance_ratio_different_covariances(mocker, vector_mcmc):
+    old_log_post = np.array([[1.0], [2.0]])
+    new_log_post = np.array([[1.5], [2.5]])
+    vector_mcmc.evaluate_log_posterior.side_effect = [old_log_post, new_log_post]
+
+    old_inputs = np.array([[1, 2], [3, 4]])
+    new_inputs = np.array([[1.1, 2.1], [3.1, 4.1]])
+
+    old_covariance = np.eye(2) * 0.1
+    new_covariance = np.eye(2) * 0.2
+
+    mock_logpdf = mocker.patch("scipy.stats.multivariate_normal.logpdf")
+    mock_logpdf.side_effect = [
+        np.array([-1.0, -1.5]),
+        np.array([-0.5, -1.0]),
+    ]
+
+    new_log_like = np.array([[0.5], [1.0]])
+    old_log_like = np.array([[0.0], [0.5]])
+    new_log_priors = np.array([[0.0], [0.0]])
+    old_log_priors = np.array([[0.0], [0.0]])
+    result = vector_mcmc.acceptance_ratio(
+        new_inputs,
+        old_inputs,
+        new_log_like,
+        old_log_like,
+        new_log_priors,
+        old_log_priors,
+        new_covariance,
+        old_covariance,
+    )
+
+    assert mock_logpdf.call_count == 2
+
+    call_args = mock_logpdf.call_args_list
+    regularized_cov = call_args[0][0][2]
+    expected_regularized = old_covariance + np.eye(2) * 1e-12
+    np.testing.assert_array_equal(regularized_cov, expected_regularized)
+
+    assert result.shape == (2, 1)
+    assert np.all(result >= 0) and np.all(result <= 1)
 
 
 def test_vectorized_get_rejections(vector_mcmc, mocker):
@@ -233,7 +282,7 @@ def test_vectorized_smc_metropolis(vector_mcmc, num_samples, num_accepted, mocke
     chk_prior_mock = pobj(vector_mcmc, "_check_log_priors_for_zero_probability")
     like_nz_mock = pobj(vector_mcmc, "_eval_log_like_if_prior_nonzero")
     like_mock = pobj(vector_mcmc, "evaluate_log_likelihood")
-    prop_mock = pobj(vector_mcmc, "proposal")
+    prop_mock = pobj(vector_mcmc, "proposal", return_value=(None, None))
     accpt_mock = pobj(vector_mcmc, "acceptance_ratio")
     reject_mock = pobj(vector_mcmc, "get_rejections", return_value=rejected)
 
@@ -337,9 +386,10 @@ def test_metropolis_no_like_calc_if_zero_prior_prob(mocker, data):
     mocked_proposal = np.ones((5, 3)) * 0.2
     mocked_proposal[2, 0] = 0.3
 
+    cov = np.eye(3)
     vmcmc = VectorMCMC(mocked_model, data, priors=None, log_like_args=1)
     mocker.patch.object(vmcmc, "_check_log_priors_for_zero_probability")
-    mocker.patch.object(vmcmc, "proposal", return_value=mocked_proposal)
+    mocker.patch.object(vmcmc, "proposal", return_value=(mocked_proposal, cov))
     mocker.patch.object(
         vmcmc, "evaluate_log_priors", side_effect=[np.ones((5, 3)), some_zero_priors]
     )
@@ -350,7 +400,7 @@ def test_metropolis_no_like_calc_if_zero_prior_prob(mocker, data):
     expected_chain[1, :, 1] = expected_chain[1, :, 0]
     expected_chain[4, :, 1] = expected_chain[1, :, 0]
 
-    chain = vmcmc.metropolis(input_params, num_samples=1, cov=np.eye(3))
+    chain = vmcmc.metropolis(input_params, num_samples=1, cov=cov)
 
     np.testing.assert_array_equal(
         mocked_model.call_args[0][0], mocked_proposal[[0, 2, 3]]
