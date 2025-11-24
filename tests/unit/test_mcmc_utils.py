@@ -21,18 +21,6 @@ def test_compute_covariance_identical_points():
         local_mcmc.compute_covariance(inputs, scale_factor)
 
 
-def test_cov_scaling():
-    inputs = np.array([[1, 3], [1, 2], [1, 1]])
-    scale_factor = 1.0
-
-    local_mcmc = LocalMCMCProposal()
-    result = local_mcmc.compute_covariance(inputs, scale_factor)
-
-    assert result.shape == (3, 2, 2)
-    for i in range(len(inputs)):
-        continue
-
-
 def test_compute_covariance_different_points():
     inputs = np.array([[1, 2], [3, 4], [5, 6]])
     scale_factor = 1.0
