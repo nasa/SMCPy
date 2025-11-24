@@ -145,7 +145,7 @@ def test_vectorized_proposal_non_psd_cov(vector_mcmc, mocker):
         (np.array([[1, 1, 1]] * 4), np.array([[2, 2, 2]] * 4)),
     ),
 )
-def test_vectorized_accept_ratio_same_covariances(
+def test_vectorized_acceptance_ratio_same_covariances(
     vector_mcmc, new_inputs, old_inputs, mocker
 ):
     mocked_new_log_likelihood = np.ones([new_inputs.shape[0], 1])
@@ -170,47 +170,74 @@ def test_vectorized_accept_ratio_same_covariances(
     np.testing.assert_array_equal(accpt_ratio, expected)
 
 
-def test_acceptance_ratio_different_covariances(mocker, vector_mcmc):
-    old_log_post = np.array([[1.0], [2.0]])
-    new_log_post = np.array([[1.5], [2.5]])
-    vector_mcmc.evaluate_log_posterior.side_effect = [old_log_post, new_log_post]
+@pytest.mark.parametrize(
+    "array_covs",
+    [
+        (np.array([[[1, 0], [0, 1]]])),
+        np.array(
+            [[[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[3, 0, 0], [0, 3, 0], [0, 0, 3]]]
+        ),
+    ],
+)
+def test_vectorized_acceptance_ratio_different_covariances(array_covs, vector_mcmc):
+    num_matrices, dim, _ = array_covs.shape
+    np.random.seed(33)
+    new_inputs = np.random.randn(num_matrices, dim)
+    old_inputs = np.random.randn(num_matrices, dim)
 
-    old_inputs = np.array([[1, 2], [3, 4]])
-    new_inputs = np.array([[1.1, 2.1], [3.1, 4.1]])
+    mocked_new_log_likelihood = np.ones([num_matrices, 1])
+    mocked_old_log_likelihood = np.ones([num_matrices, 1])
+    mocked_new_log_priors = np.random.randn(num_matrices, dim)
+    mocked_old_log_priors = np.random.randn(num_matrices, dim)
+    new_cov = array_covs.copy()
 
-    old_covariance = np.eye(2) * 0.1
-    new_covariance = np.eye(2) * 0.2
-
-    mock_logpdf = mocker.patch("scipy.stats.multivariate_normal.logpdf")
-    mock_logpdf.side_effect = [
-        np.array([-1.0, -1.5]),
-        np.array([-0.5, -1.0]),
-    ]
-
-    new_log_like = np.array([[0.5], [1.0]])
-    old_log_like = np.array([[0.0], [0.5]])
-    new_log_priors = np.array([[0.0], [0.0]])
-    old_log_priors = np.array([[0.0], [0.0]])
-    result = vector_mcmc.acceptance_ratio(
+    accpt_ratio = vector_mcmc.acceptance_ratio(
         new_inputs,
         old_inputs,
-        new_log_like,
-        old_log_like,
-        new_log_priors,
-        old_log_priors,
-        new_covariance,
-        old_covariance,
+        mocked_new_log_likelihood,
+        mocked_old_log_likelihood,
+        mocked_new_log_priors,
+        mocked_old_log_priors,
+        new_cov,
+        array_covs,
     )
 
-    assert mock_logpdf.call_count == 2
+    scipy_old_proposal_logpdf = []
+    for i in range(array_covs.shape[0]):
+        scipy_old_proposal_logpdf.append(
+            multivariate_normal.logpdf(
+                old_inputs[i],
+                mean=new_inputs[i],
+                cov=array_covs[i],
+            )
+        )
+    scipy_old_proposal_logpdf = np.array(scipy_old_proposal_logpdf)
 
-    call_args = mock_logpdf.call_args_list
-    regularized_cov = call_args[0][0][2]
-    expected_regularized = old_covariance + np.eye(2) * 1e-12
-    np.testing.assert_array_equal(regularized_cov, expected_regularized)
+    scipy_new_proposal_logpdf = []
+    for i in range(array_covs.shape[0]):
+        scipy_new_proposal_logpdf.append(
+            multivariate_normal.logpdf(
+                new_inputs[i],
+                mean=old_inputs[i],
+                cov=array_covs[i],
+            )
+        )
+    scipy_new_proposal_logpdf = np.array(scipy_new_proposal_logpdf)
 
-    assert result.shape == (2, 1)
-    assert np.all(result >= 0) and np.all(result <= 1)
+    expected_log_ratio = (
+        mocked_new_log_likelihood.flatten()
+        - mocked_old_log_likelihood.flatten()
+        + np.sum(mocked_new_log_priors, axis=1)
+        - np.sum(mocked_old_log_priors, axis=1)
+        + scipy_old_proposal_logpdf
+        - scipy_new_proposal_logpdf
+    )
+    expected_accpt_ratio = np.exp(expected_log_ratio).reshape(-1, 1)
+
+    np.testing.assert_allclose(
+        accpt_ratio,
+        expected_accpt_ratio,
+    )
 
 
 def test_vectorized_get_rejections(vector_mcmc, mocker):

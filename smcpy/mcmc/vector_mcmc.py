@@ -132,6 +132,36 @@ class VectorMCMC:
         delta = np.matmul(chol, z.T).T
         return inputs + delta, cov
 
+    def multivariate_normal_logpdf_batch(self, data_points, means, covariances):
+        """
+        Computes the log-PDF of multiple N-dimensional multivariate normal distributions in batch.
+
+        Parameters:
+        - data_points: (M, N) array of M data points in N dimensions
+        - means: (M, N) array of M mean vectors
+        - covariances: (M, N, N) array of M covariance matrices
+
+        Returns:
+        - log_pdf_vals: (M,) array of log-PDF values
+        """
+        M, N = data_points.shape
+
+        sign, log_dets = np.linalg.slogdet(covariances)
+
+        if np.any(sign <= 0):
+            raise ValueError("Covariance matrices must be positive definite")
+
+        inv_covs = np.linalg.inv(covariances)
+
+        log_norm_consts = -0.5 * (N * np.log(2 * np.pi) + log_dets)
+
+        deltas = data_points - means
+        mahalanobis_dist_sq = np.einsum("mi,mij,mj->m", deltas, inv_covs, deltas)
+
+        log_pdf_vals = log_norm_consts - 0.5 * mahalanobis_dist_sq
+
+        return log_pdf_vals
+
     def acceptance_ratio(
         self,
         new_inputs,
@@ -150,6 +180,7 @@ class VectorMCMC:
             new_inputs, new_log_like, new_log_priors
         )
 
+        # loop through multivariate_normal.logpdf is the same result as batch version
         if old_proposal_covariance is not new_proposal_covariance:
             old_proposal_covariance = (
                 old_proposal_covariance
@@ -159,10 +190,10 @@ class VectorMCMC:
                 old_proposal_covariance
                 + np.eye(new_proposal_covariance.shape[1]) * 1e-12
             )
-            q_new_given_old = multivariate_normal.logpdf(
+            q_new_given_old = self.multivariate_normal_logpdf_batch(
                 new_inputs, old_inputs, old_proposal_covariance
             )
-            q_old_given_new = multivariate_normal.logpdf(
+            q_old_given_new = self.multivariate_normal_logpdf_batch(
                 old_inputs, new_inputs, new_proposal_covariance
             )
 
