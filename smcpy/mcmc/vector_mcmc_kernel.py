@@ -3,10 +3,16 @@ import numpy as np
 
 from .kernel_base import KernelBase
 
+from smcpy.utils.mcmc_utils import LocalMCMCProposal
+
 
 class VectorMCMCKernel(KernelBase):
-    def __init__(self, vector_mcmc_object, param_order, path=None, rng=None):
+    def __init__(
+        self, vector_mcmc_object, param_order, path=None, rng=None, local_proposal=False
+    ):
         super().__init__(vector_mcmc_object, param_order, path, rng)
+        if local_proposal:
+            self._mcmc.proposal = self.local_mcmc_proposal
         self._mcmc.evaluate_log_posterior = self.path.logpdf
         self.param_order = tuple(str(param) for param in param_order)
 
@@ -37,3 +43,10 @@ class VectorMCMCKernel(KernelBase):
 
     def set_mcmc_rng(self, rng):
         self._mcmc.rng = rng
+
+    def local_mcmc_proposal(self, inputs, cov):
+        mcmc_proposal = LocalMCMCProposal()
+        orig_inputs, orig_cov, prop_inputs, prop_cov = mcmc_proposal(
+            inputs, self._mcmc._scale_factor
+        )
+        return prop_inputs, prop_cov
