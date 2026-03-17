@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import os
 import pickle
+import pickletools
 
 from abc import abstractmethod
 from pathlib import Path
@@ -230,14 +231,14 @@ class PickleStorage(BaseStorage):
 
     def _get_data_length(self):
         count = 0
-
         with open(self._filename, "rb") as f:
             try:
                 while True:
-                    pickle.load(f)
+                    for _ in pickletools.genops(f): pass
                     count += 1
-            except EOFError:
+            except ValueError:
                 pass
+
         return count
 
     def __getitem__(self, idx):
