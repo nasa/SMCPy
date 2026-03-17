@@ -229,6 +229,19 @@ def test_hdf5storage_first_save_step_changes_mode(tmpdir, mock_particles):
     assert storage._mode == "a"
 
 
+def test_pickle_storage_open_wb_resets_len(tmpdir, mock_particles):
+    """Opening in write-binary mode must reset _len to 0."""
+    filename = tmpdir / "test.pkl"
+    storage = PickleStorage(filename=filename)
+    storage.save_step(mock_particles)
+    storage.save_step(mock_particles)
+    assert len(storage) == 2
+
+    f = storage._open_file("wb")
+    f.close()
+    assert len(storage) == 0
+
+
 def test_picklestorage_overwrite_mode(mocker, tmpdir):
     pickle_mock = mocker.patch("smcpy.utils.storage.open")
 
