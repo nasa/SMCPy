@@ -2,7 +2,7 @@ import copy
 import numpy as np
 import pytest
 
-from smcpy.utils.storage import *
+from smcpy.utils.storage import HDF5Storage, InMemoryStorage, PickleStorage
 
 
 class DummyParticles:
