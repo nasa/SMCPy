@@ -219,7 +219,7 @@ class PickleStorage(BaseStorage):
         self._refresh_filesystem_metadata()
         file = open(self._filename, mode)
         if mode == "wb":
-            self._len == 0
+            self._len = 0
         else:
             self._len = self._get_data_length()
 
