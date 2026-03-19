@@ -180,6 +180,8 @@ class PickleStorage(BaseStorage):
         super().__init__()
         self._filename = Path(filename)
         self._len = 0
+        self._last_scan_offset = 0
+        self._byte_offsets = []
         self._mode = mode + "b"
         if os.path.exists(filename) and mode == "a":
             self._init_length_on_restart()
@@ -220,34 +222,38 @@ class PickleStorage(BaseStorage):
         file = open(self._filename, mode)
         if mode == "wb":
             self._len = 0
+            self._last_scan_offset = 0
+            self._byte_offsets = []
         else:
-            self._len = self._get_data_length()
+            self._get_data_length()
 
         return file
 
     def _close(self, file):
         file.close()
-        self._len = self._get_data_length()
+        self._get_data_length()
 
     def _get_data_length(self):
-        count = 0
         with open(self._filename, "rb") as f:
+            f.seek(self._last_scan_offset)
             try:
                 while True:
-                    for _ in pickletools.genops(f): pass
-                    count += 1
+                    start = f.tell()
+                    for _ in pickletools.genops(f):
+                        pass
+                    self._byte_offsets.append(start)
+                    self._len += 1
+                    self._last_scan_offset = f.tell()
             except ValueError:
                 pass
-
-        return count
+        return self._len
 
     def __getitem__(self, idx):
         pickle_file = self._open_file("rb")
         idx = self._format_index(idx)
 
+        pickle_file.seek(self._byte_offsets[idx])
         step = pickle.load(pickle_file)
-        for _ in range(idx):
-            step = pickle.load(pickle_file)
 
         step.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
         self._close(pickle_file)
