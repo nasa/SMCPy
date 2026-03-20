@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 
+from scipy.stats import multivariate_normal
 from tqdm import tqdm
 
 from ..log_likelihoods import Normal
@@ -31,6 +32,7 @@ class VectorMCMC:
         self._priors = priors
         self._log_like_func = log_like_func(self.evaluate_model, data, log_like_args)
         self._rng = np.random.default_rng()
+        self._scale_factor = 1
 
     @property
     def rng(self):
@@ -55,9 +57,11 @@ class VectorMCMC:
             num_accepted = num_particles - np.sum(rejected)
 
             if num_accepted < inputs.shape[0] * 0.3:
-                cov = cov * 1 / 5
+                self._scale_factor *= 1 / 5
+                cov = cov * self._scale_factor
             if num_accepted > inputs.shape[0] * 0.7:
-                cov = cov * 2
+                self._scale_factor *= 2
+                cov = cov * self._scale_factor
 
         return inputs, log_like
 
@@ -126,7 +130,37 @@ class VectorMCMC:
         chol = self._ensure_psd_cov_and_do_chol_decomp(cov)
         z = self.rng.normal(0, 1, inputs.shape)
         delta = np.matmul(chol, z.T).T
-        return inputs + delta
+        return inputs + delta, cov
+
+    def multivariate_normal_logpdf_batch(self, data_points, means, covariances):
+        """
+        Computes the log-PDF of multiple N-dimensional multivariate normal distributions in batch.
+
+        Parameters:
+        - data_points: (M, N) array of M data points in N dimensions
+        - means: (M, N) array of M mean vectors
+        - covariances: (M, N, N) array of M covariance matrices
+
+        Returns:
+        - log_pdf_vals: (M,) array of log-PDF values
+        """
+        M, N = data_points.shape
+
+        sign, log_dets = np.linalg.slogdet(covariances)
+
+        if np.any(sign <= 0):
+            raise ValueError("Covariance matrices must be positive definite")
+
+        inv_covs = np.linalg.inv(covariances)
+
+        log_norm_consts = -0.5 * (N * np.log(2 * np.pi) + log_dets)
+
+        deltas = data_points - means
+        mahalanobis_dist_sq = np.einsum("mi,mij,mj->m", deltas, inv_covs, deltas)
+
+        log_pdf_vals = log_norm_consts - 0.5 * mahalanobis_dist_sq
+
+        return log_pdf_vals
 
     def acceptance_ratio(
         self,
@@ -136,6 +170,8 @@ class VectorMCMC:
         old_log_like,
         new_log_priors,
         old_log_priors,
+        new_proposal_covariance,
+        old_proposal_covariance,
     ):
         old_log_post = self.evaluate_log_posterior(
             old_inputs, old_log_like, old_log_priors
@@ -143,6 +179,33 @@ class VectorMCMC:
         new_log_post = self.evaluate_log_posterior(
             new_inputs, new_log_like, new_log_priors
         )
+
+        # loop through multivariate_normal.logpdf is the same result as batch version
+        if old_proposal_covariance is not new_proposal_covariance:
+            old_proposal_covariance = (
+                old_proposal_covariance
+                + np.eye(old_proposal_covariance.shape[1]) * 1e-12
+            )
+            new_proposal_covariance = (
+                old_proposal_covariance
+                + np.eye(new_proposal_covariance.shape[1]) * 1e-12
+            )
+            q_new_given_old = self.multivariate_normal_logpdf_batch(
+                new_inputs, old_inputs, old_proposal_covariance
+            )
+            q_old_given_new = self.multivariate_normal_logpdf_batch(
+                old_inputs, new_inputs, new_proposal_covariance
+            )
+
+            eps = np.finfo(float).eps
+            q_new_given_old = np.maximum(q_new_given_old, eps)
+            q_old_given_new = np.maximum(q_old_given_new, eps)
+
+            log_proposal_ratio = q_old_given_new - q_new_given_old
+
+            log_alpha = (new_log_post - old_log_post) + log_proposal_ratio
+            alpha = np.exp(np.minimum(0, log_alpha))
+            return alpha.reshape(-1, 1)
         return np.exp(new_log_post - old_log_post).reshape(-1, 1)
 
     @rank_zero_output_only
@@ -166,12 +229,19 @@ class VectorMCMC:
         return log_priors, log_like
 
     def _perform_mcmc_step(self, inputs, cov, log_like, log_priors):
-        new_inputs = self.proposal(inputs, cov)
+        new_inputs, new_cov = self.proposal(inputs, cov)
         new_log_priors = self.evaluate_log_priors(new_inputs)
         new_log_like = self._eval_log_like_if_prior_nonzero(new_log_priors, new_inputs)
 
         accpt_ratio = self.acceptance_ratio(
-            new_inputs, inputs, new_log_like, log_like, new_log_priors, log_priors
+            new_inputs,
+            inputs,
+            new_log_like,
+            log_like,
+            new_log_priors,
+            log_priors,
+            new_cov,
+            cov,
         )
 
         rejected = self.get_rejections(accpt_ratio)
