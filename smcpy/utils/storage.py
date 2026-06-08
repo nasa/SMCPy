@@ -182,9 +182,12 @@ class PickleStorage(BaseStorage):
         self._len = 0
         self._last_scan_offset = 0
         self._byte_offsets = []
+        self._phi_sequence = []
+        self._mut_ratio_sequence = []
         self._mode = mode + "b"
         if os.path.exists(filename) and mode == "a":
             self._init_length_on_restart()
+            self._rebuild_attributes()
             self.is_restart = True
 
     def _load_data(self):
@@ -201,21 +204,33 @@ class PickleStorage(BaseStorage):
 
     @property
     def phi_sequence(self):
-        data = self._load_data()
-        phi_sequence = [obj.attrs["phi"] for obj in data]
-        return phi_sequence
+        return self._phi_sequence
 
     @property
     def mut_ratio_sequence(self):
-        data = self._load_data()
-        mut_ratio_sequence = [obj.attrs["mutation_ratio"] for obj in data]
-        return mut_ratio_sequence
+        return self._mut_ratio_sequence
 
     def save_step(self, step):
         file = self._open_file(self._mode)
         self._mode = "ab"
         pickle.dump(step, file, pickle.HIGHEST_PROTOCOL)
         self._close(file)
+        self._phi_sequence.append(step.attrs["phi"])
+        self._mut_ratio_sequence.append(step.attrs["mutation_ratio"])
+    
+    def _rebuild_attributes(self):
+        self._phi_sequence = []
+        self._mut_ratio_sequence = []
+
+        if not self._byte_offsets:
+            return
+        with open(self._filename, "rb") as f:
+            for offset in self._byte_offsets:
+                f.seek(offset)
+                obj = pickle.load(f)
+                self._phi_sequence.append(obj.attrs["phi"])
+                self._mut_ratio_sequence.append(obj.attrs["mutation_ratio"])
+
 
     def _open_file(self, mode):
         self._refresh_filesystem_metadata()
@@ -224,6 +239,8 @@ class PickleStorage(BaseStorage):
             self._len = 0
             self._last_scan_offset = 0
             self._byte_offsets = []
+            self._phi_sequence = []
+            self._mut_ratio_sequence = []
         else:
             self._get_data_length()
 
