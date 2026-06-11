@@ -243,7 +243,7 @@ class PickleStorage(BaseStorage):
                 start = f.tell()
                 try:
                     obj = pickle.load(f)
-                except (EOFError, ValueError):
+                except (EOFError, ValueError, pickle.UnpicklingError):
                     break
                 
                 self._byte_offsets.append(start)
