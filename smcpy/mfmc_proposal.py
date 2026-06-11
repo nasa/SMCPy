@@ -1,6 +1,8 @@
 import numpy as np
 from typing import Any
 from log_likelihoods import Normal
+from scipy.stats import uniform, multivariate_normal
+
 
 class MultiFidelityProposal:
     """
@@ -28,7 +30,7 @@ class MultiFidelityProposal:
         self._dist_list = args
         self._dims = self._get_dims()
 
-    def rvs(self, num_samples: int, random_state: int = None) -> np.ndarray:
+    def rvs(self, lofi_samples, num_samples: int, random_state: int = None) -> np.ndarray:
         """
         Generates random samples from the joint multivariate distribution.
 
@@ -41,10 +43,14 @@ class MultiFidelityProposal:
             np.ndarray: A 2D array of shape `(num_samples, total_dimensions)` 
                 containing the generated samples.
         """
-        # Take a sample from the low fidelity posterior
+
+        # generate proposal distribution
+        self._generate_proposal_distribution()
 
         # return this sample
-        return None
+        samples = self.proposal_dist.rvs(num_samples, random_state=random_state)
+
+        return samples
 
     def logpdf(self, inputs: np.ndarray) -> np.ndarray:
         """
@@ -99,3 +105,14 @@ class MultiFidelityProposal:
         # Split inputs based on the cumulative sum of the dimensions
         split_indices = np.cumsum(self._dims)[:-1]
         return np.split(inputs, split_indices, axis=1)
+    
+    def _generate_proposal_distribution(self):
+
+        # Compute summary statistics for low fidelity posterior
+        lofi_posterior_means = np.mean(self.lofi_samples)
+        lofi_cov = np.cov(self.lofi_samples)
+        
+        # Take samples from the low fidelity posterior
+        self.proposal_dist = multivariate_normal(mean=lofi_posterior_means, cov=lofi_cov)
+        
+        return None
