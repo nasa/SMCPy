@@ -186,8 +186,7 @@ class PickleStorage(BaseStorage):
         self._mut_ratio_sequence = []
         self._mode = mode + "b"
         if os.path.exists(filename) and mode == "a":
-            self._init_length_on_restart()
-            self._rebuild_attributes()
+            self._scan_new_records()
             self.is_restart = True
 
     def _load_data(self):
@@ -217,20 +216,6 @@ class PickleStorage(BaseStorage):
         self._close(file)
         self._phi_sequence.append(step.attrs["phi"])
         self._mut_ratio_sequence.append(step.attrs["mutation_ratio"])
-    
-    def _rebuild_attributes(self):
-        self._phi_sequence = []
-        self._mut_ratio_sequence = []
-
-        if not self._byte_offsets:
-            return
-        with open(self._filename, "rb") as f:
-            for offset in self._byte_offsets:
-                f.seek(offset)
-                obj = pickle.load(f)
-                self._phi_sequence.append(obj.attrs["phi"])
-                self._mut_ratio_sequence.append(obj.attrs["mutation_ratio"])
-
 
     def _open_file(self, mode):
         self._refresh_filesystem_metadata()
@@ -251,18 +236,23 @@ class PickleStorage(BaseStorage):
         self._get_data_length()
 
     def _get_data_length(self):
+        return self._scan_new_records()
+    
+    def _scan_new_records(self):
         with open(self._filename, "rb") as f:
             f.seek(self._last_scan_offset)
-            try:
-                while True:
-                    start = f.tell()
-                    for _ in pickletools.genops(f):
-                        pass
-                    self._byte_offsets.append(start)
-                    self._len += 1
-                    self._last_scan_offset = f.tell()
-            except ValueError:
-                pass
+            while True:
+                start = f.tell()
+                try:
+                    obj = pickle.load(f)
+                except (EOFError, ValueError):
+                    break
+                
+                self._byte_offsets.append(start)
+                self._phi_sequence.append(obj.attrs["phi"])
+                self._mut_ratio_sequence.append(obj.attrs["mutation_ratio"])
+                self._len += 1
+                self._last_scan_offset = f.tell()
         return self._len
 
     def __getitem__(self, idx):
@@ -293,10 +283,6 @@ class PickleStorage(BaseStorage):
 
     def __len__(self):
         return self._len
-
-    def _init_length_on_restart(self):
-        pickle_file = self._open_file("rb")
-        self._close(pickle_file)
 
     def _refresh_filesystem_metadata(self):
         os.scandir(self._filename.parent)
