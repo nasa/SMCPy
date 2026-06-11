@@ -214,8 +214,6 @@ class PickleStorage(BaseStorage):
         self._mode = "ab"
         pickle.dump(step, file, pickle.HIGHEST_PROTOCOL)
         self._close(file)
-        self._phi_sequence.append(step.attrs["phi"])
-        self._mut_ratio_sequence.append(step.attrs["mutation_ratio"])
 
     def _open_file(self, mode):
         self._refresh_filesystem_metadata()
