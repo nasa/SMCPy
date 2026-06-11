@@ -1,7 +1,8 @@
 import numpy as np
 from typing import Any
+from log_likelihoods import Normal
 
-class MultivarIndependent:
+class MultiFidelityProposal:
     """
     A helper class to combine an arbitrary number of independent proposal 
     distributions into a single multivariate distribution object.
@@ -11,7 +12,7 @@ class MultivarIndependent:
     and evaluate the joint probability of the combined independent distributions.
     """
 
-    def __init__(self, *args: Any):
+    def __init__(self, lofi_samples, lofi_model, data, *args: Any):
         """
         Initializes the multivariate independent distribution.
 
@@ -19,6 +20,11 @@ class MultivarIndependent:
             *args: An arbitrary number of `scipy.stats`-like distribution objects. 
                 Each object must implement `rvs()` and `logpdf()` methods.
         """
+
+        self.lofi_samples = lofi_samples
+        self.lofi_model = lofi_model
+        self.noisy_data = data
+
         self._dist_list = args
         self._dims = self._get_dims()
 
@@ -35,13 +41,10 @@ class MultivarIndependent:
             np.ndarray: A 2D array of shape `(num_samples, total_dimensions)` 
                 containing the generated samples.
         """
-        # np.c_ safely converts 1D arrays to 2D column arrays before horizontal stacking
-        return np.hstack(
-            [
-                np.c_[d.rvs(num_samples, random_state=random_state)]
-                for d in self._dist_list
-            ]
-        )
+        # Take a sample from the low fidelity posterior
+
+        # return this sample
+        return None
 
     def logpdf(self, inputs: np.ndarray) -> np.ndarray:
         """
@@ -58,6 +61,10 @@ class MultivarIndependent:
             np.ndarray: A 2D array of shape `(num_samples, 1)` containing the 
                 evaluated joint log probabilities.
         """
+
+        # Compute log-likelihood of low fidelity data
+        lofi_log_likelihoods = Normal(self.lofi_model, self.noisy_data, self.noise_stdev)
+
         # Pair each distribution with its corresponding slice of the input array
         iterable = zip(self._dist_list, self._partition_inputs(inputs))
         
