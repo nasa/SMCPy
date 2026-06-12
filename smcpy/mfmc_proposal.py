@@ -1,6 +1,6 @@
 import numpy as np
 from log_likelihoods import Normal
-
+#test
 class MultiFidelityProposal:
     """
     An empirical proposal distribution for Multi-Fidelity Sequential Monte Carlo (SMC).
