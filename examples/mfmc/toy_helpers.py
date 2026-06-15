@@ -25,10 +25,10 @@ def M_HF(THETA: np.ndarray, return_flat: bool = True) -> np.ndarray:
     theta_1 = THETA[:, 1, None]
 
     char_length = 2
-    
+    resolution = 200
     # Sample 100 points for x and y ranging from -1 to 1
-    x = np.linspace(-1 * char_length, char_length, 100)
-    y = np.linspace(-1 * char_length, char_length, 100)
+    x = np.linspace(-1 * char_length, char_length, resolution)
+    y = np.linspace(-1 * char_length, char_length, resolution)
 
     # Create a 2D meshgrid (100x100) for the spatial coordinates
     X, Y = np.meshgrid(x, y)
@@ -59,10 +59,10 @@ def M_LF(THETA: np.ndarray) -> np.ndarray:
     theta_1 = THETA[:, 1, None]
 
     char_length = 2
-    
-    # Sample 100 points for x and y ranging from -char_length to char_length
-    x = np.linspace(-1 * char_length, char_length, 100)
-    y = np.linspace(-1 * char_length, char_length, 100)
+    resolution = 200
+    # Sample 100 points for x and y ranging from -1 to 1
+    x = np.linspace(-1 * char_length, char_length, resolution)
+    y = np.linspace(-1 * char_length, char_length, resolution)
 
     # Create a 2D meshgrid (100x100)
     X, Y = np.meshgrid(x, y)
