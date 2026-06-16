@@ -12,11 +12,11 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import AdaptiveSampler as Sampler
 from smcpy.paths import GeometricPath
 
-from toy_helpers import M_HF, generate_noisy_data
+from exp_2d import M_HF, generate_noisy_data
 from smcpy.mfmc_proposal import MultiFidelityProposal
 from smcpy.proposals import MultivarIndependent
 
-from toy_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots
+from plotting_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots
 
 # Data generation details
 STD_DEV = 0.2
