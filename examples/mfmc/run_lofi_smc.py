@@ -12,7 +12,7 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import AdaptiveSampler as Sampler
 from smcpy.paths import GeometricPath
 
-from toy_helpers import M_HF, M_LF, generate_noisy_data
+from toy_helpers import M_LF, generate_noisy_data
 from smcpy.mfmc_proposal import MultiFidelityProposal
 from smcpy.proposals import MultivarIndependent
 
@@ -32,7 +32,7 @@ Execute MF SMC
 '''
 
 # Setup low-fidelity case
-priors = [uniform(0.001, 2), uniform(0, 8)]
+priors = [uniform(0.001, 2), uniform(0.5, 8)]
 vector_mcmc = VectorMCMC(M_LF, noisy_data, priors, STD_DEV)
 
 # initialize from prior
@@ -41,54 +41,29 @@ smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
 lofi_step_list, lofi_mll_list = smc.sample(
     num_particles=NUM_PARTICLES,
     num_mcmc_samples=5,
-    target_ess=0.75
+    target_ess=0.9
 )
 lofi_phi_list = smc.phi_sequence
 lofi_particles = lofi_step_list[-1].params
 
-# Setup low-fidelity posterior as proposal for high-fidelity
-lofi_proposal_dist = MultiFidelityProposal(
-    lofi_particles, 
-    M_LF, 
-    noisy_data,
-    priors,
-    STD_DEV
-)
-mcmc_kernel = VectorMCMCKernel(
-    vector_mcmc, param_order=("a", "b"), path=GeometricPath(proposal=lofi_proposal_dist)
-)
-
-# Setup high-fidelity case
-hifi_smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
-hifi_step_list, hifi_mll_list = hifi_smc.sample(
-    num_particles=NUM_PARTICLES,
-    num_mcmc_samples=5,
-    target_ess=0.75,
-)
-hifi_phi_list = hifi_smc.phi_sequence
-
-
 '''
 Plot results
 '''
-run_label = 'plots/mfmc'
+run_label = 'plots/lofi'
 plot_target_boxplots(
     THETA_TRUE.flatten(),
     run_label,
-    Low_Fidelity=(lofi_step_list, lofi_phi_list),
-    High_Fidelity=(hifi_step_list, hifi_phi_list),
+    Low_Fidelity=(lofi_step_list, lofi_phi_list)
 )
 
 plot_2d_joint_posterior(
     THETA_TRUE.flatten(),
     run_label,
-    Low_Fidelity=lofi_step_list,
-    High_Fidelity=hifi_step_list,
+    Low_Fidelity=lofi_step_list
 )
 
 plot_param_hists(
     THETA_TRUE.flatten(),
     run_label,
-    Low_Fidelity=lofi_step_list,
-    High_Fidelity=hifi_step_list
+    Low_Fidelity=lofi_step_list
     )
