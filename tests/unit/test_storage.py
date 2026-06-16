@@ -210,6 +210,25 @@ class TestHDF5Storage:
         storage.save_step(mock_particles)
         assert storage._mode == "a"
 
+    def test_save_step_skipped_on_non_rank_zero(self, mocker, tmpdir, mock_particles):
+        mocker.patch("smcpy.utils.storage.is_mpi_rank_zero", return_value=False)
+        filename = tmpdir / "test.h5"
+        storage = HDF5Storage(filename=filename, mode="w")
+
+        storage.save_step(mock_particles)
+
+        assert len(storage) == 0
+        assert not filename.exists()
+
+    def test_save_step_runs_on_rank_zero(self, mocker, tmpdir, mock_particles):
+        mocker.patch("smcpy.utils.storage.is_mpi_rank_zero", return_value=True)
+        filename = tmpdir / "test.h5"
+        storage = HDF5Storage(filename=filename, mode="w")
+
+        storage.save_step(mock_particles)
+
+        assert len(storage) == 1
+
 
 class TestPickleStorage:
     def test_open_wb_resets_len(self, tmpdir, mock_particles):
@@ -253,6 +272,25 @@ class TestPickleStorage:
 
         storage.save_step(mock_particles)
         assert storage._mode == "ab"
+
+    def test_save_step_skipped_on_non_rank_zero(self, mocker, tmpdir, mock_particles):
+        mocker.patch("smcpy.utils.storage.is_mpi_rank_zero", return_value=False)
+        filename = tmpdir / "test.pkl"
+        storage = PickleStorage(filename=filename, mode="w")
+
+        storage.save_step(mock_particles)
+
+        assert len(storage) == 0
+        assert not filename.exists()
+
+    def test_save_step_runs_on_rank_zero(self, mocker, tmpdir, mock_particles):
+        mocker.patch("smcpy.utils.storage.is_mpi_rank_zero", return_value=True)
+        filename = tmpdir / "test.pkl"
+        storage = PickleStorage(filename=filename, mode="w")
+
+        storage.save_step(mock_particles)
+
+        assert len(storage) == 1
 
     def test_array_objects(self, tmpdir, mock_particles):
         storage = PickleStorage(filename=tmpdir / f"test.pkl")

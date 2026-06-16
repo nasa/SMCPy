@@ -1,3 +1,17 @@
+def is_mpi_rank_zero():
+    """
+    Returns True if mpi4py is not available (single-process) or if the current
+    process is MPI rank 0. Used to guard file I/O operations that must only run
+    on one process.
+    """
+    try:
+        from mpi4py import MPI
+
+        return MPI.COMM_WORLD.Get_rank() == 0
+    except ImportError:
+        return True
+
+
 def rank_zero_output_only(func):
     """
     Wrapper function that detects whether mpi4py is available and forces all

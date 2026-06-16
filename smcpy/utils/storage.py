@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ..smc.particles import Particles
 from .context_manager import ContextManager
+from .mpi_utils import is_mpi_rank_zero
 
 
 class BaseStorage(ContextManager):
@@ -106,6 +107,8 @@ class HDF5Storage(BaseStorage):
         return mut_ratio_sequence
 
     def save_step(self, step):
+        if not is_mpi_rank_zero():
+            return
         h5 = self._open_file(self._mode)
         self._mode = "a"
         step_grp = h5.create_group(str(len(self)))
@@ -212,6 +215,8 @@ class PickleStorage(BaseStorage):
         return mut_ratio_sequence
 
     def save_step(self, step):
+        if not is_mpi_rank_zero():
+            return
         file = self._open_file(self._mode)
         self._mode = "ab"
         pickle.dump(step, file, pickle.HIGHEST_PROTOCOL)

@@ -102,3 +102,23 @@ def test_no_mpi_zero_run():
     assert no_mpi_run_mock.func_ran == True
     with pytest.raises(AttributeError):
         no_mpi_run_mock._mcmc_kernel
+
+
+def test_is_mpi_rank_zero_no_mpi():
+    assert is_mpi_rank_zero() == True
+
+
+@pytest.mark.parametrize("rank, expected", [(0, True), (1, False), (3, False)])
+def test_is_mpi_rank_zero_with_mpi(mocker, rank, expected):
+    comm_mock = mocker.Mock()
+    comm_mock.Get_rank.return_value = rank
+    mpi_module = mocker.Mock()
+    mpi_module.COMM_WORLD = comm_mock
+    mocker.patch.dict("sys.modules", {"mpi4py": mocker.Mock(MPI=mpi_module)})
+
+    import importlib
+    import smcpy.utils.mpi_utils as mpi_utils_module
+
+    importlib.reload(mpi_utils_module)
+
+    assert mpi_utils_module.is_mpi_rank_zero() == expected
