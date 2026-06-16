@@ -12,14 +12,14 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import AdaptiveSampler as Sampler
 from smcpy.paths import GeometricPath
 
-from exp_2d import M_LF as M_LF
-from exp_2d import generate_noisy_data
+from exp_3d import M_LF8 as M_LF
+from exp_3d import generate_noisy_data
 from smcpy.mfmc_proposal import MultiFidelityProposal
 
 from plotting_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots
 
 # Data generation details
-STD_DEV = 0.2
+STD_DEV = 0.5
 theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])
@@ -32,7 +32,7 @@ Execute MF SMC
 '''
 
 # Setup low-fidelity case
-priors = [uniform(0.01,2), uniform(0.05, 6)]
+priors = [uniform(0.001, 2), uniform(0, 4)]
 vector_mcmc = VectorMCMC(M_LF, noisy_data, priors, STD_DEV)
 
 # initialize from prior
@@ -40,8 +40,8 @@ mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=("theta_0", "theta_1"))
 smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
 lofi_step_list, lofi_mll_list = smc.sample(
     num_particles=NUM_PARTICLES,
-    num_mcmc_samples=5,
-    target_ess=0.5
+    num_mcmc_samples=2,
+    target_ess=0.75
 )
 lofi_phi_list = smc.phi_sequence
 lofi_particles = lofi_step_list[-1].params
@@ -49,7 +49,7 @@ lofi_particles = lofi_step_list[-1].params
 '''
 Plot results
 '''
-run_label = 'plots/lofi'
+run_label = 'plots/lofi_fail'
 plot_target_boxplots(
     THETA_TRUE.flatten(),
     run_label,

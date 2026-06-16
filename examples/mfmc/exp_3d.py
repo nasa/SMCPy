@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-resolution = 125
+resolution = 150
 char_length = 4
 # Sample 100 points for x and y ranging from -1 to 1
 x = np.linspace(np.pi, 0, resolution)
@@ -42,7 +42,7 @@ def M_HF(THETA: np.ndarray, return_flat: bool = True) -> np.ndarray:
     else:
         return theta_0 * np.exp(X * Y) + theta_1
 
-def M_LF(THETA: np.ndarray) -> np.ndarray:
+def M_LF8(THETA: np.ndarray) -> np.ndarray:
     """
     Evaluates the Low-Fidelity (LF) model using a Maclaurin series approximation.
     
@@ -78,12 +78,12 @@ def M_LF(THETA: np.ndarray) -> np.ndarray:
         (xy**8 / 40320)
     ).flatten() + theta_1
 
-def M_LF3(THETA: np.ndarray) -> np.ndarray:
+def M_LF4(THETA: np.ndarray) -> np.ndarray:
     """
-    Evaluates the Low-Fidelity (LF) model using a Maclaurin series approximation.
+    Evaluates the Low-Fidelity (LF4) model using a truncated Maclaurin series.
     
-    This approximates the high-fidelity exponential term `exp(x * y)` using an 
-    8th-degree Maclaurin series polynomial.
+    This approximates the high-fidelity exponential term `exp(x * y)` using a 
+    4th-degree Maclaurin series polynomial.
 
     Args:
         THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters.
@@ -100,13 +100,48 @@ def M_LF3(THETA: np.ndarray) -> np.ndarray:
     # Calculate the joint xy term once to optimize computation
     xy = X * Y  
     
-    # Calculate the 8th degree Maclaurin series approximation
-    # Z = theta_0 * (1 + xy + xy^2/2! + xy^3/3! + ... + xy^8/8!) + theta_1
+    # Calculate the 4th degree Maclaurin series approximation
+    # Z = theta_0 * (1 + xy + xy^2/2! + xy^3/3! + xy^4/4!) + theta_1
     return theta_0 * (
         1 + 
         (xy) + 
         (xy**2 / 2) + 
-        (xy**3 / 6)
+        (xy**3 / 6) + 
+        (xy**4 / 24)
+    ).flatten() + theta_1
+
+def M_LF6(THETA: np.ndarray) -> np.ndarray:
+    """
+    Evaluates the Low-Fidelity (LF6) model using a truncated Maclaurin series.
+    
+    This approximates the high-fidelity exponential term `exp(x * y)` using a 
+    6th-degree Maclaurin series polynomial.
+
+    Args:
+        THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters.
+            - Column 0 corresponds to theta_0.
+            - Column 1 corresponds to theta_1.
+
+    Returns:
+        np.ndarray: The evaluated low-fidelity approximation, flattened to a 1D array per sample.
+    """
+    # Extract parameters for batch processing
+    theta_0 = THETA[:, 0, None]
+    theta_1 = THETA[:, 1, None]
+
+    # Calculate the joint xy term once to optimize computation
+    xy = X * Y  
+    
+    # Calculate the 6th degree Maclaurin series approximation
+    # Z = theta_0 * (1 + xy + xy^2/2! + xy^3/3! + ... + xy^6/6!) + theta_1
+    return theta_0 * (
+        1 + 
+        (xy) + 
+        (xy**2 / 2) + 
+        (xy**3 / 6) + 
+        (xy**4 / 24) +
+        (xy**5 / 120) +
+        (xy**6 / 720)
     ).flatten() + theta_1
 
 def generate_noisy_data(THETA: np.ndarray, noise_st_dev: float, return_flat: bool = True) -> np.ndarray:

@@ -12,15 +12,15 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import AdaptiveSampler as Sampler
 from smcpy.paths import GeometricPath
 
-from exp_3d import M_HF, generate_noisy_data
-from exp_3d import M_LF as M_LF
+from exp_2d import M_HF, generate_noisy_data
+from exp_2d import M_LF as M_LF
 from smcpy.mfmc_proposal import MultiFidelityProposal
 from smcpy.proposals import MultivarIndependent
 
 from plotting_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots
 
 # Data generation details
-STD_DEV = 0.2
+STD_DEV = 0.08
 theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])

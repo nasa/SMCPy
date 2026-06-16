@@ -4,15 +4,15 @@ from typing import Union
 resolution = 10_000
 char_length = 4
 
-# Generate 1D non-uniform grid clustered at the edges, range: [-2, 2]
-x = np.linspace(0, char_length, resolution)
+# Generate 1D uniform grid, range: [0, 4]
+x = np.linspace(-char_length, char_length, resolution)
 
 def M_HF(THETA: np.ndarray) -> np.ndarray:
     """
     Evaluates the High-Fidelity (HF) model over a 1D spatial domain.
     
-    The model evaluates the function: Z = theta_0 * exp(x) + theta_1
-    over a 1D array of 1000 points ranging from -2 to 2.
+    The model evaluates the function: Z = theta_0 * sin(x) + theta_1
+    over a 1D array of 10,000 points ranging from 0 to 4.
 
     Args:
         THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters. 
@@ -26,8 +26,8 @@ def M_HF(THETA: np.ndarray) -> np.ndarray:
     theta_0 = THETA[:, 0, None]
     theta_1 = THETA[:, 1, None]
 
-    # Evaluate the exact exponential function
-    output = theta_0 * np.exp(x) + theta_1
+    # Evaluate the exact sine function
+    output = theta_0 * np.sin(x) + theta_1
     
     return output
 
@@ -35,8 +35,8 @@ def M_LF(THETA: np.ndarray) -> np.ndarray:
     """
     Evaluates the Low-Fidelity (LF) model using a Maclaurin series approximation.
     
-    This approximates the high-fidelity exponential term `exp(x)` using an 
-    8th-degree Maclaurin series polynomial.
+    This approximates the high-fidelity sine term `sin(x)` using a 
+    9th-degree Maclaurin series polynomial.
 
     Args:
         THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters.
@@ -50,18 +50,14 @@ def M_LF(THETA: np.ndarray) -> np.ndarray:
     theta_0 = THETA[:, 0, None]
     theta_1 = THETA[:, 1, None]
 
-    # Calculate the 8th degree Maclaurin series approximation
-    # Z = theta_0 * (1 + x + x^2/2! + x^3/3! + ... + x^8/8!) + theta_1
+    # Calculate the 9th degree Maclaurin series approximation for sine
+    # Z = theta_0 * (x - x^3/3! + x^5/5! - x^7/7! + x^9/9!) + theta_1
     output = theta_0 * (
-        1 + 
-        x + 
-        (x**2 / 2) + 
-        (x**3 / 6) +
-        (x**4 / 24) +
-        (x**5 / 120) +
-        (x**6 / 720) +
-        (x**7 / 5040) +
-        (x**8 / 40320)
+        x - 
+        (x**3 / 6) + 
+        (x**5 / 120) - 
+        (x**7 / 5040) + 
+        (x**9 / 362880)
     ) + theta_1
     
     return output
@@ -70,7 +66,7 @@ def M_LF3(THETA: np.ndarray) -> np.ndarray:
     """
     Evaluates the lowest-fidelity (LF3) model using a truncated Maclaurin series.
     
-    This approximates the high-fidelity exponential term `exp(x)` using a 
+    This approximates the high-fidelity sine term `sin(x)` using a 
     3rd-degree Maclaurin series polynomial.
 
     Args:
@@ -85,12 +81,10 @@ def M_LF3(THETA: np.ndarray) -> np.ndarray:
     theta_0 = THETA[:, 0, None]
     theta_1 = THETA[:, 1, None]
     
-    # Calculate the 3rd degree Maclaurin series approximation
-    # Z = theta_0 * (1 + x + x^2/2! + x^3/3!) + theta_1
+    # Calculate the 3rd degree Maclaurin series approximation for sine
+    # Z = theta_0 * (x - x^3/3!) + theta_1
     output = theta_0 * (
-        1 + 
-        x + 
-        (x**2 / 2) + 
+        x - 
         (x**3 / 6)
     ) + theta_1
     

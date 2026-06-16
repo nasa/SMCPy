@@ -12,14 +12,15 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import AdaptiveSampler as Sampler
 from smcpy.paths import GeometricPath
 
-from exp_2d import M_HF, generate_noisy_data
+from exp_3d import M_HF as M_HF
+from exp_3d import generate_noisy_data
 from smcpy.mfmc_proposal import MultiFidelityProposal
 from smcpy.proposals import MultivarIndependent
 
 from plotting_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots
 
 # Data generation details
-STD_DEV = 0.2
+STD_DEV = 0.5
 theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])
@@ -32,7 +33,7 @@ Execute MF SMC
 '''
 
 # Setup low-fidelity case
-priors = [uniform(0.001, 2), uniform(0, 8)]
+priors = [uniform(0.001, 2), uniform(0, 4)]
 vector_mcmc = VectorMCMC(M_HF, noisy_data, priors, STD_DEV)
 
 # initialize from prior
@@ -41,7 +42,7 @@ smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
 hifi_step_list, hifi_mll_list = smc.sample(
     num_particles=NUM_PARTICLES,
     num_mcmc_samples=5,
-    target_ess=0.9
+    target_ess=0.75
 )
 hifi_phi_list = smc.phi_sequence
 hifi_particles = hifi_step_list[-1].params

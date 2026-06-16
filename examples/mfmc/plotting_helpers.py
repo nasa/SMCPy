@@ -46,6 +46,7 @@ def plot_target_boxplots(true_values, run_label, **series):
                 label="true value",
                 alpha=0.7,
             )
+            ax.tick_params(axis='y', labelrotation=45)
             ax.grid(True)
             if col == 0:
                 ax.set_ylabel(f"${name}$")
@@ -56,7 +57,7 @@ def plot_target_boxplots(true_values, run_label, **series):
 
     axes[0, -1].legend(loc="upper right")
     plt.tight_layout()
-    plt.savefig(f"{run_label}_smc_steps.png")
+    plt.savefig(f"{run_label}_smc_steps.png", bbox_inches='tight')
     plt.show()
 
 def plot_2d_joint_posterior(true_values, run_label, **series):
@@ -120,13 +121,13 @@ def plot_2d_joint_posterior(true_values, run_label, **series):
         ax.grid(True, alpha=0.5)
 
         # Make tick marks slightly larger
-        ax.tick_params(axis='both', which='major', labelsize=12)
+        ax.tick_params(axis='both', which='major', labelsize=12, labelrotation = 45)
 
     # Add the legend to the last axis
     axes[-1].legend(loc="upper right")
     
     plt.tight_layout()
-    plt.savefig(f"{run_label}_joint_posterior.png")
+    plt.savefig(f"{run_label}_joint_posterior.png", bbox_inches='tight')
     plt.show()
 
 def plot_param_hists(true_values, run_label, **series):
@@ -168,7 +169,7 @@ def plot_param_hists(true_values, run_label, **series):
             ax.hist(
                 final_particles[:, col],
                 bins=30,
-                density=True,      # Normalizes the histogram to represent a probability density
+                # density=True,      # Normalizes the histogram to represent a probability density
                 alpha=0.7,           
                 label='Posterior Density' if row == 0 and col == 0 else None,
                 color = 'mediumblue'
@@ -191,7 +192,9 @@ def plot_param_hists(true_values, run_label, **series):
             
             # Put the SMC run label on the y-axis of the first column
             if col == 0:
-                ax.set_ylabel(f'{label}\nDensity', fontsize=14)
+                ax.set_ylabel(f'{label}\nFrequency', fontsize=14)
+
+            ax.tick_params(axis='x', labelrotation=45)
 
             # Clean up the background grid and ticks
             ax.grid(True, alpha=0.3)
@@ -202,5 +205,5 @@ def plot_param_hists(true_values, run_label, **series):
     plt.tight_layout()
     # Adjust top margin so the figure legend doesn't overlap titles
     plt.subplots_adjust(top=0.9) 
-    plt.savefig(f"{run_label}_histogram_comp.png")
+    plt.savefig(f"{run_label}_histogram_comp.png", bbox_inches='tight')
     plt.show()
