@@ -51,6 +51,8 @@ class Mutator:
 
     def mutate(self, particles, num_samples):
         cov = particles.compute_covariance() if self._compute_cov else None
+        if self.mcmc_kernel._mcmc.proposal == self.mcmc_kernel.local_mcmc_proposal:
+            cov = np.repeat(cov[np.newaxis, :, :], num_samples, axis=0)
         mutated = self.mcmc_kernel.mutate_particles(
             particles.param_dict, num_samples, cov
         )

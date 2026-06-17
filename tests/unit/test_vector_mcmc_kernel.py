@@ -188,3 +188,26 @@ def test_convert_params_ele_to_string(vector_mcmc):
 def test_convert_params_itr_to_tuple(vector_mcmc, iterable):
     kernel = VectorMCMCKernel(vector_mcmc, iterable)
     assert isinstance(kernel.param_order, tuple)
+
+
+def test_local_mcmc_proposal_check_changing_scale_factor(mocker, vector_mcmc):
+    mock_local_mcmc_proposal = mocker.patch(
+        "smcpy.mcmc.vector_mcmc_kernel.LocalMCMCProposal"
+    )
+    mock_mcmc_proposal_instance = mocker.Mock()
+    mock_local_mcmc_proposal.return_value = mock_mcmc_proposal_instance
+    mock_mcmc_proposal_instance.return_value = (None, None, None, None)
+
+    param_array = np.array([[1, 2], [3, 4], [5, 6]])
+    kernel = VectorMCMCKernel(vector_mcmc, param_array, local_proposal=True)
+    kernel._mcmc._scale_factor = 3
+
+    inputs = None
+    cov = None
+    kernel.local_mcmc_proposal(inputs, cov)
+
+    mock_local_mcmc_proposal.assert_called_once()
+
+    call_args = mock_mcmc_proposal_instance.call_args
+    called_scale_factor = call_args[0][1]
+    assert called_scale_factor == 3

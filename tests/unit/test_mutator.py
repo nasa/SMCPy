@@ -51,6 +51,8 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     stub_mcmc_kernel.mutate_particles.return_value = (params, log_likes)
     stub_mcmc_kernel.path = GeometricPath()
     stub_mcmc_kernel.path.phi = 1
+    stub_mcmc_kernel._mcmc = mocker.Mock()
+    stub_mcmc_kernel.local_mcmc_proposal = mocker.Mock()
 
     mutated_particles = mutator.mutate(mocked_particles, num_samples)
 
@@ -66,12 +68,51 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     )
 
 
+def test_check_reshaping_cov_for_local_mcmc_proposal(mutator, stub_mcmc_kernel, mocker):
+    num_samples = 2
+    cov = np.array([[1, 0], [0, 1]])
+
+    mocked_particles = mocker.Mock(Particles, autospec=True)
+    mocked_particles.param_dict = 1
+    mocked_particles.params = np.array([[333, 333]])
+    mocked_particles.log_likes = 2
+    mocked_particles.log_weights = 3
+    mocked_particles.total_unnorm_log_weight = 99
+    mocker.patch.object(mocked_particles, "compute_covariance", return_value=cov)
+
+    mocker.patch("smcpy.smc.mutator.Particles", new=DummyParticles)
+
+    params = np.array([[333, 333]])
+    log_likes = [[33]]
+    stub_mcmc_kernel.mutate_particles.return_value = (params, log_likes)
+    stub_mcmc_kernel.path = GeometricPath()
+    stub_mcmc_kernel._mcmc = mocker.Mock()
+    stub_mcmc_kernel._mcmc.proposal = None
+    stub_mcmc_kernel.local_mcmc_proposal = None
+
+    mutator.mutate(mocked_particles, num_samples)
+
+    call_args = mutator.mcmc_kernel.mutate_particles.call_args
+    passed_cov = call_args[0][2]
+
+    expected_cov = expected_cov = np.array(
+        [
+            [[1, 0], [0, 1]],
+            [[1, 0], [0, 1]],
+        ]
+    )
+    assert passed_cov.shape == (num_samples, cov.shape[0], cov.shape[1])
+    np.testing.assert_array_equal(passed_cov, expected_cov)
+
+
 def test_hidden_turn_off_cov_calculation(mocker, mutator, stub_mcmc_kernel):
     mocked_particles = mocker.Mock(Particles, autospec=True)
     mocked_particles.param_dict = {}
     mocker.patch.object(mocked_particles, "compute_covariance")
 
     stub_mcmc_kernel.path = mocker.Mock()
+    stub_mcmc_kernel._mcmc = mocker.Mock()
+    stub_mcmc_kernel.local_mcmc_proposal = mocker.Mock()
 
     params = np.array([[1]])
     log_likes = [[1]]
