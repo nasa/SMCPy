@@ -214,7 +214,7 @@ class AdaptiveSampler(SamplerBase):
         :type min_dphi: float
         """
         if target_ess <= 0.0 or target_ess >= 1.0:
-            raise ValueError
+            raise ValueError("target_ess must be in the range (0, 1)")
 
         self._updater = Updater(
             ess_threshold=1,  # ensures always resampling
