@@ -12,15 +12,15 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import AdaptiveSampler as Sampler
 from smcpy.paths import GeometricPath
 
-from exp_2d import M_HF, generate_noisy_data
-from exp_2d import M_LF as M_LF
+from exp_3d import M_HF, generate_noisy_data
+from exp_3d import M_LF8 as M_LF
 from smcpy.mfmc_proposal import MultiFidelityProposal
 from smcpy.proposals import MultivarIndependent
 
 from plotting_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots
 
 # Data generation details
-STD_DEV = 0.08
+STD_DEV = 0.5
 theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])
@@ -55,8 +55,10 @@ lofi_proposal_dist = MultiFidelityProposal(
     priors,
     STD_DEV
 )
+
+vector_mcmc_hifi = VectorMCMC(M_HF, noisy_data, priors, STD_DEV)
 mcmc_kernel = VectorMCMCKernel(
-    vector_mcmc, param_order=("a", "b"), path=GeometricPath(proposal=lofi_proposal_dist)
+    vector_mcmc_hifi, param_order=("theta_0", "theta_1"), path=GeometricPath(proposal=lofi_proposal_dist)
 )
 
 # Setup high-fidelity case

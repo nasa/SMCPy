@@ -2,7 +2,7 @@ import numpy as np
 from typing import Union
 
 resolution = 150
-char_length = 4
+char_length = 2
 # Sample 100 points for x and y ranging from -1 to 1
 x = np.linspace(np.pi, 0, resolution)
 y = np.linspace(np.pi, 0, resolution)
