@@ -33,24 +33,36 @@ class MultiFidelityProposal:
         self._priors_list = priors
         self._dims = self._get_dims()
 
-    def rvs(self, num_samples: int, random_state: Optional[int] = None) -> np.ndarray:
+    import numpy as np
+
+    def rvs(self, num_samples: int, random_state: np.random.Generator) -> np.ndarray:
         """
         Generates random samples directly from the LF posterior particles.
 
         Args:
             num_samples (int): Number of particles to propose.
-            random_state (Optional[int]): Seed for reproducibility.
+            random_state (np.random.Generator): A NumPy random number generator instance 
+                (e.g., initialized via `np.random.default_rng()`) used to ensure 
+                reproducibility of the sampled particles.
 
         Returns:
             np.ndarray: Subsampled particles of shape (num_samples, N_parameters).
         """
+        
+        # If the requested number of samples matches the particle pool exactly, return all of them
         if num_samples == len(self.lofi_particles):
             return self.lofi_particles
-            
-        if random_state is not None:
-            np.random.seed(random_state)
 
-        random_indices = np.random.choice(self.lofi_particles.shape[0], size=num_samples, replace=False)
+        # Randomly sample indices with replacement using the provided Generator
+        if num_samples < len(self.lofi_particles):
+            random_indices = random_state.choice(
+                self.lofi_particles.shape[0], 
+                size=num_samples, 
+                replace=False
+            )
+        else:
+            ValueError("num_samples must be less than the number of LoFi Particles")
+        
         return self.lofi_particles[random_indices]
 
     def logpdf(self, particles: np.ndarray) -> np.ndarray:
