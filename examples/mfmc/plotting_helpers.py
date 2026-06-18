@@ -148,7 +148,7 @@ def plot_param_hists(true_values, run_label, **series):
         n_runs,
         n_params,
         sharex="col",  # X-axis shared across the same parameter (columns)
-        figsize=(4 * n_params, 3 * n_runs), 
+        figsize=(8 * n_params, 6 * n_runs), 
         squeeze=False 
     )
 

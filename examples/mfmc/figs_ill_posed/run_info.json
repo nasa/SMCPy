@@ -1,0 +1,38 @@
+{
+    "figs_ill_posed/test1": {
+        "timestamp": "2026-06-18 10:19:04",
+        "bias_adjustments": [
+            0.0005,
+            0.005
+        ],
+        "stdev_adjustments": [
+            1,
+            1
+        ],
+        "true_theta": [
+            0.05,
+            1.0
+        ],
+        "target_ess": 0.99,
+        "num_mcmc_samples": 6,
+        "num_particles": 1000
+    },
+    "figs_ill_posed/test2": {
+        "timestamp": "2026-06-18 11:52:44",
+        "bias_adjustments": [
+            0.0005,
+            0.005
+        ],
+        "stdev_adjustments": [
+            1,
+            1
+        ],
+        "true_theta": [
+            0.05,
+            1.0
+        ],
+        "target_ess": 0.9,
+        "num_mcmc_samples": 5,
+        "num_particles": 10000
+    }
+}

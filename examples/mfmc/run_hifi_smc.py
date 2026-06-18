@@ -25,7 +25,6 @@ theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])
 NUM_PARTICLES = 1_000
-np.random.seed(42)
 noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV)
 
 '''
@@ -41,16 +40,17 @@ mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=("theta_0", "theta_1"))
 smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
 hifi_step_list, hifi_mll_list = smc.sample(
     num_particles=NUM_PARTICLES,
-    num_mcmc_samples=5,
-    target_ess=0.75
+    num_mcmc_samples=7,
+    target_ess=0.9
 )
 hifi_phi_list = smc.phi_sequence
 hifi_particles = hifi_step_list[-1].params
+np.save('HIFI_REF_posterior_particles.npy', hifi_particles)
 
 '''
 Plot results
 '''
-run_label = 'plots/hifi'
+run_label = 'plots/HIFI_REF'
 plot_target_boxplots(
     THETA_TRUE.flatten(),
     run_label,
