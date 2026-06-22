@@ -74,7 +74,7 @@ hifi_phi_list = hifi_smc.phi_sequence
 '''
 Plot results
 '''
-run_label = 'plots/mfmc'
+run_label = 'plots/mfmc2'
 plot_target_boxplots(
     THETA_TRUE.flatten(),
     run_label,

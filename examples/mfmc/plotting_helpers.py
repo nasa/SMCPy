@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import json
 '''
 Plotting functions
 '''
@@ -199,8 +201,11 @@ def plot_param_hists(true_values, run_label, **series):
             # Clean up the background grid and ticks
             ax.grid(True, alpha=0.3)
             ax.tick_params(axis='both', which='major', labelsize=11)
+            # Turn off scientific notation and the base offset
+            ax.ticklabel_format(useOffset=False, style='plain', axis='x')
 
     axes[0,0].legend(loc="upper right")
+
     
     plt.tight_layout()
     # Adjust top margin so the figure legend doesn't overlap titles
@@ -362,4 +367,86 @@ def plot_ill_posed_res(true_values, run_label, perturbed_lofi_particles, bias_ad
     plt.subplots_adjust(top=0.9) 
     plt.savefig(f"{run_label}_results.png", bbox_inches='tight')
     plt.show()
+    return None
+
+def plot_log_likelihood(run_label, **series):
+    """
+    Plots the Marginal Log-Likelihood (MLL) progression across SMC steps.
+    
+    Args:
+        run_label (str): A prefix used for saving the output plot filename.
+        **series: Keyword arguments where the key is the label (e.g., run name) 
+                  and the value is an iterable/tuple where the second element 
+                  is the MLL array over steps.
+    """
+    n_series = len(series)
+    
+    # Create the subplots. squeeze=False ensures axes is ALWAYS a 2D array 
+    # of shape (1, n_series), even if n_series is 1.
+    fig, axes = plt.subplots(
+        nrows=1,
+        ncols=n_series,
+        sharex="col",
+        sharey="row",
+        figsize=(5 * n_series, 4), # Slightly taller and wider for a cleaner look
+        squeeze=False 
+    )
+
+    for col, (label, mll_arr) in enumerate(series.items()):
+        # Extract the MLL array (assuming series_data is a tuple of (targets, mll_arr))
+        positions = np.arange(len(mll_arr))
+
+        # Access the specific subplot (Row 0, Column 'col')
+        ax = axes[0, col]
+        
+        # Plot the line and scatter points
+        # Added zorder to ensure points sit on top of the line
+        line = ax.plot(positions, mll_arr, linewidth=2, alpha=0.8, label="MLL Trajectory")
+        ax.scatter(positions, mll_arr, s=30, color=line[0].get_color(), zorder=3)
+
+        # Styling and Labels
+        ax.set_title(f"{label}", fontsize=12, fontweight='bold')
+        ax.set_xlabel("SMC Step", fontsize=11)
+        
+        # Only add the Y-label to the far-left plot to avoid clutter (since sharey=True)
+        if col == 0:
+            ax.set_ylabel("Marginal Log-Likelihood", fontsize=11)
+            
+        # Add a subtle background grid for easier reading
+        ax.grid(True, linestyle='--', alpha=0.6)
+
+    # Add a legend to the final subplot
+    axes[0, -1].legend(loc="best", fontsize=10)
+
+    # Clean layout and save
+    plt.tight_layout()
+    file_name = f"{run_label}_mll_per_smc_step.png"
+    plt.savefig(file_name, bbox_inches='tight', dpi=300) # dpi=300 makes the image high-res
+    
+    plt.show()
+
+
+def save_run_hyperparameters(log_filepath, run_label, **hyperparameters):
+
+    # 2. Load existing data if the file already exists
+    if os.path.exists(log_filepath):
+        with open(log_filepath, "r") as log_file:
+            try:
+                all_runs = json.load(log_file)
+            except json.JSONDecodeError:
+                all_runs = {} # If the file is empty or corrupted, start fresh
+    else:
+        all_runs = {}
+
+    # 3. Add or Overwrite the data for this specific run_label
+    # (If run_label already exists in the dictionary, this overwrites it. If not, it adds it.)
+    all_runs[run_label] = hyperparameters
+
+    # 4. Save the updated dictionary back to the JSON file
+    with open(log_filepath, "w") as log_file:
+        # indent=4 makes the JSON file nicely formatted and easy for humans to read!
+        json.dump(all_runs, log_file, indent=4)
+
+    print(f"Run details successfully logged to {log_filepath}")
+
     return None

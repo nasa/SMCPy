@@ -17,15 +17,18 @@ from exp_3d import generate_noisy_data
 from smcpy.mfmc_proposal import MultiFidelityProposal
 from smcpy.proposals import MultivarIndependent
 
-from plotting_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots
+from plotting_helpers import plot_2d_joint_posterior, plot_param_hists, plot_target_boxplots, plot_log_likelihood, save_run_hyperparameters
 
 # Data generation details
-STD_DEV = 0.5
+STD_DEV = 5
 theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])
-NUM_PARTICLES = 1_000
+NUM_PARTICLES = 2_000
 noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV)
+
+target_ess = 0.97
+num_mcmc_samples = 8
 
 '''
 Execute MF SMC
@@ -40,8 +43,8 @@ mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=("theta_0", "theta_1"))
 smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
 hifi_step_list, hifi_mll_list = smc.sample(
     num_particles=NUM_PARTICLES,
-    num_mcmc_samples=7,
-    target_ess=0.9
+    num_mcmc_samples=num_mcmc_samples,
+    target_ess=target_ess
 )
 hifi_phi_list = smc.phi_sequence
 hifi_particles = hifi_step_list[-1].params
@@ -50,7 +53,7 @@ np.save('HIFI_REF_posterior_particles.npy', hifi_particles)
 '''
 Plot results
 '''
-run_label = 'plots/HIFI_REF'
+run_label = 'plots/HIFI_REF3'
 plot_target_boxplots(
     THETA_TRUE.flatten(),
     run_label,
@@ -67,4 +70,25 @@ plot_param_hists(
     THETA_TRUE.flatten(),
     run_label,
     High_Fidelity=hifi_step_list
-    )
+)
+
+plot_log_likelihood(
+    run_label,
+    High_Fidelity=hifi_mll_list
+)
+
+current_run_data = {
+    "true_theta": THETA_TRUE.flatten().tolist() if hasattr(THETA_TRUE, 'tolist') else THETA_TRUE.flatten(),
+    "target_ess": target_ess,
+    "num_mcmc_samples": num_mcmc_samples,
+    "num_particles": NUM_PARTICLES,
+    "add_noise_stdev": STD_DEV
+}
+
+save_run_hyperparameters(
+    'plots/run_info.json',
+    run_label.split('/')[-1],
+    **current_run_data
+)
+
+print(f"Run label: {run_label}")

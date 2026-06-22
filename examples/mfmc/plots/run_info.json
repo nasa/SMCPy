@@ -1,0 +1,31 @@
+{
+    "HIFI_REF": {
+        "true_theta": [
+            0.05,
+            1.0
+        ],
+        "target_ess": 0.97,
+        "num_mcmc_samples": 8,
+        "num_particles": 1000,
+        "add_noise_stdev": 5
+    },
+    "HIFI_REF_2d": {
+        "true_theta": [
+            0.05,
+            1.0
+        ],
+        "target_ess": 0.97,
+        "num_mcmc_samples": 5,
+        "num_particles": 2000
+    },
+    "HIFI_REF2": {
+        "true_theta": [
+            0.05,
+            1.0
+        ],
+        "target_ess": 0.97,
+        "num_mcmc_samples": 8,
+        "num_particles": 2000,
+        "add_noise_stdev": 5
+    }
+}
