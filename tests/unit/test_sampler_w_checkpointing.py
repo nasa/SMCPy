@@ -72,6 +72,25 @@ def test_restart_restores_path_phi(mocker, mcmc_kernel):
     assert mcmc_kernel.path.phi == last_phi
 
 
+def test_restart_when_path_already_at_last_phi(mocker, mcmc_kernel):
+    phi_sequence = [0, 0.3, 0.7, 1.0]
+    last_phi = phi_sequence[-1]
+
+    # simulate a reused kernel / completed-run restart where the path is
+    # already advanced to the last phi
+    mcmc_kernel.path.phi = last_phi
+
+    result = DummyResult()
+    result.phi_sequence = phi_sequence
+    mocker.patch(SAMPLER_BASE + ".InMemoryStorage", return_value=result)
+
+    smc = AdaptiveSampler(mcmc_kernel)
+    smc._result = result
+    smc._initialize(num_particles=100)
+
+    assert mcmc_kernel.path.phi == last_phi
+
+
 @pytest.mark.parametrize(
     "stored_phi_sequence, provided_phi_sequence, expected_called, expected_seq",
     [
