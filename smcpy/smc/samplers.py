@@ -88,6 +88,7 @@ class SamplerBase:
         if self._result and self._result.is_restart:
             self._step = self._result[-1]
             self._phi_sequence = self._result.phi_sequence
+            self._mcmc_kernel.path.phi = self._phi_sequence[-1]
             return None
         return self._initializer.initialize_particles(num_particles)
 
@@ -136,6 +137,14 @@ class FixedPhiSampler(SamplerBase):
         """
         super().__init__(mcmc_kernel, show_progress_bar)
 
+    def _initialize_sequence(self, num_particles, phi_sequence):
+        self._phi_sequence = [0]
+        step = self._initialize(num_particles)  # loads phis existing if restart
+        last_phi = self._phi_sequence[-1]
+        phi_iterator = [p for p in phi_sequence if p > last_phi]
+        self._phi_sequence = list(self._phi_sequence) + phi_iterator
+        return step, phi_iterator
+
     def sample(
         self,
         num_particles,
@@ -165,11 +174,8 @@ class FixedPhiSampler(SamplerBase):
             resample_rng=resample_rng,
             particles_warn_threshold=particles_warn_threshold,
         )
-        self._phi_sequence = phi_sequence
+        self.step, phi_iterator = self._initialize_sequence(num_particles, phi_sequence)
 
-        self.step = self._initialize(num_particles)
-
-        phi_iterator = self._phi_sequence[1:]
         pbar = self._init_progress_bar(0)
         for i, phi in enumerate(phi_iterator):
             self._do_smc_step(phi, num_mcmc_samples)
