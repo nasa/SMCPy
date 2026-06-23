@@ -51,7 +51,9 @@ mcmc_kernel = VectorMCMCKernel(
 
 # Setup function for running SMC w/ storage context. Defined at module level so
 # spawned subprocesses can import it (required for multiprocessing on Windows).
-def run_smc(mode="w"):  # mode = 'w' will create a new checkpoint file
+def run_smc(
+    mode="w", mcmc_kernel=mcmc_kernel
+):  # mode = 'w' will create a new checkpoint file
     with Storage(checkpoint_file, mode=mode):  # can use any available backend
         smc = AdaptiveSampler(mcmc_kernel)
         results, mll = smc.sample(num_particles=500, num_mcmc_samples=5, target_ess=0.8)
@@ -73,8 +75,11 @@ if __name__ == "__main__":
     print("phi sequence = {}".format(np.array(results.phi_sequence)))
 
     # Show that SMC will not run again once complete (if mode != 'w')
-    print(">> Try restarting again...")
-    results, mll = run_smc(mode="a")
+    print(">> Try restarting again and use a fresh kernel...")
+    mcmc_kernel = VectorMCMCKernel(
+        vector_mcmc, param_order=("a", "b"), rng=np.random.default_rng(34)
+    )
+    results, mll = run_smc(mode="a", mcmc_kernel=mcmc_kernel)
 
     # Print results to console
     print("marginal log likelihood = {} (unchanged)".format(mll[-1]))
