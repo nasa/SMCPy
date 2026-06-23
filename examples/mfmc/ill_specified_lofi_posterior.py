@@ -4,7 +4,7 @@ import os
 import sys
 import json
 
-from scipy.stats import uniform, multivariate_normal, Normal, norm
+from scipy.stats import uniform, wasserstein_distance
 
 sys.path.append(os.path.join(os.getcwd(), "../../"))
 sys.path.append(os.path.join(os.getcwd(), "../../smcpy"))
@@ -13,11 +13,11 @@ from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy import AdaptiveSampler as Sampler
 from smcpy.paths import GeometricPath
 
-from exp_3d import M_HF, generate_noisy_data
+from exp_3d import M_HF
 from smcpy.mfmc_proposal import MultiFidelityProposal
 from smcpy.proposals import MultivarIndependent
 
-from plotting_helpers import plot_ill_posed_res
+from plotting_helpers import plot_ill_posed_res, save_run_hyperparameters, plot_param_hist_progression, plot_target_boxplots
 import datetime
 
 ##########################################################################################
@@ -27,20 +27,18 @@ import datetime
 Run details
 '''
 # Data generation details
-STD_DEV = 0.5
+STD_DEV = 5
 theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])
-NUM_PARTICLES = 10_000
-np.random.seed(42)
-noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV)
+NUM_PARTICLES = 5_000
+noisy_data = np.load('HIFI_REF_noisy_data.npy')
 
-
-run_label = 'figs_ill_posed/test2'
-bias_adjustments_arr = np.array([0.0005,0.005])
+run_label = 'figs_ill_posed/theta1_bias5'
+bias_adjustments_arr = np.array([0., -0.1])
 stdev_adjustments_arr = np.array([1,1])
-target_ess = 0.9
-num_mcmc_samples = 5
+target_ess = 0.99
+num_mcmc_samples = 10
 ##########################################################################################
 ##########################################################################################
 ##########################################################################################
@@ -58,29 +56,12 @@ def perturb_lofi_posterior(particles, bias_adjust, stdev_adjust):
 '''
 Execute MF SMC
 '''
-
-# # Setup low-fidelity case
-priors = [uniform(0.001, 2), uniform(0, 4)]
-vector_mcmc = VectorMCMC(M_HF, noisy_data, priors, STD_DEV)
-
-# initialize from prior
-mcmc_kernel = VectorMCMCKernel(vector_mcmc, param_order=("theta_0", "theta_1"))
-smc = Sampler(mcmc_kernel=mcmc_kernel, show_progress_bar=True)
-lofi_step_list, lofi_mll_list = smc.sample(
-    num_particles=NUM_PARTICLES,
-    num_mcmc_samples=5,
-    target_ess=0.75
-)
-lofi_phi_list = smc.phi_sequence
-lofi_particles = lofi_step_list[-1].params
-np.save('pseudo_lofi_posterior.npy', lofi_particles)
-
-# read in pseudo lofi posterior particles
-lofi_particles = np.load('pseudo_lofi_posterior.npy')
+lofi_particles = np.load('HIFI_REF_posterior_particles.npy')
 
 perturbed_particles = perturb_lofi_posterior(lofi_particles, bias_adjustments_arr, stdev_adjustments_arr)
 
 # Setup low-fidelity posterior as proposal for high-fidelity
+priors = [uniform(0.001, 2), uniform(0, 4)]
 lofi_proposal_dist = MultiFidelityProposal(
     perturbed_particles, 
     M_HF, 
@@ -106,6 +87,7 @@ hifi_step_list, hifi_mll_list = hifi_smc.sample(
     target_ess=target_ess,
 )
 hifi_phi_list = hifi_smc.phi_sequence
+hifi_particles = hifi_step_list[-1].params
 
 '''
 Plot results
@@ -117,6 +99,35 @@ plot_ill_posed_res(
     bias_adjustments_arr, stdev_adjustments_arr,
     High_Fidelity=(hifi_step_list, hifi_phi_list)
 )
+
+plot_param_hist_progression(
+    run_label,
+    lofi_particles,
+    perturbed_particles,
+    hifi_particles,
+    bias_adjustments_arr, stdev_adjustments_arr
+)
+
+plot_target_boxplots(
+    THETA_TRUE.flatten(),
+    run_label,
+    High_Fidelity = (hifi_step_list, hifi_phi_list)
+)
+
+'''
+Wasserstein distance and posterior mean difference
+'''
+wasser_dist = []
+n_params = lofi_particles.shape[-1]
+
+for i in range(n_params):
+    dist = wasserstein_distance(lofi_particles[:, i], hifi_particles[:, i])
+    wasser_dist.append(dist)
+
+hifi_post_mean = np.mean(hifi_particles, axis = 0)
+lofi_post_mean = np.mean(lofi_particles, axis = 0)
+
+post_mean_difference = hifi_post_mean - lofi_post_mean
 
 '''
 Log Run Information to JSON File
@@ -136,26 +147,17 @@ current_run_data = {
     "true_theta": THETA_TRUE.flatten().tolist() if hasattr(THETA_TRUE, 'tolist') else THETA_TRUE.flatten(),
     "target_ess": target_ess,
     "num_mcmc_samples": num_mcmc_samples,
-    "num_particles": NUM_PARTICLES
+    "num_particles": NUM_PARTICLES,
+    "add_noise_stdev": STD_DEV,
+    "wasserstein_distance": wasser_dist,
+    "posterior_mean_distance": post_mean_difference.flatten().tolist(),
+    "Extra details": 'Priors: [uniform(0.001, 2), uniform(0, 4)]\n Used exp_3d HF Model'
 }
 
-# 2. Load existing data if the file already exists
-if os.path.exists(log_filename):
-    with open(log_filename, "r") as log_file:
-        try:
-            all_runs = json.load(log_file)
-        except json.JSONDecodeError:
-            all_runs = {} # If the file is empty or corrupted, start fresh
-else:
-    all_runs = {}
+save_run_hyperparameters(
+    log_filename,
+    run_label,
+    **current_run_data
+)
 
-# 3. Add or Overwrite the data for this specific run_label
-# (If run_label already exists in the dictionary, this overwrites it. If not, it adds it.)
-all_runs[run_label] = current_run_data
-
-# 4. Save the updated dictionary back to the JSON file
-with open(log_filename, "w") as log_file:
-    # indent=4 makes the JSON file nicely formatted and easy for humans to read!
-    json.dump(all_runs, log_file, indent=4)
-
-print(f"Run details successfully logged to {log_filename}")
+print(f"Run label: {run_label}")

@@ -2,6 +2,35 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import json
+
+'''
+Saving function
+'''
+def save_run_hyperparameters(log_filepath, run_label, **hyperparameters):
+
+    # 2. Load existing data if the file already exists
+    if os.path.exists(log_filepath):
+        with open(log_filepath, "r") as log_file:
+            try:
+                all_runs = json.load(log_file)
+            except json.JSONDecodeError:
+                all_runs = {} # If the file is empty or corrupted, start fresh
+    else:
+        all_runs = {}
+
+    # 3. Add or Overwrite the data for this specific run_label
+    # (If run_label already exists in the dictionary, this overwrites it. If not, it adds it.)
+    all_runs[run_label] = hyperparameters
+
+    # 4. Save the updated dictionary back to the JSON file
+    with open(log_filepath, "w") as log_file:
+        # indent=4 makes the JSON file nicely formatted and easy for humans to read!
+        json.dump(all_runs, log_file, indent=4)
+
+    print(f"Run details successfully logged to {log_filepath}")
+
+    return None
+
 '''
 Plotting functions
 '''
@@ -48,6 +77,7 @@ def plot_target_boxplots(true_values, run_label, **series):
                 label="true value",
                 alpha=0.7,
             )
+            ax.ticklabel_format(useOffset=False, style='plain', axis='y')
             ax.tick_params(axis='y', labelrotation=45)
             ax.grid(True)
             if col == 0:
@@ -213,162 +243,6 @@ def plot_param_hists(true_values, run_label, **series):
     plt.savefig(f"{run_label}_histogram_comp.png", bbox_inches='tight')
     plt.show()
 
-def plot_ill_posed_res(true_values, run_label, perturbed_lofi_particles, bias_adjustments_arr, stdev_adjustments_arr, **series):
-    n_params = len(true_values)
-    
-    # Create subplots: n_runs (rows) x n_params (columns)
-    # squeeze=False ensures `axes` is strictly a 2D array: shape (n_runs, n_params)
-    fig, axes = plt.subplots(
-        2,
-        n_params*2,
-        figsize=(10 * n_params, 6 * 2), 
-        squeeze=False 
-    )
-
-    targets, phi_sequence = next(iter(series.values()))
-    param_names = targets[0].param_names
-    positions = np.arange(len(phi_sequence))
-    box_width = 0.6
-
-    for param_ind in range(n_params):
-        
-        # plot smc steps 
-        ax = axes[0, param_ind * 2]
-        ax.boxplot(
-            [target.params[:, param_ind] for target in targets],
-            positions=positions,
-            widths=box_width,
-            patch_artist=True,
-            manage_ticks=False,
-        )
-        ax.axhline(
-            true_values[param_ind],
-            color="r",
-            linestyle="--",
-            linewidth=1.5,
-            label="true value",
-            alpha=0.7,
-        )
-        ax.tick_params(axis='y', labelrotation=45)
-        ax.grid(True)
-        ax.set_xlabel("SMC Cycles", fontsize=14)
-        ax.set_ylabel(f"${param_names[param_ind]}$", fontsize=14)
-        ax.set_title(f" {param_names[param_ind]} | ({len(targets)} steps)", fontsize=14)
-
-        # plot lofi posterior
-        ax = axes[1, param_ind * 2]
-            
-        # Plot the histogram for this specific parameter
-        ax.hist(
-            perturbed_lofi_particles[:, param_ind],
-            bins=30,
-            # density=True,      # Normalizes the histogram to represent a probability density
-            alpha=0.7,           
-            color = 'mediumblue'
-        )
-
-        # Plot True value line
-        true_val = true_values[param_ind]
-        ax.axvline(true_val, color='r', linestyle='--', alpha=0.8, linewidth=2)
-
-        # --- Formatting and Labels ---
-        ax.set_title('LoFi Posterior', fontsize=16, pad=10)
-        ax.set_xlabel(param_names[param_ind], fontsize=14)
-        ax.set_ylabel('Frequency', fontsize=14)
-        ax.tick_params(axis='x', labelrotation=45)
-
-        ax.grid(True, alpha=0.3)
-        ax.tick_params(axis='both', which='major', labelsize=11)
-
-        # plot HiFi posterior
-        final_particles = targets[-1].params
-        ax = axes[1, (param_ind * 2) + 1]
-        # Plot the histogram for this specific parameter
-        ax.hist(
-            final_particles[:, param_ind],
-            bins=30,
-            # density=True,      # Normalizes the histogram to represent a probability density
-            alpha=0.7,           
-            color = 'mediumblue'
-        )
-
-        # Plot True value line
-        true_val = true_values[param_ind]
-        ax.axvline(true_val, color='r', linestyle='--', alpha=0.8, linewidth=2)
-
-        # --- Formatting and Labels ---
-        ax.set_title('HiFi Posterior', fontsize=16, pad=10)
-        ax.set_xlabel(param_names[param_ind], fontsize=14)
-        ax.set_ylabel('Frequency', fontsize=14)
-        ax.tick_params(axis='x', labelrotation=45)
-
-        ax.grid(True, alpha=0.3)
-        ax.tick_params(axis='both', which='major', labelsize=11)
-    
-    # plot LoFi joint posterior
-    ax = axes[0, 1]
-    ax.scatter(
-        perturbed_lofi_particles[:, 0],
-        perturbed_lofi_particles[:, 1],
-        alpha=0.3,           
-        s=20,                
-        color='mediumblue',  
-        edgecolors='none',   
-        label='Posterior Particles'
-    )
-
-    # Plot True values lines using the specific Axis object (ax)
-    ax.axvline(true_values[0], color='r', linestyle='--', alpha=0.8, linewidth=2)
-    ax.axhline(true_values[1], color='r', linestyle='--', alpha=0.8, linewidth=2)
-
-    # Add a marker right at the exact true value intersection
-    ax.plot(true_values[0], true_values[1], marker='*', color='red', markersize=15, 
-            linestyle='None', label='True Theta')
-
-    # Labels and Titles
-    ax.set_title("Low-Fidelity", fontsize=14)
-    ax.set_xlabel(r'$\theta_0$', fontsize=14)
-    ax.set_ylabel(r'$\theta_1$', fontsize=14)
-    ax.grid(True, alpha=0.5)
-    ax.tick_params(axis='both', which='major', labelsize=12, labelrotation = 45)
-
-    # plot HiFi joint posterior
-    ax = axes[0, 3]
-    ax.scatter(
-        targets[-1].params[:, 0],
-        targets[-1].params[:, 1],
-        alpha=0.3,           
-        s=20,                
-        color='mediumblue',  
-        edgecolors='none',   
-        label='Posterior Particles'
-    )
-
-    # Plot True values lines using the specific Axis object (ax)
-    ax.axvline(true_values[0], color='r', linestyle='--', alpha=0.8, linewidth=2)
-    ax.axhline(true_values[1], color='r', linestyle='--', alpha=0.8, linewidth=2)
-
-    # Add a marker right at the exact true value intersection
-    ax.plot(true_values[0], true_values[1], marker='*', color='red', markersize=15, 
-            linestyle='None', label='True Theta')
-
-    # Labels and Titles
-    ax.set_title("High-Fidelity", fontsize=14)
-    ax.set_xlabel(r'$\theta_0$', fontsize=14)
-    ax.set_ylabel(r'$\theta_1$', fontsize=14)
-    ax.grid(True, alpha=0.5)
-    ax.tick_params(axis='both', which='major', labelsize=12, labelrotation = 45)
-    
-    title = f"Bias Adjustments: {bias_adjustments_arr}  |  Std Dev Adjustments: {stdev_adjustments_arr}"
-    fig.suptitle(title, fontsize=14)
-    
-    plt.tight_layout()
-    # Adjust top margin so the figure legend doesn't overlap titles
-    plt.subplots_adjust(top=0.9) 
-    plt.savefig(f"{run_label}_results.png", bbox_inches='tight')
-    plt.show()
-    return None
-
 def plot_log_likelihood(run_label, **series):
     """
     Plots the Marginal Log-Likelihood (MLL) progression across SMC steps.
@@ -425,28 +299,224 @@ def plot_log_likelihood(run_label, **series):
     
     plt.show()
 
+'''
+Functions for checking perturbations to a perfectly specified low fidelity posterior.
+'''
 
-def save_run_hyperparameters(log_filepath, run_label, **hyperparameters):
+def plot_param_hist_progression(save_prefix, lofi_particles, perturbed_lofi_particles, hifi_particles, bias_adjustments_arr, stdev_adjustments_arr):
+    """
+    Plots the progression of particle distributions across three stages:
+    Low Fidelity -> Perturbed -> High Fidelity.
+    """
+    n_params = lofi_particles.shape[-1]
+    
+    # Adjusted figsize for a 1-row layout: width scales with params, height is fixed at 5
+    fig, axes = plt.subplots(
+        1,
+        n_params,
+        figsize=(6 * n_params, 5), 
+        squeeze=False 
+    )
+    axes = axes.flatten()
+    nbins = 80
+    
+    for param_ind in range(n_params):
+        
+        # Plot overlapping histograms
+        axes[param_ind].hist(lofi_particles[:, param_ind], bins=nbins, color='royalblue', alpha=0.6, label='LoFi')
+        axes[param_ind].hist(perturbed_lofi_particles[:, param_ind], bins=nbins, color='mediumseagreen', alpha=0.6, label='LoFi Perturbed')
+        axes[param_ind].hist(hifi_particles[:, param_ind], bins=nbins, color='indianred', alpha=0.6, label='HiFi')
+        
+        axes[param_ind].ticklabel_format(useOffset=False, style='plain', axis='x')
+        axes[param_ind].set_xlabel(f'Theta_{param_ind}')
+        
+        if param_ind == 0: 
+            axes[param_ind].set_ylabel('Frequency')
+            # Add the legend to each subplot
+            axes[param_ind].legend(loc='best')
 
-    # 2. Load existing data if the file already exists
-    if os.path.exists(log_filepath):
-        with open(log_filepath, "r") as log_file:
-            try:
-                all_runs = json.load(log_file)
-            except json.JSONDecodeError:
-                all_runs = {} # If the file is empty or corrupted, start fresh
-    else:
-        all_runs = {}
+        axes[param_ind].tick_params(axis='x', labelrotation=45)
+        axes[param_ind].set_title('Posterior')
+                
+    # Format the arrays nicely for the title so they don't break the layout
+    bias_str = np.array2string(np.array(bias_adjustments_arr), precision=4, separator=', ')
+    std_str = np.array2string(np.array(stdev_adjustments_arr), precision=4, separator=', ')
+    
+    title = f"Bias Adjustments: {bias_str}  |  Std Dev Adjustments: {std_str}"
+    fig.suptitle(title, fontsize=14)
 
-    # 3. Add or Overwrite the data for this specific run_label
-    # (If run_label already exists in the dictionary, this overwrites it. If not, it adds it.)
-    all_runs[run_label] = hyperparameters
+    # Clean up layout so labels don't overlap
+    plt.tight_layout()
 
-    # 4. Save the updated dictionary back to the JSON file
-    with open(log_filepath, "w") as log_file:
-        # indent=4 makes the JSON file nicely formatted and easy for humans to read!
-        json.dump(all_runs, log_file, indent=4)
+    # Save the figure using the provided prefix
+    save_path = f"{save_prefix}_param_progression.png"
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
 
-    print(f"Run details successfully logged to {log_filepath}")
+    # Display the plot
+    plt.show()
 
+    return None
+
+def plot_ill_posed_res(true_values, run_label, perturbed_lofi_particles, bias_adjustments_arr, stdev_adjustments_arr, **series):
+    n_params = len(true_values)
+    
+    # Create subplots: n_runs (rows) x n_params (columns)
+    # squeeze=False ensures `axes` is strictly a 2D array: shape (n_runs, n_params)
+    fig, axes = plt.subplots(
+        2,
+        n_params*2,
+        figsize=(10 * n_params, 6 * 2), 
+        squeeze=False 
+    )
+
+    targets, phi_sequence = next(iter(series.values()))
+    param_names = targets[0].param_names
+    positions = np.arange(len(phi_sequence))
+    box_width = 0.6
+
+    for param_ind in range(n_params):
+        
+        # plot smc steps 
+        ax = axes[0, param_ind * 2]
+        ax.boxplot(
+            [target.params[:, param_ind] for target in targets],
+            positions=positions,
+            widths=box_width,
+            patch_artist=True,
+            manage_ticks=False,
+        )
+        ax.axhline(
+            true_values[param_ind],
+            color="r",
+            linestyle="--",
+            linewidth=1.5,
+            label="true value",
+            alpha=0.7,
+        )
+        ax.tick_params(axis='y', labelrotation=45)
+        ax.grid(True)
+        ax.set_xlabel("SMC Cycles", fontsize=14)
+        ax.set_ylabel(f"${param_names[param_ind]}$", fontsize=14)
+        ax.set_title(f" {param_names[param_ind]} | ({len(targets)} steps)", fontsize=14)
+        ax.ticklabel_format(useOffset=False, style='plain', axis='y')
+
+        # plot lofi posterior
+        ax = axes[1, param_ind * 2]
+            
+        # Plot the histogram for this specific parameter
+        ax.hist(
+            perturbed_lofi_particles[:, param_ind],
+            bins=30,
+            # density=True,      # Normalizes the histogram to represent a probability density
+            alpha=0.7,           
+            color = 'mediumblue'
+        )
+
+        # Plot True value line
+        true_val = true_values[param_ind]
+        ax.axvline(true_val, color='r', linestyle='--', alpha=0.8, linewidth=2)
+
+        # --- Formatting and Labels ---
+        ax.set_title('LoFi Posterior', fontsize=16, pad=10)
+        ax.set_xlabel(param_names[param_ind], fontsize=14)
+        ax.set_ylabel('Frequency', fontsize=14)
+        ax.tick_params(axis='x', labelrotation=45)
+
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(axis='both', which='major', labelsize=11)
+        ax.ticklabel_format(useOffset=False, style='plain', axis='x')
+
+        # plot HiFi posterior
+        final_particles = targets[-1].params
+        ax = axes[1, (param_ind * 2) + 1]
+        # Plot the histogram for this specific parameter
+        ax.hist(
+            final_particles[:, param_ind],
+            bins=30,
+            # density=True,      # Normalizes the histogram to represent a probability density
+            alpha=0.7,           
+            color = 'mediumblue'
+        )
+
+        # Plot True value line
+        true_val = true_values[param_ind]
+        ax.axvline(true_val, color='r', linestyle='--', alpha=0.8, linewidth=2)
+
+        # --- Formatting and Labels ---
+        ax.set_title('HiFi Posterior', fontsize=16, pad=10)
+        ax.set_xlabel(param_names[param_ind], fontsize=14)
+        ax.set_ylabel('Frequency', fontsize=14)
+        ax.tick_params(axis='x', labelrotation=45)
+
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(axis='both', which='major', labelsize=11)
+        ax.ticklabel_format(useOffset=False, style='plain', axis='x')
+    
+    # plot LoFi joint posterior
+    ax = axes[0, 1]
+    ax.scatter(
+        perturbed_lofi_particles[:, 0],
+        perturbed_lofi_particles[:, 1],
+        alpha=0.3,           
+        s=20,                
+        color='mediumblue',  
+        edgecolors='none',   
+        label='Posterior Particles'
+    )
+
+    # Plot True values lines using the specific Axis object (ax)
+    ax.axvline(true_values[0], color='r', linestyle='--', alpha=0.8, linewidth=2)
+    ax.axhline(true_values[1], color='r', linestyle='--', alpha=0.8, linewidth=2)
+
+    # Add a marker right at the exact true value intersection
+    ax.plot(true_values[0], true_values[1], marker='*', color='red', markersize=15, 
+            linestyle='None', label='True Theta')
+
+    # Labels and Titles
+    ax.set_title("Low-Fidelity", fontsize=14)
+    ax.set_xlabel(r'$\theta_0$', fontsize=14)
+    ax.set_ylabel(r'$\theta_1$', fontsize=14)
+    ax.grid(True, alpha=0.5)
+    ax.tick_params(axis='both', which='major', labelsize=12, labelrotation = 45)
+    ax.ticklabel_format(useOffset=False, style='plain', axis='x')
+    ax.ticklabel_format(useOffset=False, style='plain', axis='y')
+
+
+    # plot HiFi joint posterior
+    ax = axes[0, 3]
+    ax.scatter(
+        targets[-1].params[:, 0],
+        targets[-1].params[:, 1],
+        alpha=0.3,           
+        s=20,                
+        color='mediumblue',  
+        edgecolors='none',   
+        label='Posterior Particles'
+    )
+
+    # Plot True values lines using the specific Axis object (ax)
+    ax.axvline(true_values[0], color='r', linestyle='--', alpha=0.8, linewidth=2)
+    ax.axhline(true_values[1], color='r', linestyle='--', alpha=0.8, linewidth=2)
+
+    # Add a marker right at the exact true value intersection
+    ax.plot(true_values[0], true_values[1], marker='*', color='red', markersize=15, 
+            linestyle='None', label='True Theta')
+
+    # Labels and Titles
+    ax.set_title("High-Fidelity", fontsize=14)
+    ax.set_xlabel(r'$\theta_0$', fontsize=14)
+    ax.set_ylabel(r'$\theta_1$', fontsize=14)
+    ax.grid(True, alpha=0.5)
+    ax.tick_params(axis='both', which='major', labelsize=12, labelrotation = 45)
+    ax.ticklabel_format(useOffset=False, style='plain', axis='x')
+    ax.ticklabel_format(useOffset=False, style='plain', axis='y')
+    
+    title = f"Bias Adjustments: {bias_adjustments_arr}  |  Std Dev Adjustments: {stdev_adjustments_arr}"
+    fig.suptitle(title, fontsize=14)
+    
+    plt.tight_layout()
+    # Adjust top margin so the figure legend doesn't overlap titles
+    plt.subplots_adjust(top=0.9) 
+    plt.savefig(f"{run_label}_results.png", bbox_inches='tight')
+    plt.show()
     return None

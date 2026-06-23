@@ -24,11 +24,12 @@ STD_DEV = 5
 theta_0 = 1/20
 theta_1 = 1
 THETA_TRUE = np.array([[theta_0, theta_1]])
-NUM_PARTICLES = 2_000
-noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV)
+NUM_PARTICLES = 5_000
+random_seed = 16
+noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV, random_seed=random_seed)
 
 target_ess = 0.97
-num_mcmc_samples = 8
+num_mcmc_samples = 7
 
 '''
 Execute MF SMC
@@ -48,12 +49,13 @@ hifi_step_list, hifi_mll_list = smc.sample(
 )
 hifi_phi_list = smc.phi_sequence
 hifi_particles = hifi_step_list[-1].params
-np.save('HIFI_REF_posterior_particles.npy', hifi_particles)
 
 '''
 Plot results
 '''
-run_label = 'plots/HIFI_REF3'
+run_label = 'plots/HIFI_REF'
+np.save(run_label.split('/')[-1] + '_noisy_data.npy', noisy_data)
+np.save(run_label.split('/')[-1] + '_posterior_particles.npy', hifi_particles)
 plot_target_boxplots(
     THETA_TRUE.flatten(),
     run_label,
@@ -82,7 +84,9 @@ current_run_data = {
     "target_ess": target_ess,
     "num_mcmc_samples": num_mcmc_samples,
     "num_particles": NUM_PARTICLES,
-    "add_noise_stdev": STD_DEV
+    "add_noise_stdev": STD_DEV,
+    "random_seed": random_seed,
+    "Extra details": 'Priors: [uniform(0.001, 2), uniform(0, 4)]\n Used exp_3d HF Model'
 }
 
 save_run_hyperparameters(

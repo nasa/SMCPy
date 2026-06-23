@@ -144,7 +144,7 @@ def M_LF6(THETA: np.ndarray) -> np.ndarray:
         (xy**6 / 720)
     ).flatten() + theta_1
 
-def generate_noisy_data(THETA: np.ndarray, noise_st_dev: float, return_flat: bool = True) -> np.ndarray:
+def generate_noisy_data(THETA: np.ndarray, noise_st_dev: float, return_flat: bool = True, random_seed: int = None) -> np.ndarray:
     """
     Generates synthetic observation data by adding Gaussian noise to the High-Fidelity model.
 
@@ -153,17 +153,19 @@ def generate_noisy_data(THETA: np.ndarray, noise_st_dev: float, return_flat: boo
         noise_st_dev (float): The standard deviation of the Gaussian noise to be added.
         return_flat (bool, optional): If True, flattens the output array before returning. 
             Defaults to True.
+        random_seed (int, optional): Seed for reproducibility. Defaults to None.
 
     Returns:
-        np.ndarray: The simulated noisy data. Shape is 1D if return_flat is True, 
-        otherwise maintains the High-Fidelity output shape.
+        np.ndarray: The simulated noisy data.
     """
     # Run the "true" high-fidelity simulation
     Z_HF = M_HF(THETA)
     
-    # Generate Gaussian (normal) noise with mean=0 and the specified standard deviation
-    # The noise array matches the exact shape of the HF output
-    random_noise = np.random.normal(0, noise_st_dev, size=Z_HF.shape)
+    # Use a local random number generator instead of messing with the global np.random state
+    rng = np.random.default_rng(random_seed)
+    
+    # Generate Gaussian (normal) noise
+    random_noise = rng.normal(0, noise_st_dev, size=Z_HF.shape)
 
     # Add noise to the true signal
     noisy_data = random_noise + Z_HF
