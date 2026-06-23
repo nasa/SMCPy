@@ -37,30 +37,30 @@ def kill_after_timeout(run_smc, timeout_seconds):
         print("Function completed naturally.")
 
 
+checkpoint_file = "example.h5"
+
+std_dev = 2
+noisy_data = generate_data(eval_model, std_dev, plot=False)
+
+priors = [uniform(0.0, 6.0), uniform(0.0, 6.0)]
+vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
+mcmc_kernel = VectorMCMCKernel(
+    vector_mcmc, param_order=("a", "b"), rng=np.random.default_rng(34)
+)
+
+
+# Setup function for running SMC w/ storage context. Defined at module level so
+# spawned subprocesses can import it (required for multiprocessing on Windows).
+def run_smc(mode="w"):  # mode = 'w' will create a new checkpoint file
+    with Storage(checkpoint_file, mode=mode):  # can use any available backend
+        smc = AdaptiveSampler(mcmc_kernel)
+        results, mll = smc.sample(num_particles=500, num_mcmc_samples=5, target_ess=0.8)
+    return results, mll
+
+
 if __name__ == "__main__":
 
-    checkpoint_file = "example.h5"
-
-    num_smc_steps = 5
-    std_dev = 2
-    noisy_data = generate_data(eval_model, std_dev, plot=False)
-
-    priors = [uniform(0.0, 6.0), uniform(0.0, 6.0)]
-    vector_mcmc = VectorMCMC(eval_model, noisy_data, priors, std_dev)
-    mcmc_kernel = VectorMCMCKernel(
-        vector_mcmc, param_order=("a", "b"), rng=np.random.default_rng(34)
-    )
-
-    # Setup function for running SMC w/ storage context
-    def run_smc(mode="w"):  # mode = 'w' will create a new checkpoint file
-        with Storage(checkpoint_file, mode=mode):  # can use any available backend
-            smc = AdaptiveSampler(mcmc_kernel)
-            results, mll = smc.sample(
-                num_particles=500, num_mcmc_samples=5, target_ess=0.8
-            )
-        return results, mll
-
-    # Start run but kill after 7 seconds (incomplete run)
+    # Start run but kill after timeout (incomplete run)
     kill_after_timeout(run_smc, timeout_seconds=7)
 
     # Restart SMC run and allow run to complete
