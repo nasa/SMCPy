@@ -2,6 +2,8 @@ import copy
 import numpy as np
 import pytest
 
+import h5py
+
 from smcpy.utils.storage import HDF5Storage, InMemoryStorage, PickleStorage
 
 
@@ -209,6 +211,26 @@ class TestHDF5Storage:
 
         storage.save_step(mock_particles)
         assert storage._mode == "a"
+
+    def test_phi_and_mutrat_sequence_ordered_by_step_index(self, tmpdir):
+        """phi/mut-ratio sequences must follow numeric step order, not the
+        lexicographic key order returned by h5py when creation-order tracking
+        is unavailable (e.g. '0','1','10','11','2',...)."""
+        filename = str(tmpdir / "test.h5")
+
+        # build a file WITHOUT creation-order tracking so keys() comes back in
+        # name-sorted (lexicographic) order; >10 steps so it differs from numeric
+        n_steps = 13
+        with h5py.File(filename, "w") as h5:
+            for i in range(n_steps):
+                grp = h5.create_group(str(i))
+                grp.attrs["phi"] = i / 100
+                grp.attrs["mutation_ratio"] = i / 100
+
+        storage = HDF5Storage(filename=filename)
+
+        assert storage.phi_sequence == [i / 100 for i in range(n_steps)]
+        assert storage.mut_ratio_sequence == [i / 100 for i in range(n_steps)]
 
 
 class TestPickleStorage:
