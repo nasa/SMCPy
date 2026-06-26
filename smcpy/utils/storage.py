@@ -181,7 +181,8 @@ class PickleStorage(BaseStorage):
         self._filename = Path(filename)
         self._len = 0
         self._last_scan_offset = 0
-        self._byte_offsets = []
+        self._meta_byte_offsets = []
+        self._step_byte_offsets = []
         self._phi_sequence = []
         self._mut_ratio_sequence = []
         self._mode = mode + "b"
@@ -193,25 +194,41 @@ class PickleStorage(BaseStorage):
         pickle_file = self._open_file("rb")
         data = []
         try:
-            while True:
-                object = pickle.load(pickle_file)
-                data.append(object)
+            for idx in range(len(self)):
+                pickle_file.seek(self._step_byte_offsets[idx])
+                data.append(pickle.load(pickle_file))
         except EOFError:
             pass
         self._close(pickle_file)
         return data
 
+    def _sync_metadata(self):
+        if len(self._phi_sequence) < len(self._meta_byte_offsets):
+            with open(self._filename, "rb") as f:
+                for idx in range(len(self._phi_sequence), len(self._meta_byte_offsets)):
+                    f.seek(self._meta_byte_offsets[idx])
+                    meta_dict = pickle.load(f)
+                    self._phi_sequence.append(meta_dict["phi"])
+                    self._mut_ratio_sequence.append(meta_dict["mutation_ratio"])
+
     @property
     def phi_sequence(self):
+        self._sync_metadata()
         return self._phi_sequence
 
     @property
     def mut_ratio_sequence(self):
+        self._sync_metadata()
         return self._mut_ratio_sequence
 
     def save_step(self, step):
         file = self._open_file(self._mode)
         self._mode = "ab"
+        meta_dict = {
+            "phi": step.attrs["phi"],
+            "mutation_ratio": step.attrs["mutation_ratio"],
+        }
+        pickle.dump(meta_dict, file, pickle.HIGHEST_PROTOCOL)
         pickle.dump(step, file, pickle.HIGHEST_PROTOCOL)
         self._close(file)
 
@@ -221,7 +238,8 @@ class PickleStorage(BaseStorage):
         if mode == "wb":
             self._len = 0
             self._last_scan_offset = 0
-            self._byte_offsets = []
+            self._meta_byte_offsets = []
+            self._step_byte_offsets = []
             self._phi_sequence = []
             self._mut_ratio_sequence = []
         else:
@@ -235,29 +253,36 @@ class PickleStorage(BaseStorage):
 
     def _get_data_length(self):
         return self._scan_new_records()
-    
+
     def _scan_new_records(self):
         with open(self._filename, "rb") as f:
             f.seek(self._last_scan_offset)
             while True:
                 start = f.tell()
                 try:
-                    obj = pickle.load(f)
+                    for _ in pickletools.genops(f):
+                        pass
+
+                    if len(self._meta_byte_offsets) == len(self._step_byte_offsets):
+                        self._meta_byte_offsets.append(start)
+                    else:
+                        self._step_byte_offsets.append(start)
+                        self._len += 1
                 except (EOFError, ValueError, pickle.UnpicklingError):
                     break
-                
-                self._byte_offsets.append(start)
-                self._phi_sequence.append(obj.attrs["phi"])
-                self._mut_ratio_sequence.append(obj.attrs["mutation_ratio"])
-                self._len += 1
+
                 self._last_scan_offset = f.tell()
+
+        if len(self._meta_byte_offsets) > len(self._step_byte_offsets):
+            self._meta_byte_offsets.pop()
+
         return self._len
 
     def __getitem__(self, idx):
         pickle_file = self._open_file("rb")
         idx = self._format_index(idx)
 
-        pickle_file.seek(self._byte_offsets[idx])
+        pickle_file.seek(self._step_byte_offsets[idx])
         step = pickle.load(pickle_file)
 
         step.attrs["total_unnorm_log_weight"] = step.total_unnorm_log_weight
