@@ -1,170 +1,161 @@
 import numpy as np
 from typing import Union
 
-resolution = 150
-char_length = 4
-# Sample 100 points for x and y ranging from -1 to 1
-x = np.linspace(np.pi, 0, resolution)
-y = np.linspace(np.pi, 0, resolution)
+def _generate_meshgrid(char_length: int, resolution: int = 150):
+    """Helper function to generate the 2D spatial meshgrid based on char_length."""
+    x = np.linspace(np.pi, 0, resolution)
+    y = np.linspace(np.pi, 0, resolution)
 
-x = char_length * np.cos(x)
-y = char_length * np.cos(y)
+    x = char_length * np.cos(x)
+    y = char_length * np.cos(y)
 
-# Create a 2D meshgrid (100x100)
-X, Y = np.meshgrid(x, y)
+    return np.meshgrid(x, y)
 
-def M_HF(THETA: np.ndarray, return_flat: bool = True) -> np.ndarray:
+
+def M_HF(THETA: np.ndarray, return_flat: bool = True, char_length: int = 4) -> np.ndarray:
     """
     Evaluates the High-Fidelity (HF) model over a 2D spatial grid.
     
     The model evaluates the function: Z = theta_0 * exp(x * y) + theta_1
-    over a 100x100 grid where x and y range from -1 to 1.
 
     Args:
-        THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters. 
-            - Column 0 corresponds to theta_0 (the scaling factor).
-            - Column 1 corresponds to theta_1 (the bias/offset).
-        return_flat (bool, optional): If True, flattens the spatial dimensions of the 
-            evaluated output array before returning. Defaults to True.
+        THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters.
+        return_flat (bool, optional): If True, flattens the spatial dimensions. Defaults to True.
+        char_length (int, optional): Scaling factor for the spatial domain. Defaults to 4.
 
     Returns:
-        np.ndarray: The evaluated high-fidelity output. If return_flat is True, the spatial 
-        grid is flattened (1D per sample). Otherwise, it maintains the 2D grid shape. 
-        The final shape also depends on the input N and NumPy broadcasting rules.
+        np.ndarray: The evaluated high-fidelity output.
     """
-    # Extract parameters, keeping the first dimension to allow batch processing of N samples
+    X, Y = _generate_meshgrid(char_length)
+
+    # Extract parameters for batch processing
     theta_0 = THETA[:, 0, None]
     theta_1 = THETA[:, 1, None]
 
-    # Evaluate and return the exact exponential function
     if return_flat:
         return theta_0 * np.exp(X * Y).flatten() + theta_1
     else:
         return theta_0 * np.exp(X * Y) + theta_1
 
-def M_LF8(THETA: np.ndarray) -> np.ndarray:
-    """
-    Evaluates the Low-Fidelity (LF) model using a Maclaurin series approximation.
-    
-    This approximates the high-fidelity exponential term `exp(x * y)` using an 
-    8th-degree Maclaurin series polynomial.
 
-    Args:
-        THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters.
-            - Column 0 corresponds to theta_0.
-            - Column 1 corresponds to theta_1.
-
-    Returns:
-        np.ndarray: The evaluated low-fidelity approximation, flattened to a 1D array per sample.
+def M_LF2(THETA: np.ndarray, char_length: int = 2) -> np.ndarray:
     """
-    # Extract parameters for batch processing
+    Evaluates the Low-Fidelity (LF2) model using a 2nd-degree Maclaurin series.
+    """
+    X, Y = _generate_meshgrid(char_length)
     theta_0 = THETA[:, 0, None]
     theta_1 = THETA[:, 1, None]
-
-    # Calculate the joint xy term once to optimize computation
     xy = X * Y  
     
-    # Calculate the 8th degree Maclaurin series approximation
-    # Z = theta_0 * (1 + xy + xy^2/2! + xy^3/3! + ... + xy^8/8!) + theta_1
     return theta_0 * (
-        1 + 
-        (xy) + 
-        (xy**2 / 2) + 
-        (xy**3 / 6) +
-        (xy**4 / 24) +
-        (xy**5 / 120) +
-        (xy**6 / 720) +
-        (xy**7 / 5040) +
-        (xy**8 / 40320)
+        1 + (xy) + (xy**2 / 2)
     ).flatten() + theta_1
 
-def M_LF4(THETA: np.ndarray) -> np.ndarray:
-    """
-    Evaluates the Low-Fidelity (LF4) model using a truncated Maclaurin series.
-    
-    This approximates the high-fidelity exponential term `exp(x * y)` using a 
-    4th-degree Maclaurin series polynomial.
 
-    Args:
-        THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters.
-            - Column 0 corresponds to theta_0.
-            - Column 1 corresponds to theta_1.
-
-    Returns:
-        np.ndarray: The evaluated low-fidelity approximation, flattened to a 1D array per sample.
+def M_LF3(THETA: np.ndarray, char_length: int = 2) -> np.ndarray:
     """
-    # Extract parameters for batch processing
+    Evaluates the Low-Fidelity (LF3) model using a 3rd-degree Maclaurin series.
+    """
+    X, Y = _generate_meshgrid(char_length)
     theta_0 = THETA[:, 0, None]
     theta_1 = THETA[:, 1, None]
-
-    # Calculate the joint xy term once to optimize computation
     xy = X * Y  
     
-    # Calculate the 4th degree Maclaurin series approximation
-    # Z = theta_0 * (1 + xy + xy^2/2! + xy^3/3! + xy^4/4!) + theta_1
     return theta_0 * (
-        1 + 
-        (xy) + 
-        (xy**2 / 2) + 
-        (xy**3 / 6) + 
-        (xy**4 / 24)
+        1 + (xy) + (xy**2 / 2) + (xy**3 / 6)
     ).flatten() + theta_1
 
-def M_LF6(THETA: np.ndarray) -> np.ndarray:
-    """
-    Evaluates the Low-Fidelity (LF6) model using a truncated Maclaurin series.
-    
-    This approximates the high-fidelity exponential term `exp(x * y)` using a 
-    6th-degree Maclaurin series polynomial.
 
-    Args:
-        THETA (np.ndarray): A 2D array of shape (N, 2) containing the model parameters.
-            - Column 0 corresponds to theta_0.
-            - Column 1 corresponds to theta_1.
-
-    Returns:
-        np.ndarray: The evaluated low-fidelity approximation, flattened to a 1D array per sample.
+def M_LF4(THETA: np.ndarray, char_length: int = 2) -> np.ndarray:
     """
-    # Extract parameters for batch processing
+    Evaluates the Low-Fidelity (LF4) model using a 4th-degree Maclaurin series.
+    """
+    X, Y = _generate_meshgrid(char_length)
     theta_0 = THETA[:, 0, None]
     theta_1 = THETA[:, 1, None]
-
-    # Calculate the joint xy term once to optimize computation
     xy = X * Y  
     
-    # Calculate the 6th degree Maclaurin series approximation
-    # Z = theta_0 * (1 + xy + xy^2/2! + xy^3/3! + ... + xy^6/6!) + theta_1
     return theta_0 * (
-        1 + 
-        (xy) + 
-        (xy**2 / 2) + 
-        (xy**3 / 6) + 
-        (xy**4 / 24) +
-        (xy**5 / 120) +
-        (xy**6 / 720)
+        1 + (xy) + (xy**2 / 2) + (xy**3 / 6) + (xy**4 / 24)
     ).flatten() + theta_1
 
-def generate_noisy_data(THETA: np.ndarray, noise_st_dev: float, return_flat: bool = True, random_seed: int = None) -> np.ndarray:
+
+def M_LF5(THETA: np.ndarray, char_length: int = 2) -> np.ndarray:
+    """
+    Evaluates the Low-Fidelity (LF5) model using a 5th-degree Maclaurin series.
+    """
+    X, Y = _generate_meshgrid(char_length)
+    theta_0 = THETA[:, 0, None]
+    theta_1 = THETA[:, 1, None]
+    xy = X * Y  
+    
+    return theta_0 * (
+        1 + (xy) + (xy**2 / 2) + (xy**3 / 6) + (xy**4 / 24) +
+        (xy**5 / 120)
+    ).flatten() + theta_1
+
+
+def M_LF6(THETA: np.ndarray, char_length: int = 2) -> np.ndarray:
+    """
+    Evaluates the Low-Fidelity (LF6) model using a 6th-degree Maclaurin series.
+    """
+    X, Y = _generate_meshgrid(char_length)
+    theta_0 = THETA[:, 0, None]
+    theta_1 = THETA[:, 1, None]
+    xy = X * Y  
+    
+    return theta_0 * (
+        1 + (xy) + (xy**2 / 2) + (xy**3 / 6) + (xy**4 / 24) +
+        (xy**5 / 120) + (xy**6 / 720)
+    ).flatten() + theta_1
+
+
+def M_LF7(THETA: np.ndarray, char_length: int = 2) -> np.ndarray:
+    """
+    Evaluates the Low-Fidelity (LF7) model using a 7th-degree Maclaurin series.
+    """
+    X, Y = _generate_meshgrid(char_length)
+    theta_0 = THETA[:, 0, None]
+    theta_1 = THETA[:, 1, None]
+    xy = X * Y  
+    
+    return theta_0 * (
+        1 + (xy) + (xy**2 / 2) + (xy**3 / 6) + (xy**4 / 24) +
+        (xy**5 / 120) + (xy**6 / 720) + (xy**7 / 5040)
+    ).flatten() + theta_1
+
+
+def M_LF8(THETA: np.ndarray, char_length: int = 2) -> np.ndarray:
+    """
+    Evaluates the Low-Fidelity (LF8) model using an 8th-degree Maclaurin series.
+    """
+    X, Y = _generate_meshgrid(char_length)
+    theta_0 = THETA[:, 0, None]
+    theta_1 = THETA[:, 1, None]
+    xy = X * Y  
+    
+    return theta_0 * (
+        1 + (xy) + (xy**2 / 2) + (xy**3 / 6) + (xy**4 / 24) +
+        (xy**5 / 120) + (xy**6 / 720) + (xy**7 / 5040) + (xy**8 / 40320)
+    ).flatten() + theta_1
+
+
+def generate_noisy_data(THETA: np.ndarray, noise_st_dev: float, return_flat: bool = True, random_seed: int = None, char_length: int = 4) -> np.ndarray:
     """
     Generates synthetic observation data by adding Gaussian noise to the High-Fidelity model.
 
     Args:
-        THETA (np.ndarray): A 2D array of shape (N, 2) containing the true model parameters.
-        noise_st_dev (float): The standard deviation of the Gaussian noise to be added.
-        return_flat (bool, optional): If True, flattens the output array before returning. 
-            Defaults to True.
+        THETA (np.ndarray): A 2D array containing the true model parameters.
+        noise_st_dev (float): Standard deviation of the Gaussian noise.
+        return_flat (bool, optional): Flattens the output array. Defaults to True.
         random_seed (int, optional): Seed for reproducibility. Defaults to None.
-
-    Returns:
-        np.ndarray: The simulated noisy data.
+        char_length (int, optional): Scaling factor for the spatial domain. Defaults to 4.
     """
     # Run the "true" high-fidelity simulation
-    Z_HF = M_HF(THETA)
+    Z_HF = M_HF(THETA, char_length=char_length, return_flat=False)
     
-    # Use a local random number generator instead of messing with the global np.random state
+    # Generate reproducible noise
     rng = np.random.default_rng(random_seed)
-    
-    # Generate Gaussian (normal) noise
     random_noise = rng.normal(0, noise_st_dev, size=Z_HF.shape)
 
     # Add noise to the true signal
