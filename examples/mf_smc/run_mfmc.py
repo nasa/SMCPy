@@ -39,21 +39,17 @@ num_mcmc_samples = 7
 random_seed = 16
 
 # Paths
-run_label = '/hpnobackup2/vasanche/exp_3d_case/varying_fidelities/test'
+run_label = '/hpnobackup2/vasanche/exp_3d_case/varying_fidelities/test/'
 log_filename = '/hpnobackup2/vasanche/exp_3d_case/varying_fidelities/run_info.json'
 
 # Generate synthetic measurement data
-lofi_char_length = 2
-hifi_char_length = 4
-lofi_noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV, random_seed=random_seed, char_length=lofi_char_length)
-hifi_noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV, random_seed=random_seed, char_length=hifi_char_length)
-# lofi_noisy_data = hifi_noisy_data
-# all(hifi_noisy_data == lofi_noisy_data)
+char_length = 2
+noisy_data = generate_noisy_data(THETA_TRUE, STD_DEV, random_seed=random_seed, char_length=char_length)
 
 def wrapper_M_HF(THETA):
-    return M_HF(THETA, char_length=lofi_char_length)
+    return M_HF(THETA, char_length=char_length)
 def wrapper_M_LF(THETA):
-    return M_LF(THETA, char_length=hifi_char_length)
+    return M_LF(THETA, char_length=char_length)
 
 # Define priors for the Bayesian inference
 priors = [uniform(0.001, 2), uniform(0, 4)]
@@ -66,7 +62,7 @@ print("Phase 1: Executing Low-Fidelity SMC")
 print("=" * 50 + "\n")
 
 # Setup low-fidelity MCMC kernel
-vector_mcmc_lofi = VectorMCMC(wrapper_M_LF, lofi_noisy_data, priors, STD_DEV)
+vector_mcmc_lofi = VectorMCMC(wrapper_M_LF, noisy_data, priors, STD_DEV)
 mcmc_kernel_lofi = VectorMCMCKernel(vector_mcmc_lofi, param_order=("theta_0", "theta_1"))
 
 # Run SMC
@@ -92,13 +88,13 @@ print("=" * 50 + "\n")
 lofi_proposal_dist = MultiFidelityProposal(
     lofi_particles, 
     wrapper_M_LF, 
-    lofi_noisy_data,
+    noisy_data,
     priors,
     STD_DEV
 )
 
 # Setup high-fidelity MCMC kernel with the geometric path proposal
-vector_mcmc_hifi = VectorMCMC(wrapper_M_HF, hifi_noisy_data, priors, STD_DEV)
+vector_mcmc_hifi = VectorMCMC(wrapper_M_HF, noisy_data, priors, STD_DEV)
 mcmc_kernel_hifi = VectorMCMCKernel(
     vector_mcmc_hifi, 
     param_order=("theta_0", "theta_1"), 

@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-def _generate_meshgrid(char_length: int, resolution: int = 150):
+def _generate_meshgrid_old(char_length: int, resolution: int = 150):
     """Helper function to generate the 2D spatial meshgrid based on char_length."""
     x = np.linspace(np.pi, 0, resolution)
     y = np.linspace(np.pi, 0, resolution)
@@ -11,6 +11,49 @@ def _generate_meshgrid(char_length: int, resolution: int = 150):
 
     return np.meshgrid(x, y)
 
+def _generate_meshgrid(char_length: float, resolution: int = 150, oval_width: float = 4.0, oval_height: float = 1.5, rotation_deg: float = 45.0):
+    """
+    Helper function to generate a 2D spatial meshgrid mapped to a rotated elliptical domain.
+    
+    Args:
+        char_length (float): Used to generate the base Chebyshev grid.
+        resolution (int): Number of points along each axis.
+        oval_width (float): The x-axis radius of the ellipse.
+        oval_height (float): The y-axis radius of the ellipse.
+        rotation_deg (float): Degrees to rotate the final ellipse.
+        
+    Returns:
+        tuple: (U_rotated, V_rotated) representing the 2D spatial grid.
+    """
+    # Generate the base Chebyshev grid
+    x = np.linspace(np.pi, 0, resolution)
+    y = np.linspace(np.pi, 0, resolution)
+
+    x = char_length * np.cos(x)
+    y = char_length * np.cos(y)
+
+    X, Y = np.meshgrid(x, y)
+
+    # 1. Normalize the grid to [-1, 1] for the mapping math to work
+    X_norm = X / char_length
+    Y_norm = Y / char_length
+
+    oval_width = char_length
+
+    # 2. Apply Elliptical Mapping (maps the square to a unit circle)
+    U_norm = X_norm * np.sqrt(1 - (Y_norm**2) / 2.0)
+    V_norm = Y_norm * np.sqrt(1 - (X_norm**2) / 2.0)
+
+    # 3. Scale to an Oval / Ellipse
+    U = U_norm * oval_width
+    V = V_norm * oval_height
+
+    # 4. Rotate the oval
+    theta = np.radians(rotation_deg) 
+    U_rotated = U * np.cos(theta) - V * np.sin(theta)
+    V_rotated = U * np.sin(theta) + V * np.cos(theta)
+
+    return U_rotated, V_rotated
 
 def M_HF(THETA: np.ndarray, return_flat: bool = True, char_length: int = 4) -> np.ndarray:
     """
