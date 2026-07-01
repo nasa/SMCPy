@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-def _generate_meshgrid_old(char_length: int, resolution: int = 150):
+def _generate_meshgrid_standard(char_length: int, resolution: int = 150):
     """Helper function to generate the 2D spatial meshgrid based on char_length."""
     x = np.linspace(np.pi, 0, resolution)
     y = np.linspace(np.pi, 0, resolution)
@@ -11,7 +11,7 @@ def _generate_meshgrid_old(char_length: int, resolution: int = 150):
 
     return np.meshgrid(x, y)
 
-def _generate_meshgrid(char_length: float, resolution: int = 150, oval_width: float = 4.0, oval_height: float = 1.5, rotation_deg: float = 45.0):
+def _generate_meshgrid_elliptical(char_length: float, resolution: int = 150, oval_width: float = 4.0, oval_height: float = 1.5, rotation_deg: float = 45.0):
     """
     Helper function to generate a 2D spatial meshgrid mapped to a rotated elliptical domain.
     
@@ -54,6 +54,8 @@ def _generate_meshgrid(char_length: float, resolution: int = 150, oval_width: fl
     V_rotated = U * np.sin(theta) + V * np.cos(theta)
 
     return U_rotated, V_rotated
+
+_generate_meshgrid = _generate_meshgrid_standard
 
 def M_HF(THETA: np.ndarray, return_flat: bool = True, char_length: int = 4) -> np.ndarray:
     """
