@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import json
+import corner
 
 '''
 Saving function
@@ -173,6 +174,9 @@ def plot_param_hists(true_values, run_label, **series):
     """
     n_runs = len(series)
     n_params = len(true_values)
+
+    first_targets = next(iter(series.values()))
+    param_names = first_targets[0].param_names
     
     # Create subplots: n_runs (rows) x n_params (columns)
     # squeeze=False ensures `axes` is strictly a 2D array: shape (n_runs, n_params)
@@ -220,7 +224,7 @@ def plot_param_hists(true_values, run_label, **series):
             
             # Put the parameter symbol on the x-axis of the bottom row
             if row == n_runs - 1:
-                ax.set_xlabel(r'$\theta_{%d}$' % col, fontsize=14)
+                ax.set_xlabel(param_names[col], fontsize=14)
             
             # Put the SMC run label on the y-axis of the first column
             if col == 0:
@@ -519,4 +523,63 @@ def plot_ill_posed_res(true_values, run_label, perturbed_lofi_particles, bias_ad
     plt.subplots_adjust(top=0.9) 
     plt.savefig(f"{run_label}_results.png", bbox_inches='tight')
     plt.show()
+    return None
+
+
+def plot_corner_posteriors(true_values, run_label, **series):
+    """
+    Plots a corner plot (lower triangular matrix) of the joint and marginal 
+    posterior distributions for each SMC run. Generates a separate figure 
+    for each series.
+
+    Args:
+        true_values: Array-like of true parameter values (1D array).
+        run_label: Base string path/name for saving the plots.
+        **series: label=step_list for each SMC run.
+    """
+    # Ensure true_values is a flat 1D array/list for the corner package
+    truths = np.array(true_values).flatten()
+    first_targets = next(iter(series.values()))
+    param_names = first_targets[0].param_names
+
+    for label, targets in series.items():
+        # Extract the final particles array from the step list
+        # Shape should be (num_particles, n_params)
+        samples = targets[-1].params
+        n_params = samples.shape[1]
+        
+        # Generate parameter labels (theta_0, theta_1, theta_2, etc.)
+        param_labels = param_names
+
+        # --- Generate the Corner Plot ---
+        # corner.corner creates the figure, plots the 1D hists on the diagonal, 
+        # the 2D scatters/contours on the lower triangle, and adds the truths!
+        fig = corner.corner(
+            samples,
+            labels=param_labels,
+            truths=truths,
+            truth_color='red',            # Color of the true value lines
+            color='mediumblue',           # Color of the histograms/scatter
+            show_titles=False,             # Shows median and uncertainties above 1D hists
+            title_kwargs={"fontsize": 12},
+            label_kwargs={"fontsize": 14},
+            plot_datapoints=True,         # Show actual particles (scatter)
+            plot_density=False,           # Turn off density contours (optional)
+            plot_contours=False,          # Turn off 2D contours (optional)
+            alpha=0.3,                    # Transparency of the particles
+            fig=None                      # Tell corner to create a new figure
+        )
+        
+        # Add a main title to the figure
+        fig.suptitle(f"Corner Plot: {label}", fontsize=16)
+        
+        # Save the figure, appending the series label so they don't overwrite
+        save_path = f"{run_label}_{label}_corner.png"
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        
+        print(f"Saved corner plot to: {save_path}")
+        
+        # Display the plot
+        plt.show()
+
     return None
