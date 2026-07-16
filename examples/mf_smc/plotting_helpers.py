@@ -219,8 +219,8 @@ def plot_param_hists(true_values, run_label, **series):
             # --- Formatting and Labels ---
             
             # Put the parameter symbol as the title on the top row
-            if row == 0:
-                ax.set_title(r'$\theta_{%d}$' % col, fontsize=16, pad=10)
+            # if row == 0:
+            #     ax.set_title(r'$\theta_{%d}$' % col, fontsize=16, pad=10)
             
             # Put the parameter symbol on the x-axis of the bottom row
             if row == n_runs - 1:
