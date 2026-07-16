@@ -13,6 +13,17 @@ def test_credible_interval_empty_outputs():
     np.testing.assert_array_equal(intervals, np.array([]))
 
 
+def test_credible_interval_does_not_modify_output():
+    output = np.array(
+        [[0.4, 4, 40], [0.1, 1, 10], [0.5, 5, 50], [0.2, 2, 20], [0.3, 3, 30]]
+    )
+    original_output = output.copy()
+
+    compute_intervals(output=output, alpha=0.5)
+
+    np.testing.assert_array_equal(output, original_output)
+
+
 @pytest.mark.parametrize(
     "alpha, expected_intervals",
     [

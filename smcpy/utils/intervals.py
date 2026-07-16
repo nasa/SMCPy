@@ -2,6 +2,8 @@ import numpy as np
 
 
 def compute_intervals(output, alpha):
+    output = output.copy()
+
     if alpha > 1 or alpha < 0:
         raise ValueError
 
