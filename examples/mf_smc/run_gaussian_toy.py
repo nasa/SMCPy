@@ -10,7 +10,7 @@ from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.smc.samplers import AdaptiveSampler
 from smcpy.paths import GeometricPath
-from smcpy.mfmc_proposal import MultiFidelityProposal
+from SMCPy.smcpy.mfsmc_proposal import MultiFidelityProposal
 
 # Import our new toy problem functions
 from gaussian_toy import generate_noisy_data, M_LF, M_HF, get_analytical_posterior

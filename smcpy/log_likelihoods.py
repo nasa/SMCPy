@@ -317,3 +317,5 @@ class MVNormalEmulatorUncertainty(BaseLogLike):
         term3 = -0.5 * quad                                 # (P,)
 
         return term1 + term2 + term3                        # (P,)
+    
+

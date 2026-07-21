@@ -13,7 +13,7 @@ from smcpy import AdaptiveSampler as Sampler
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.paths import GeometricPath
-from smcpy.mfmc_proposal import MultiFidelityProposal
+from SMCPy.smcpy.mfsmc_proposal import MultiFidelityProposal
 
 # --- Local Project Imports ---
 from exp_3d import M_HF, generate_noisy_data
