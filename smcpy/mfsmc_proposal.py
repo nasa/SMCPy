@@ -15,7 +15,8 @@ class MultiFidelityProposal:
                  lofi_model: Callable, 
                  observed_data: np.ndarray, 
                  priors: List[Any],
-                 additive_noise_stdev: Optional[float] = None):
+                 additive_noise_stdev: Optional[float] = None,
+                 psi_star: Optional[float] = 1):
         """
         Initializes the Multi-Fidelity proposal distribution.
 
@@ -32,6 +33,7 @@ class MultiFidelityProposal:
         self.additive_noise_stdev = additive_noise_stdev
         self._priors_list = priors
         self._dims = self._get_dims()
+        self.psi_star = psi_star
 
 
     def rvs(self, num_samples: int, random_state: np.random.Generator) -> np.ndarray:
@@ -83,7 +85,7 @@ class MultiFidelityProposal:
         log_likelihood_values = np.array(log_likelihood(particles)).reshape(-1, 1)
 
         # 3. Sum prior and likelihood to get the unnormalized log LF posterior density
-        return log_prior_values + log_likelihood_values
+        return log_prior_values + self.psi_star * log_likelihood_values
     
     def prior_logpdf(self, particles: np.ndarray) -> np.ndarray:
         """
