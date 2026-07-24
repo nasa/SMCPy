@@ -264,6 +264,20 @@ def test_delta_phi_is_zero_and_loglike_neginf(mocker, mcmc_kernel):
     assert ess_margin == pytest.approx(0)
 
 
+def test_delta_phi_is_zero_and_log_likes_are_objects(mocker, mcmc_kernel):
+    mock_particles = mocker.Mock()
+    mock_particles.num_particles = 2
+    mock_particles.log_likes = np.array([object(), object()], dtype=object).reshape(
+        -1, 1
+    )
+    mock_particles._logsum = Particles._logsum
+    smc = AdaptiveSampler(mcmc_kernel)
+
+    ess_margin = smc.predict_ess_margin(1, 1, mock_particles, target_ess=1)
+
+    assert ess_margin == pytest.approx(0)
+
+
 @pytest.mark.parametrize(
     "min_dphi,is_floored", [(0.2, True), (0.1, True), (0.01, False), (None, False)]
 )

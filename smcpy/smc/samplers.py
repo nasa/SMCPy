@@ -273,7 +273,7 @@ class AdaptiveSampler(SamplerBase):
         log_beta = (
             self._get_inc_weights(particles, phi_new)
             if delta_phi > 0
-            else np.zeros_like(particles.log_likes)
+            else np.zeros(particles.log_likes.shape)
         )
         numer = 2 * particles._logsum(log_beta)
         denom = particles._logsum(2 * log_beta)
