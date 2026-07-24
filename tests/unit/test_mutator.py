@@ -62,7 +62,7 @@ def test_mutate(mutator, stub_mcmc_kernel, mocker):
     assert mutated_particles.attrs["mutation_ratio"] == 0
 
     stub_mcmc_kernel.mutate_particles.assert_called_with(
-        mocked_particles.param_dict, num_samples, cov
+        mocked_particles, num_samples, cov
     )
 
 

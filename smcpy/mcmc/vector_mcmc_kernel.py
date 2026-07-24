@@ -10,10 +10,10 @@ class VectorMCMCKernel(KernelBase):
         self._mcmc.evaluate_log_posterior = self.path.logpdf
         self.param_order = tuple(str(param) for param in param_order)
 
-    def mutate_particles(self, param_dict, num_samples, cov):
-        param_array = self._conv_param_dict_to_array(param_dict)
+    def mutate_particles(self, particles, num_samples, cov):
+        param_array = self._conv_param_dict_to_array(particles.param_dict)
         param_array, log_likes = self._mcmc.smc_metropolis(
-            param_array, num_samples, cov
+            param_array, num_samples, cov, particles.log_likes
         )
         param_dict = self._conv_param_array_to_dict(param_array)
         return param_dict, log_likes

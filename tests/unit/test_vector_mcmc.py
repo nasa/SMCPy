@@ -258,6 +258,54 @@ def test_vectorized_smc_metropolis(vector_mcmc, num_samples, num_accepted, mocke
             expected_cov *= 1 / 5
 
 
+def test_smc_metropolis_uses_supplied_log_likes(vector_mcmc, mocker):
+    inputs = np.ones([2, 3])
+    supplied_log_likes = np.array([3, 5])
+    mocker.patch.object(
+        vector_mcmc, "evaluate_log_priors", return_value=np.zeros((2, 1))
+    )
+    evaluate_log_likelihood = mocker.patch.object(
+        vector_mcmc, "evaluate_log_likelihood"
+    )
+
+    _, log_likes = vector_mcmc.smc_metropolis(
+        inputs, num_samples=0, cov=None, log_likes=supplied_log_likes
+    )
+
+    evaluate_log_likelihood.assert_not_called()
+    np.testing.assert_array_equal(log_likes, np.array([[3], [5]]))
+
+
+def test_smc_metropolis_calculates_log_likes_when_not_supplied(vector_mcmc, mocker):
+    inputs = np.ones([2, 3])
+    expected_log_likes = np.array([[3], [5]])
+    mocker.patch.object(
+        vector_mcmc, "evaluate_log_priors", return_value=np.zeros((2, 1))
+    )
+    evaluate_log_likelihood = mocker.patch.object(
+        vector_mcmc, "evaluate_log_likelihood", return_value=expected_log_likes
+    )
+
+    _, log_likes = vector_mcmc.smc_metropolis(
+        inputs, num_samples=0, cov=None, log_likes=None
+    )
+
+    evaluate_log_likelihood.assert_called_once_with(inputs)
+    np.testing.assert_array_equal(log_likes, expected_log_likes)
+
+
+def test_smc_metropolis_rejects_mismatched_log_likes(vector_mcmc, mocker):
+    inputs = np.ones([2, 3])
+    mocker.patch.object(
+        vector_mcmc, "evaluate_log_priors", return_value=np.zeros((2, 1))
+    )
+
+    with pytest.raises(ValueError):
+        vector_mcmc.smc_metropolis(
+            inputs, num_samples=0, cov=None, log_likes=np.array([3])
+        )
+
+
 @pytest.mark.parametrize("num_samples", (1, 2))
 def test_vectorized_metropolis(vector_mcmc, num_samples, mocker):
     inputs = np.ones([10, 3])

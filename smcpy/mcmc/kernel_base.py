@@ -27,7 +27,7 @@ class KernelBase(ABC):
         self._rng = rng
 
     @abc.abstractmethod
-    def mutate_particles(self, particles, num_samples, proposal_cov, phi):
+    def mutate_particles(self, particles, num_samples, proposal_cov):
         return new_param_values, new_log_likelihoods
 
     @abc.abstractmethod

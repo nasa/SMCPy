@@ -43,9 +43,9 @@ class VectorMCMC:
         else:
             raise TypeError("Random number generator must be a numpy generator.")
 
-    def smc_metropolis(self, inputs, num_samples, cov):
+    def smc_metropolis(self, inputs, num_samples, cov, log_likes=None):
         num_particles = inputs.shape[0]
-        log_priors, log_like = self._initialize_probabilities(inputs)
+        log_priors, log_like = self._initialize_probabilities(inputs, log_likes)
 
         for i in range(num_samples):
             inputs, log_like, log_priors, rejected = self._perform_mcmc_step(
@@ -159,10 +159,24 @@ class VectorMCMC:
             return np.cov(flat_chain)
         return cov
 
-    def _initialize_probabilities(self, inputs):
+    def _initialize_probabilities(self, inputs, log_likes=None):
+        """
+        Calculate initial priors and obtain or calculate log likelihoods.
+
+        If supplied, likelihoods are reshaped to a column vector and must contain
+        one value for each input particle.
+        """
         log_priors = self.evaluate_log_priors(inputs)
         self._check_log_priors_for_zero_probability(log_priors)
-        log_like = self.evaluate_log_likelihood(inputs)
+        if log_likes is None:
+            log_like = self.evaluate_log_likelihood(inputs)
+        else:
+            log_like = np.asarray(log_likes).reshape(-1, 1)
+            if log_like.shape[0] != inputs.shape[0]:
+                raise ValueError(
+                    "log_likes.shape[0] != number inputs: "
+                    f"{log_like.shape[0]} != {inputs.shape[0]}"
+                )
         return log_priors, log_like
 
     def _perform_mcmc_step(self, inputs, cov, log_like, log_priors):

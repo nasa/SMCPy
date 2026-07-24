@@ -3,6 +3,7 @@ import pytest
 
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
+from smcpy.smc.particles import Particles
 
 
 @pytest.fixture
@@ -97,6 +98,8 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
 
     param_array = np.array([[1, 2]] * num_vectorized)
     param_dict = dict(zip(["a", "b"], param_array.T))
+    log_likes = np.ones((num_vectorized, 1))
+    particles = Particles(param_dict, log_likes, np.ones(num_vectorized))
 
     mocked_return = (
         np.array([[2, 3]] * num_vectorized),
@@ -108,7 +111,7 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
 
     kernel = VectorMCMCKernel(vector_mcmc, param_order=["a", "b"])
     kernel.path.phi = 1
-    mutated = kernel.mutate_particles(param_dict, num_samples, cov)
+    mutated = kernel.mutate_particles(particles, num_samples, cov)
     new_param_dict = mutated[0]
     new_log_likes = mutated[1]
 
@@ -123,7 +126,7 @@ def test_mutate_particles(vector_mcmc, num_vectorized, mocker):
     np.testing.assert_array_equal(new_log_likes, expected_log_likes)
 
     calls = smc_metropolis.call_args[0]
-    for i, expect in enumerate([param_array, num_samples, cov]):
+    for i, expect in enumerate([param_array, num_samples, cov, log_likes]):
         np.testing.assert_array_equal(calls[i], expect)
 
 
