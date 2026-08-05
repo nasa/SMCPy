@@ -1,0 +1,16 @@
+{
+    "fill_in_label_name/": {
+        "true_theta": [
+            0.05,
+            1.0
+        ],
+        "target_ess": 0.5,
+        "num_mcmc_samples": 7,
+        "num_particles": 5000,
+        "add_noise_stdev": 5,
+        "random_seed": 16,
+        "lofi_num_smc_steps": 9,
+        "hifi_num_smc_steps": 4,
+        "Extra details": "Priors: [uniform(0.001, 2), uniform(0, 4)]\n Used exp_3d HF Model & LF8 Model"
+    }
+}

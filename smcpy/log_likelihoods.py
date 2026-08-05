@@ -286,7 +286,7 @@ class MVNormalEmulatorUncertainty(BaseLogLike):
         # 1. Emulator prediction: mean (P, d) and GP covariance (P, d, d)
         # ------------------------------------------------------------------
         mu_gp, sigma_gp = self._get_output(model_inputs)   # (P, d), (P, d, d)
-        num_particles, d = mu_gp.shape
+        _, d = mu_gp.shape
 
         # ------------------------------------------------------------------
         # 2. Total covariance = Sigma_meas + Sigma_GP   (per particle)

@@ -13,14 +13,14 @@ from smcpy import AdaptiveSampler as Sampler
 from smcpy.mcmc.vector_mcmc import VectorMCMC
 from smcpy.mcmc.vector_mcmc_kernel import VectorMCMCKernel
 from smcpy.paths import GeometricPath
-from SMCPy.smcpy.mfsmc_proposal import MultiFidelityProposal
+from smcpy.mfsmc_proposal import MultiFidelityProposal
 
 # --- Local Project Imports ---
 from exp_3d import M_HF, generate_noisy_data
 from exp_3d import M_LF5 as M_LF
 from plotting_helpers import (
     plot_2d_joint_posterior, 
-    plot_param_hists, 
+    plot_param_posteriors, 
     plot_target_boxplots, 
     save_run_hyperparameters
 )
@@ -39,8 +39,9 @@ num_mcmc_samples = 7
 random_seed = 16
 
 # Paths
-run_label = '/hpnobackup2/vasanche/exp_3d_case/varying_fidelities/test/'
-log_filename = '/hpnobackup2/vasanche/exp_3d_case/varying_fidelities/run_info.json'
+run_label = 'fill_in_label_name/'
+os.makedirs(run_label, exist_ok=True)
+log_filename = 'run_info.json'
 
 # Generate synthetic measurement data
 char_length = 2
@@ -133,7 +134,7 @@ plot_2d_joint_posterior(
     High_Fidelity=hifi_step_list,
 )
 
-plot_param_hists(
+plot_param_posteriors(
     THETA_TRUE.flatten(),
     run_label,
     Low_Fidelity=lofi_step_list,

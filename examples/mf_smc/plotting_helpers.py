@@ -4,9 +4,15 @@ import os
 import json
 import corner
 
+###############################################################
+###############################################################
+###############################################################
 '''
-Saving function
+Saving SMC hyperparameters
 '''
+###############################################################
+###############################################################
+###############################################################
 def save_run_hyperparameters(log_filepath, run_label, **hyperparameters):
 
     # 2. Load existing data if the file already exists
@@ -32,9 +38,73 @@ def save_run_hyperparameters(log_filepath, run_label, **hyperparameters):
 
     return None
 
+###############################################################
+###############################################################
+###############################################################
 '''
 Plotting functions
 '''
+###############################################################
+###############################################################
+###############################################################
+
+def plot_corner_posteriors(true_values, run_label, **series):
+    """
+    Plots a corner plot (lower triangular matrix) of the joint and marginal 
+    posterior distributions for each SMC run. Generates a separate figure 
+    for each series.
+
+    Args:
+        true_values: Array-like of true parameter values (1D array).
+        run_label: Base string path/name for saving the plots.
+        **series: label=step_list for each SMC run.
+    """
+    # Ensure true_values is a flat 1D array/list for the corner package
+    truths = np.array(true_values).flatten()
+    first_targets = next(iter(series.values()))
+    param_names = first_targets[0].param_names
+
+    for label, targets in series.items():
+        # Extract the final particles array from the step list
+        # Shape should be (num_particles, n_params)
+        samples = targets[-1].params
+        n_params = samples.shape[1]
+        
+        # Generate parameter labels (theta_0, theta_1, theta_2, etc.)
+        param_labels = param_names
+
+        # --- Generate the Corner Plot ---
+        # corner.corner creates the figure, plots the 1D hists on the diagonal, 
+        # the 2D scatters/contours on the lower triangle, and adds the truths!
+        fig = corner.corner(
+            samples,
+            labels=param_labels,
+            truths=truths,
+            truth_color='red',            # Color of the true value lines
+            color='mediumblue',           # Color of the histograms/scatter
+            show_titles=False,             # Shows median and uncertainties above 1D hists
+            title_kwargs={"fontsize": 12},
+            label_kwargs={"fontsize": 14},
+            plot_datapoints=True,         # Show actual particles (scatter)
+            plot_density=False,           # Turn off density contours (optional)
+            plot_contours=False,          # Turn off 2D contours (optional)
+            alpha=0.3,                    # Transparency of the particles
+            fig=None                      # Tell corner to create a new figure
+        )
+        
+        # Add a main title to the figure
+        fig.suptitle(f"Corner Plot: {label}", fontsize=16)
+        
+        # Save the figure, appending the series label so they don't overwrite
+        save_path = f"{run_label}_{label}_corner.png"
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        
+        print(f"Saved corner plot to: {save_path}")
+        
+        # Display the plot
+        plt.show()
+
+    return None
 
 def plot_target_boxplots(true_values, run_label, **series):
     """Plot box plots for each parameter and series over the phi sequence.
@@ -93,77 +163,8 @@ def plot_target_boxplots(true_values, run_label, **series):
     plt.savefig(f"{run_label}_smc_steps.png", bbox_inches='tight')
     plt.show()
 
-def plot_2d_joint_posterior(true_values, run_label, **series):
-    """
-    Plots a 2D scatter of the joint posterior particles for each SMC run.
 
-    Args:
-        true_values: Array-like of true parameter values (needs at least 2 values).
-        **series: label=(targets_list, phi_sequence) for each SMC run.
-    """
-    n_series = len(series)
-    
-    # Extract true values from the array (fixes the undefined variables bug)
-    theta_0, theta_1 = true_values[0], true_values[1]
-
-    # Create subplots
-    fig, axes = plt.subplots(
-        1,
-        n_series,
-        sharex="col",
-        sharey="row",
-        figsize=(6 * n_series, 6), # slightly adjusted size for better proportions
-        # squeeze=False
-    )
-    
-    # Ensure axes is a 1D array so we can index it cleanly, even if n_series == 1
-    axes = np.atleast_1d(axes)
-
-    # Unpack the series tuple directly in the loop
-    for col, (label, targets) in enumerate(series.items()):
-        ax = axes[col]
-        
-        # Plot posterior particles
-        ax.scatter(
-            targets[-1].params[:, 0],
-            targets[-1].params[:, 1],
-            alpha=0.3,           
-            s=20,                
-            color='mediumblue',  
-            edgecolors='none',   
-            label='Posterior Particles'
-        )
-
-        # Plot True values lines using the specific Axis object (ax)
-        ax.axvline(theta_0, color='r', linestyle='--', alpha=0.8, linewidth=2)
-        ax.axhline(theta_1, color='r', linestyle='--', alpha=0.8, linewidth=2)
-
-        # Add a marker right at the exact true value intersection
-        ax.plot(theta_0, theta_1, marker='*', color='red', markersize=15, 
-                linestyle='None', label='True Theta')
-
-        # Labels and Titles
-        ax.set_xlabel(r'$\theta_0$', fontsize=14)
-        ax.set_title(label, fontsize=16, pad=15)
-        
-        # Only add the y-label to the first plot since the y-axis is shared
-        if col == 0:
-            ax.set_ylabel(r'$\theta_1$', fontsize=14)
-
-        # Add a subtle background grid for readability
-        ax.grid(True, alpha=0.5)
-
-        # Make tick marks slightly larger
-        ax.tick_params(axis='both', which='major', labelsize=12, labelrotation = 45)
-
-    # Add the legend to the last axis
-    axes[-1].legend(loc="upper right")
-    
-    plt.tight_layout()
-    plt.savefig(f"{run_label}_joint_posterior.png", bbox_inches='tight')
-    plt.show()
-
-def plot_param_hists(true_values, run_label, **series):
+def plot_param_posteriors(true_values, run_label, **series):
     """
     Plots a histogram of the marginal posterior for each parameter (columns) 
     across each SMC run (rows).
@@ -247,65 +248,15 @@ def plot_param_hists(true_values, run_label, **series):
     plt.savefig(f"{run_label}_histogram_comp.png", bbox_inches='tight')
     plt.show()
 
-def plot_log_likelihood(run_label, **series):
-    """
-    Plots the Marginal Log-Likelihood (MLL) progression across SMC steps.
-    
-    Args:
-        run_label (str): A prefix used for saving the output plot filename.
-        **series: Keyword arguments where the key is the label (e.g., run name) 
-                  and the value is an iterable/tuple where the second element 
-                  is the MLL array over steps.
-    """
-    n_series = len(series)
-    
-    # Create the subplots. squeeze=False ensures axes is ALWAYS a 2D array 
-    # of shape (1, n_series), even if n_series is 1.
-    fig, axes = plt.subplots(
-        nrows=1,
-        ncols=n_series,
-        sharex="col",
-        sharey="row",
-        figsize=(5 * n_series, 4), # Slightly taller and wider for a cleaner look
-        squeeze=False 
-    )
-
-    for col, (label, mll_arr) in enumerate(series.items()):
-        # Extract the MLL array (assuming series_data is a tuple of (targets, mll_arr))
-        positions = np.arange(len(mll_arr))
-
-        # Access the specific subplot (Row 0, Column 'col')
-        ax = axes[0, col]
-        
-        # Plot the line and scatter points
-        # Added zorder to ensure points sit on top of the line
-        line = ax.plot(positions, mll_arr, linewidth=2, alpha=0.8, label="MLL Trajectory")
-        ax.scatter(positions, mll_arr, s=30, color=line[0].get_color(), zorder=3)
-
-        # Styling and Labels
-        ax.set_title(f"{label}", fontsize=12, fontweight='bold')
-        ax.set_xlabel("SMC Step", fontsize=11)
-        
-        # Only add the Y-label to the far-left plot to avoid clutter (since sharey=True)
-        if col == 0:
-            ax.set_ylabel("Marginal Log-Likelihood", fontsize=11)
-            
-        # Add a subtle background grid for easier reading
-        ax.grid(True, linestyle='--', alpha=0.6)
-
-    # Add a legend to the final subplot
-    axes[0, -1].legend(loc="best", fontsize=10)
-
-    # Clean layout and save
-    plt.tight_layout()
-    file_name = f"{run_label}_mll_per_smc_step.png"
-    plt.savefig(file_name, bbox_inches='tight', dpi=300) # dpi=300 makes the image high-res
-    
-    plt.show()
-
+###############################################################
+###############################################################
+###############################################################
 '''
-Functions for checking perturbations to a perfectly specified low fidelity posterior.
+Some extra but less important plotting functions
 '''
+###############################################################
+###############################################################
+###############################################################
 
 def plot_param_hist_progression(save_prefix, lofi_particles, perturbed_lofi_particles, hifi_particles, bias_adjustments_arr, stdev_adjustments_arr):
     """
@@ -525,61 +476,128 @@ def plot_ill_posed_res(true_values, run_label, perturbed_lofi_particles, bias_ad
     plt.show()
     return None
 
-
-def plot_corner_posteriors(true_values, run_label, **series):
+def plot_2d_joint_posterior(true_values, run_label, **series):
     """
-    Plots a corner plot (lower triangular matrix) of the joint and marginal 
-    posterior distributions for each SMC run. Generates a separate figure 
-    for each series.
+    Plots a 2D scatter of the joint posterior particles for each SMC run.
 
     Args:
-        true_values: Array-like of true parameter values (1D array).
-        run_label: Base string path/name for saving the plots.
-        **series: label=step_list for each SMC run.
+        true_values: Array-like of true parameter values (needs at least 2 values).
+        **series: label=(targets_list, phi_sequence) for each SMC run.
     """
-    # Ensure true_values is a flat 1D array/list for the corner package
-    truths = np.array(true_values).flatten()
-    first_targets = next(iter(series.values()))
-    param_names = first_targets[0].param_names
+    n_series = len(series)
+    
+    # Extract true values from the array (fixes the undefined variables bug)
+    theta_0, theta_1 = true_values[0], true_values[1]
 
-    for label, targets in series.items():
-        # Extract the final particles array from the step list
-        # Shape should be (num_particles, n_params)
-        samples = targets[-1].params
-        n_params = samples.shape[1]
+    # Create subplots
+    fig, axes = plt.subplots(
+        1,
+        n_series,
+        sharex="col",
+        sharey="row",
+        figsize=(6 * n_series, 6), # slightly adjusted size for better proportions
+        # squeeze=False
+    )
+    
+    # Ensure axes is a 1D array so we can index it cleanly, even if n_series == 1
+    axes = np.atleast_1d(axes)
+
+    # Unpack the series tuple directly in the loop
+    for col, (label, targets) in enumerate(series.items()):
+        ax = axes[col]
         
-        # Generate parameter labels (theta_0, theta_1, theta_2, etc.)
-        param_labels = param_names
-
-        # --- Generate the Corner Plot ---
-        # corner.corner creates the figure, plots the 1D hists on the diagonal, 
-        # the 2D scatters/contours on the lower triangle, and adds the truths!
-        fig = corner.corner(
-            samples,
-            labels=param_labels,
-            truths=truths,
-            truth_color='red',            # Color of the true value lines
-            color='mediumblue',           # Color of the histograms/scatter
-            show_titles=False,             # Shows median and uncertainties above 1D hists
-            title_kwargs={"fontsize": 12},
-            label_kwargs={"fontsize": 14},
-            plot_datapoints=True,         # Show actual particles (scatter)
-            plot_density=False,           # Turn off density contours (optional)
-            plot_contours=False,          # Turn off 2D contours (optional)
-            alpha=0.3,                    # Transparency of the particles
-            fig=None                      # Tell corner to create a new figure
+        # Plot posterior particles
+        ax.scatter(
+            targets[-1].params[:, 0],
+            targets[-1].params[:, 1],
+            alpha=0.3,           
+            s=20,                
+            color='mediumblue',  
+            edgecolors='none',   
+            label='Posterior Particles'
         )
-        
-        # Add a main title to the figure
-        fig.suptitle(f"Corner Plot: {label}", fontsize=16)
-        
-        # Save the figure, appending the series label so they don't overwrite
-        save_path = f"{run_label}_{label}_corner.png"
-        plt.savefig(save_path, bbox_inches='tight', dpi=300)
-        
-        print(f"Saved corner plot to: {save_path}")
-        
-        # Display the plot
-        plt.show()
 
-    return None
+        # Plot True values lines using the specific Axis object (ax)
+        ax.axvline(theta_0, color='r', linestyle='--', alpha=0.8, linewidth=2)
+        ax.axhline(theta_1, color='r', linestyle='--', alpha=0.8, linewidth=2)
+
+        # Add a marker right at the exact true value intersection
+        ax.plot(theta_0, theta_1, marker='*', color='red', markersize=15, 
+                linestyle='None', label='True Theta')
+
+        # Labels and Titles
+        ax.set_xlabel(r'$\theta_0$', fontsize=14)
+        ax.set_title(label, fontsize=16, pad=15)
+        
+        # Only add the y-label to the first plot since the y-axis is shared
+        if col == 0:
+            ax.set_ylabel(r'$\theta_1$', fontsize=14)
+
+        # Add a subtle background grid for readability
+        ax.grid(True, alpha=0.5)
+
+        # Make tick marks slightly larger
+        ax.tick_params(axis='both', which='major', labelsize=12, labelrotation = 45)
+
+    # Add the legend to the last axis
+    axes[-1].legend(loc="upper right")
+    
+    plt.tight_layout()
+    plt.savefig(f"{run_label}_joint_posterior.png", bbox_inches='tight')
+    plt.show()
+
+def plot_log_likelihood(run_label, **series):
+    """
+    Plots the Marginal Log-Likelihood (MLL) progression across SMC steps.
+    
+    Args:
+        run_label (str): A prefix used for saving the output plot filename.
+        **series: Keyword arguments where the key is the label (e.g., run name) 
+                  and the value is an iterable/tuple where the second element 
+                  is the MLL array over steps.
+    """
+    n_series = len(series)
+    
+    # Create the subplots. squeeze=False ensures axes is ALWAYS a 2D array 
+    # of shape (1, n_series), even if n_series is 1.
+    fig, axes = plt.subplots(
+        nrows=1,
+        ncols=n_series,
+        sharex="col",
+        sharey="row",
+        figsize=(5 * n_series, 4), # Slightly taller and wider for a cleaner look
+        squeeze=False 
+    )
+
+    for col, (label, mll_arr) in enumerate(series.items()):
+        # Extract the MLL array (assuming series_data is a tuple of (targets, mll_arr))
+        positions = np.arange(len(mll_arr))
+
+        # Access the specific subplot (Row 0, Column 'col')
+        ax = axes[0, col]
+        
+        # Plot the line and scatter points
+        # Added zorder to ensure points sit on top of the line
+        line = ax.plot(positions, mll_arr, linewidth=2, alpha=0.8, label="MLL Trajectory")
+        ax.scatter(positions, mll_arr, s=30, color=line[0].get_color(), zorder=3)
+
+        # Styling and Labels
+        ax.set_title(f"{label}", fontsize=12, fontweight='bold')
+        ax.set_xlabel("SMC Step", fontsize=11)
+        
+        # Only add the Y-label to the far-left plot to avoid clutter (since sharey=True)
+        if col == 0:
+            ax.set_ylabel("Marginal Log-Likelihood", fontsize=11)
+            
+        # Add a subtle background grid for easier reading
+        ax.grid(True, linestyle='--', alpha=0.6)
+
+    # Add a legend to the final subplot
+    axes[0, -1].legend(loc="best", fontsize=10)
+
+    # Clean layout and save
+    plt.tight_layout()
+    file_name = f"{run_label}_mll_per_smc_step.png"
+    plt.savefig(file_name, bbox_inches='tight', dpi=300) # dpi=300 makes the image high-res
+    
+    plt.show()

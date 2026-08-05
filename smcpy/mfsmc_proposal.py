@@ -16,8 +16,8 @@ class MultiFidelityProposal:
                  observed_data: np.ndarray, 
                  priors: List[Any],
                  additive_noise_stdev: Optional[float] = None,
-                 psi_star: Optional[float] = 1,
-                 log_like_func = Normal):
+                 log_like_func: Optional[Callable] = Normal,
+                 phi_star: Optional[float] = 1):
         """
         Initializes the Multi-Fidelity proposal distribution.
 
@@ -27,6 +27,8 @@ class MultiFidelityProposal:
             observed_data (np.ndarray): The true observed measurement data being targeted.
             priors (List[Any]): List of prior distribution objects for the parameters.
             additive_noise_stdev (Optional[float]): Standard deviation of the Gaussian noise.
+            log_like_func (Optional[Callable]): Log-likelihood function to be used for calculations.
+            phi_star (Optional[float]): Tempering parameter value for the early stopping LoFi SMC Stage.
         """
         self.lofi_particles = lofi_particles
         self.lofi_model = lofi_model
@@ -34,8 +36,8 @@ class MultiFidelityProposal:
         self.additive_noise_stdev = additive_noise_stdev
         self._priors_list = priors
         self._dims = self._get_dims()
-        self.psi_star = psi_star
         self.log_like_func = log_like_func
+        self.phi_star = phi_star
 
 
     def rvs(self, num_samples: int, random_state: np.random.Generator) -> np.ndarray:
@@ -56,7 +58,7 @@ class MultiFidelityProposal:
         if num_samples == len(self.lofi_particles):
             return self.lofi_particles
 
-        # Randomly sample indices with replacement using the provided Generator
+        # Randomly sample indices without replacement using the provided Generator
         if num_samples < len(self.lofi_particles):
             random_indices = random_state.choice(
                 self.lofi_particles.shape[0], 
@@ -87,7 +89,7 @@ class MultiFidelityProposal:
         log_likelihood_values = np.array(log_likelihood(particles)).reshape(-1, 1)
 
         # 3. Sum prior and likelihood to get the unnormalized log LF posterior density
-        return log_prior_values + self.psi_star * log_likelihood_values
+        return log_prior_values + self.phi_star * log_likelihood_values
     
     def prior_logpdf(self, particles: np.ndarray) -> np.ndarray:
         """
