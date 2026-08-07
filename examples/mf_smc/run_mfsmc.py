@@ -1,11 +1,4 @@
-import os
-import sys
 import numpy as np
-
-# --- System Path Setup ---
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../../")))
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../../smcpy")))
-
 from scipy.stats import uniform
 
 # --- smcpy Imports ---
