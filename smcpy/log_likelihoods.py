@@ -233,10 +233,13 @@ class MVNormalEmulatorUncertainty(BaseLogLike):
         super().__init__(model, data, args)
 
         self._d = self._data.shape[0]
-        self._estimate_meas = self._args is None
 
-        if self._estimate_meas:
-            self._meas_cov = None            # built per-particle in __call__
+        # Default to None; this signals that the measurement noise should be estimated per-particle from the inputs in _build_meas_cov.
+        self._meas_cov = None
+
+        if self._args is None:
+            # Leave self._meas_cov as None -> std_dev estimated in __call__.
+            pass
         elif np.isscalar(self._args):
             # scalar std dev -> Sigma_meas = args^2 * I_d
             self._meas_cov = float(self._args) ** 2 * np.eye(self._d)
@@ -261,12 +264,14 @@ class MVNormalEmulatorUncertainty(BaseLogLike):
     def _build_meas_cov(self, inputs):
         """
         Returns (meas_cov, model_inputs).
-          - scalar/matrix case: meas_cov shape (1, d, d), broadcasts over
-            particles; inputs passed through unchanged.
-          - estimate case: strips last input column as std_dev, builds
-            per-particle covariance std_dev^2 * I_d, shape (P, d, d).
+          - scalar/matrix case (self._meas_cov is not None): meas_cov shape
+            (1, d, d), broadcasts over particles; inputs passed through
+            unchanged.
+          - estimate case (self._meas_cov is None): strips last input column
+            as std_dev, builds per-particle covariance std_dev^2 * I_d,
+            shape (P, d, d).
         """
-        if not self._estimate_meas:
+        if self._meas_cov is not None:
             return self._meas_cov[None, :, :], inputs
 
         std_dev = inputs[:, -1]                      # (P,)
@@ -277,20 +282,14 @@ class MVNormalEmulatorUncertainty(BaseLogLike):
         return meas_cov, model_inputs
 
     def __call__(self, inputs):
-        # ------------------------------------------------------------------
-        # 0. Build measurement covariance (and strip std_dev if estimating).
-        # ------------------------------------------------------------------
+        # Build measurement covariance (and strip std_dev if estimating).
         meas_cov, model_inputs = self._build_meas_cov(inputs)
 
-        # ------------------------------------------------------------------
-        # 1. Emulator prediction: mean (P, d) and GP covariance (P, d, d)
-        # ------------------------------------------------------------------
+        # Emulator prediction: mean (P, d) and GP covariance (P, d, d)
         mu_gp, sigma_gp = self._get_output(model_inputs)   # (P, d), (P, d, d)
         _, d = mu_gp.shape
 
-        # ------------------------------------------------------------------
-        # 2. Total covariance = Sigma_meas + Sigma_GP   (per particle)
-        # ------------------------------------------------------------------
+        # Total covariance = Sigma_meas + Sigma_GP   (per particle)
         total_cov = meas_cov + sigma_gp                    # (P, d, d)
 
         inv_cov = np.linalg.inv(total_cov)                 # (P, d, d)
@@ -298,24 +297,16 @@ class MVNormalEmulatorUncertainty(BaseLogLike):
         if np.any(sign <= 0):
             raise ValueError("total covariance is not positive definite.")
 
-        # ------------------------------------------------------------------
-        # 3. Residual: single data snapshot (1, d) vs emulator mean (P, d).
-        # ------------------------------------------------------------------
+        # Residual: single data snapshot (1, d) vs emulator mean (P, d).
         error = self._data - mu_gp                          # (P, d)
 
-        # ------------------------------------------------------------------
-        # 4. Quadratic form: error^T Sigma^-1 error per particle.
-        # ------------------------------------------------------------------
+        # Quadratic form: error^T Sigma^-1 error per particle.
         tmp = np.einsum("pij,pj->pi", inv_cov, error)       # (P, d)
         quad = np.einsum("pi,pi->p", error, tmp)            # (P,)
 
-        # ------------------------------------------------------------------
-        # 5. MVN log density.
-        # ------------------------------------------------------------------
+        # MVN log density.
         term1 = -0.5 * d * np.log(2 * np.pi)                # scalar
         term2 = -0.5 * logdet                               # (P,)
         term3 = -0.5 * quad                                 # (P,)
 
         return term1 + term2 + term3                        # (P,)
-    
-
