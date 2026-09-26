@@ -55,8 +55,8 @@ class InvWishart:
         :type num_samples: int
         """
         cov = self._invwishart.rvs(num_samples, random_state=random_state)
-        if num_samples == 1:
-            cov = np.expand_dims(cov, 0)
+        # SciPy squeezes singleton sample and covariance axes.
+        cov = np.asarray(cov).reshape(-1, self._cov_dim, self._cov_dim)
         idx1, idx2 = np.triu_indices(self._cov_dim)
         return cov[:, idx1, idx2]
 
@@ -119,6 +119,8 @@ class ImproperCov:
         cov = invwishart(self._iw_dof, self._iw_scale).rvs(
             num_samples, random_state=random_state
         )
+        # SciPy squeezes singleton sample and covariance axes.
+        cov = np.asarray(cov).reshape(-1, self._ncols, self._ncols)
         idx1, idx2 = np.triu_indices(self._ncols)
         return cov[:, idx1, idx2]
 
